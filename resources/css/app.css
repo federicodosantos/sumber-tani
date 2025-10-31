@@ -1,6 +1,10 @@
-@import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+@import "tailwindcss";
 
 @theme {
+    --font-mont: 'Montserrat', sans-serif;
+
     --color-button-main: #ABD36F;
     --color-button-hover: #8AB763;
     --color-cancel-button: #FC4C4C;
