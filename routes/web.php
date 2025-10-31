@@ -7,6 +7,14 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/test', function () {
+    return view('tutorial-pakai-template.test-content');
+});
+
+Route::get('/create', function () {
+    return view('tutorial-pakai-template.test-create-update');
+});
+
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
