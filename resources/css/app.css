@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@theme {
+    --color-button-main: #ABD36F;
+    --color-button-hover: #8AB763;
+    --color-cancel-button: #FC4C4C;
+}
