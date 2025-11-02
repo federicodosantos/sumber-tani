@@ -23,6 +23,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/product', function () {
         return view('product');
     })->name('product');
+
+    Route::get('/item-category', function () {
+        return view('item-category.index');
+    })->name('item-category');
 });
 
 Route::middleware('auth')->group(function () {
