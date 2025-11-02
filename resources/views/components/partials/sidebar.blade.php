@@ -68,15 +68,15 @@
         </li>
 
         <li>
-          <a href="{{ url('item-categories') }}"
+          <a href="{{ url('item-category') }}"
             class="flex items-stretch flex-row transition-colors duration-200 rounded-lg
-                                                            {{ request()->is('item-categories*') ? 'text-white font-semibold' : 'text-gray-600 hover:bg-gray-100' }}">
+                                                            {{ request()->is('item-category*') ? 'text-white font-semibold' : 'text-gray-600 hover:bg-gray-100' }}">
             <div
-              class="{{ request()->is('item-categories*') ? 'bg-button-main rounded-r-lg' : 'bg-transparent' }} w-2 rounded-l-lg">
+              class="{{ request()->is('item-category*') ? 'bg-button-main rounded-r-lg' : 'bg-transparent' }} w-2 rounded-l-lg">
             </div>
             <div class="bg-white w-3"></div>
             <div
-              class="{{ request()->is('item-categories*') ? 'bg-button-main text-white tracking-wide font-bold' : 'bg-transparent' }} flex items-center w-full px-4 py-3 rounded-lg">
+              class="{{ request()->is('item-category*') ? 'bg-button-main text-white tracking-wide font-bold' : 'bg-transparent' }} flex items-center w-full px-4 py-3 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                 stroke="currentColor" class="w-6 h-6">
                 <path stroke-linecap="round" stroke-linejoin="round"
