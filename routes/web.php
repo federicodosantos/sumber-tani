@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/item-category/create', [ItemCategoryController::class, 'create'])->name('item-category.create');
     Route::post('/item-category', [ItemCategoryController::class, 'store'])->name('item-category.store');
     Route::get('/item-category/{itemCategory}/edit', [ItemCategoryController::class, 'edit'])->name('item-category.edit');
+    Route::put('/item-category/{itemCategory}', [ItemCategoryController::class, 'update'])->name('item-category.update');
 });
 
 Route::middleware('auth')->group(function () {

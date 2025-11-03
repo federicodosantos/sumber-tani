@@ -37,15 +37,15 @@ class ItemCategoryController extends Controller
 
         $isExist = ItemCategory::where('name', $validated['name'])->exists();
         if ($isExist) {
-            return redirect()->back()
+            return redirect()
+                ->back()
                 ->withInput()
                 ->withErrors(['name' => 'Kategori dengan nama tersebut sudah ada.']);
         }
 
         ItemCategory::create($validated);
 
-        return redirect()->route('item-category')
-            ->with('success', 'Item category created successfully.');
+        return redirect()->route('item-category')->with('success', 'Item category created successfully.');
     }
 
     /**
@@ -61,7 +61,7 @@ class ItemCategoryController extends Controller
      */
     public function edit(ItemCategory $itemCategory)
     {
-        //
+        return view('item-category.edit', compact('itemCategory'));
     }
 
     /**
@@ -69,7 +69,25 @@ class ItemCategoryController extends Controller
      */
     public function update(Request $request, ItemCategory $itemCategory)
     {
-        //
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'description' => 'nullable|string',
+        ]);
+
+        $isExist = ItemCategory::where('name', $validated['name'])
+            ->where('id', '!=', $itemCategory->id)
+            ->exists();
+
+        if ($isExist) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['name' => 'Kategori dengan nama tersebut sudah ada.']);
+        }
+
+        $itemCategory->update($validated);
+
+        return redirect()->route('item-category')->with('success', 'Item category updated successfully.');
     }
 
     /**

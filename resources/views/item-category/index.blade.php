@@ -53,17 +53,18 @@
               </td>
               <td class="max-w-sm px-6 py-4 text-sm text-gray-600">
                 <span class="line-clamp-2">
-                  {{ $category->created_at->translatedFormat('l, d M Y') }}
+                  {{ $category->created_at->translatedFormat('l, d M Y | H:i') }}
                 </span>
               </td>
               <td class="max-w-sm px-6 py-4 text-sm text-gray-600">
                 <span class="line-clamp-2">
-                  {{ $category->updated_at->translatedFormat('l, d M Y') }}
+                  {{ $category->updated_at->translatedFormat('l, d M Y | H:i') }}
                 </span>
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
                 <div class="flex items-center gap-3">
-                  <a href="#" class="text-blue-600 hover:text-blue-800" title="Edit">
+                  <a href="{{ route('item-category.edit', $category->id) }}" class="text-blue-600 hover:text-blue-800"
+                    title="Edit">
                     <img src="{{ asset('update-button.svg') }}" alt="Edit" class="inline h-5 w-5">
                   </a>
 
@@ -82,9 +83,9 @@
           @endforelse
         </x-slot>
         <x-slot name="showing">
-            Showing
-            <span class="font-medium"> {{ $categories->count() }}</span> data of
-            <span class="font-medium">{{ $categories->count() }}</span> entries
+          Showing
+          <span class="font-medium"> {{ $categories->count() }}</span> data of
+          <span class="font-medium">{{ $categories->count() }}</span> entries
 
         </x-slot>
         <x-slot name="pagination">
