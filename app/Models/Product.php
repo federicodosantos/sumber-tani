@@ -9,17 +9,19 @@ class Product extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'item_categories';
+    protected $table = 'products';
 
-    protected $fillable = [
-        'name',
-        'description',
-    ];
+    protected $fillable = ['id', 'name', 'description', 'item_category_id'];
 
     protected $dates = ['deleted_at'];
 
     public function products()
     {
         return $this->hasMany(Product::class, 'item_category_id', 'id');
+    }
+
+    public function getIdAttribute($value)
+    {
+        return $value;
     }
 }

@@ -99,11 +99,4 @@ class ItemCategoryController extends Controller
 
         return redirect()->route('item-category')->with('success', 'Item category deleted successfully.');
     }
-
-    public function getAllCategoriesName()
-    {
-        $categories = ItemCategory::orderBy('name', 'asc')->pluck('name');
-
-        return response()->json($categories);
-    }
 }

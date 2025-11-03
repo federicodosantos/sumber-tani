@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ItemCategoryController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Models\ItemCategory;
 use Illuminate\Support\Facades\Route;
@@ -22,10 +23,6 @@ Route::get('/dashboard', function () {
 })->middleware(['auth'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/product', function () {
-        return view('product');
-    })->name('product');
-
     // ITEM CATEGORY ROUTES
     Route::get('/item-category', [ItemCategoryController::class, 'index'])->name('item-category');
     Route::get('/item-category/create', [ItemCategoryController::class, 'create'])->name('item-category.create');
@@ -33,6 +30,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/item-category/{itemCategory}/edit', [ItemCategoryController::class, 'edit'])->name('item-category.edit');
     Route::put('/item-category/{itemCategory}', [ItemCategoryController::class, 'update'])->name('item-category.update');
     Route::delete('/item-category/{itemCategory}', [ItemCategoryController::class, 'destroy'])->name('item-category.destroy');
+
+    // PRODUCT ROUTES
+    Route::get('/product', [ProductController::class, 'index'])->name('product');
+    Route::get('/product/create', [ProductController::class, 'create'])->name('product.create');
+    Route::post('/product', [ProductController::class, 'store'])->name('product.store');
+    Route::get('/product/{product}/edit', [ProductController::class, 'edit'])->name('product.edit');
+    Route::put('/product/{product}', [ProductController::class, 'update'])->name('product.update');
+    Route::delete('/product/{product}', [ProductController::class, 'destroy'])->name('product.destroy');
 });
 
 Route::middleware('auth')->group(function () {
