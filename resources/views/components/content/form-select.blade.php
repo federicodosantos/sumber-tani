@@ -5,7 +5,7 @@
         {{ $label }}
     </label>
     <select id="{{ $name }}" name="{{ $name }}"
-        {{ $attributes->merge(['class' => 'block w-full px-4 rounded-lg border-2 border-button-main focus:outline-none py-3']) }}>
+        {{ $attributes->merge(['class' => 'block w-full px-2 rounded-lg border-2 focus:border-button-hover focus:outline-none py-2 cursor-pointer transition-all duration-100']) }}>
         {{ $slot }}
     </select>
 

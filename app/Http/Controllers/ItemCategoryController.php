@@ -12,7 +12,7 @@ class ItemCategoryController extends Controller
      */
     public function index()
     {
-        $categories = ItemCategory::orderBy('created_at', 'name')->get();
+        $categories = ItemCategory::orderBy('name', 'asc')->get();
 
         return view('item-category.index', compact('categories'));
     }
@@ -35,10 +35,17 @@ class ItemCategoryController extends Controller
             'description' => 'nullable|string',
         ]);
 
+        $isExist = ItemCategory::where('name', $validated['name'])->exists();
+        if ($isExist) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['name' => 'Kategori dengan nama tersebut sudah ada.']);
+        }
+
         ItemCategory::create($validated);
 
         return redirect()->route('item-category')
-                         ->with('success', 'Item category created successfully.');
+            ->with('success', 'Item category created successfully.');
     }
 
     /**

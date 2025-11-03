@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\ProfileController;
+use App\Models\ItemCategory;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -24,9 +26,11 @@ Route::middleware('auth')->group(function () {
         return view('product');
     })->name('product');
 
-    Route::get('/item-category', function () {
-        return view('item-category.index');
-    })->name('item-category');
+    // ITEM CATEGORY ROUTES
+    Route::get('/item-category', [ItemCategoryController::class, 'index'])->name('item-category');
+    Route::get('/item-category/create', [ItemCategoryController::class, 'create'])->name('item-category.create');
+    Route::post('/item-category', [ItemCategoryController::class, 'store'])->name('item-category.store');
+    Route::get('/item-category/{itemCategory}/edit', [ItemCategoryController::class, 'edit'])->name('item-category.edit');
 });
 
 Route::middleware('auth')->group(function () {

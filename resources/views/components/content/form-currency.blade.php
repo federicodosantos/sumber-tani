@@ -20,7 +20,7 @@ if (rawValue) {
     <input type="text" id="{{ $name }}_display" x-ref="displayInput" inputmode="numeric"
         placeholder="{{ $placeholder }}" x-on:keyup="rawValue = autoNumericInstance.getNumericString()"
         x-on:change="rawValue = autoNumericInstance.getNumericString()"
-        class="border-button-main block w-full rounded-lg border-2 px-4 py-3 focus:outline-none"
+        class="focus:border-button-hover transition-all duration-100  block w-full rounded-lg border-2 px-3 py-2 focus:outline-none"
         {{ $attributes->whereDoesntStartWith('name') }}>
 
     <input type="hidden" id="{{ $name }}" name="{{ $name }}" x-model="rawValue">
