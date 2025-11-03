@@ -68,9 +68,8 @@
                     <img src="{{ asset('update-button.svg') }}" alt="Edit" class="inline h-5 w-5">
                   </a>
 
-                  <a href="#" class="text-red-600 hover:text-red-800" title="Delete">
-                    <img src="{{ asset('delete-button.svg') }}" alt="Delete" class="inline h-5 w-5">
-                  </a>
+                  <x-delete :module="'kategori'" :name="$category->name" :action="route('item-category.destroy', $category->id)" />
+
                 </div>
               </td>
             </tr>
