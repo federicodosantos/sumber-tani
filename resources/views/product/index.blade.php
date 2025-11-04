@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="py-12 flex justify-center items-center max-h-screen font-mont">
+    <div class="py-2 flex justify-center items-center max-h-screen font-mont">
     <div class="mx-auto w-full sm:px-6 lg:px-8">
       <div class="mb-4 flex justify-start">
         <x-button.add-button href="product/create">
@@ -26,6 +26,9 @@
             Deskripsi Produk
           </th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+            Kategori Produk
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
             Dibuat Pada
           </th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
@@ -49,6 +52,11 @@
               <td class="max-w-sm px-6 py-4 text-sm text-gray-600">
                 <span class="line-clamp-2">
                   {{ $product->description ?? '-' }}
+                </span>
+              </td>
+              <td class="max-w-sm px-6 py-4 text-sm text-gray-600">
+                <span class="line-clamp-2">
+                  {{ $product->category->name ?? '-' }}
                 </span>
               </td>
               <td class="max-w-sm px-6 py-4 text-sm text-gray-600">

@@ -13,7 +13,7 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products = Product::orderBy('name', 'asc')->get();
+        $products = Product::with('category')->orderBy('name', 'asc')->get();
 
         return view('product.index', compact('products'));
     }
@@ -24,6 +24,7 @@ class ProductController extends Controller
     public function create()
     {
         $categories = ItemCategory::orderBy('name', 'asc')->get();
+
         return view('product.create', compact('categories'));
     }
 
@@ -49,6 +50,7 @@ class ProductController extends Controller
         }
 
         Product::create($validated);
+
         return redirect()->route('product')->with('success', 'Product created successfully.');
     }
 
@@ -76,11 +78,10 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:100|unique:products,name,' . $product->id,
+            'name' => 'required|string|max:100',
             'description' => 'nullable|string',
             'item_category_id' => 'required|exists:item_categories,id',
         ]);
-
         $isExist = Product::where('name', $validated['name'])->where('id', '!=', $product->id)->exists();
 
         if ($isExist) {

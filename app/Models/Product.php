@@ -15,9 +15,9 @@ class Product extends Model
 
     protected $dates = ['deleted_at'];
 
-    public function products()
+    public function category()
     {
-        return $this->hasMany(Product::class, 'item_category_id', 'id');
+        return $this->belongsTo(ItemCategory::class, 'item_category_id', 'id');
     }
 
     public function getIdAttribute($value)

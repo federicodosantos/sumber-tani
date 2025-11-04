@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ItemCategory;
+use App\Models\Product;
 use Illuminate\Http\Request;
 
 class ItemCategoryController extends Controller
@@ -95,6 +96,14 @@ class ItemCategoryController extends Controller
      */
     public function destroy(ItemCategory $itemCategory)
     {
+        $isCategoryUsed = Product::where('item_category_id', $itemCategory->id)->exists();
+        if ($isCategoryUsed) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['name' => 'Kategori dengan nama tersebut sudah ada.']);
+        }
+
         $itemCategory->delete();
 
         return redirect()->route('item-category')->with('success', 'Item category deleted successfully.');

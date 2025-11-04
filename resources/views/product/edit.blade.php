@@ -10,11 +10,12 @@
           <x-content.form-input label="Kode Produk" name="id" value="{{ old('id', $product->id) }}" disabled="true"
             class="bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed" required />
 
-          <x-content.form-input label="Nama Produk" name="id" value="{{ old('name', $product->name) }}" required />
+          <x-content.form-input label="Nama Produk" name="name" value="{{ old('name', $product->name) }}" required />
           <x-content.form-select label="Nama Kategori" name="item_category_id" required>
             <option value="">Pilih Kategori Produk</option>
             @foreach ($categories as $category)
-              <option value="{{ $category->id }}" {{ old('item_category_id') == $category->id ? 'selected' : '' }}>
+              <option value="{{ $category->id }}"
+                {{ old('item_category_id', $product->item_category_id) == $category->id ? 'selected' : '' }}>
                 {{ $category->name }}
               </option>
             @endforeach
@@ -27,7 +28,7 @@
         </x-slot:rightCol>
 
         <x-slot:actions>
-          <x-button.remove-button href="{{ route('item-category') }}">
+          <x-button.remove-button href="{{ route('product') }}">
             <span class="font-bold">CANCEL</span>
           </x-button.remove-button>
 
