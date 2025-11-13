@@ -22,6 +22,9 @@
 </head>
 
 <body class="font-sans antialiased bg-gray-100">
+
+  <x-flash-message />
+
   <div class="min-h-screen flex">
     {{-- sidebar --}}
     <x-partials.sidebar />

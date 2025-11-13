@@ -3,7 +3,7 @@
 use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
-use App\Models\ItemCategory;
+use App\Http\Controllers\ProductStockController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -20,7 +20,9 @@ Route::get('/create', function () {
 
 Route::get('/dashboard', function () {
     return view('dashboard');
-})->middleware(['auth'])->name('dashboard');
+})
+    ->middleware(['auth'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     // ITEM CATEGORY ROUTES
@@ -38,6 +40,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/product/{product}/edit', [ProductController::class, 'edit'])->name('product.edit');
     Route::put('/product/{product}', [ProductController::class, 'update'])->name('product.update');
     Route::delete('/product/{product}', [ProductController::class, 'destroy'])->name('product.destroy');
+
+    // PRODUCT STOCK ROUTES
+    Route::get('/stock', [ProductStockController::class, 'index'])->name('stock.index');
+    Route::get('/stock/create', [ProductStockController::class, 'create'])->name('stock.create');
+    Route::get('/stock/{stock_id}', [ProductStockController::class, 'edit'])->name('stock.edit');
+    Route::put('/stock/{stock_id}', [ProductStockController::class, 'update'])->name('stock.update');
+    Route::post('/stock', [ProductStockController::class, 'store'])->name('stock.store');
+    Route::delete('/stock/{stock_id}', [ProductStockController::class, 'destroy'])->name('stock.destroy');
 });
 
 Route::middleware('auth')->group(function () {
@@ -46,4 +56,4 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
