@@ -5,7 +5,7 @@
       <x-content.form-card action="{{ route('product.store') }}" method="POST">
         @csrf
         <x-slot:leftCol>
-          <x-content.form-input label="Kode Produk" name="id" placeholder="XX-1234" required />
+          <x-content.form-input label="Kode Produk" name="code_id" placeholder="XX-1234" required />
           <x-content.form-input label="Nama Produk" name="name" placeholder="Pupuk Udang" required />
           <x-content.form-select label="Nama Kategori" name="item_category_id" required>
             <option value="">Pilih Kategori Produk</option>

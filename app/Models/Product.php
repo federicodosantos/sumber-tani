@@ -11,7 +11,7 @@ class Product extends Model
 
     protected $table = 'products';
 
-    protected $fillable = ['id', 'name', 'description', 'item_category_id'];
+    protected $fillable = ['code_id', 'name', 'description', 'item_category_id'];
 
     protected $dates = ['deleted_at'];
 
