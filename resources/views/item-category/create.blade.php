@@ -15,11 +15,11 @@
 
         <x-slot:actions>
           <x-button.remove-button href="/item-category">
-            <span class="font-bold">CANCEL</span>
+            <span class="font-bold">BATAL</span>
           </x-button.remove-button>
 
           <x-button.add-button type="submit">
-            <span class="font-bold">CREATE CATEGORY</span>
+            <span class="font-bold">TAMBAH KATEGORI</span>
           </x-button.add-button>
         </x-slot:actions>
 
