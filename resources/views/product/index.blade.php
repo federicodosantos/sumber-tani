@@ -91,53 +91,12 @@
         </x-slot>
         <x-slot name="showing">
           Showing
-          <span class="font-medium"> {{ $products->count() }}</span> data of
-          <span class="font-medium">{{ $products->count() }}</span> entries
+          <span class="font-medium"> {{ $products->firstItem() ?? 0 }}-{{ $products->lastItem() ?? 0 }}</span> data of
+          <span class="font-medium">{{ $products->total() }}</span> entries
 
         </x-slot>
         <x-slot name="pagination">
-          <a href="#"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-500 hover:bg-gray-50">
-            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd"
-                d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z"
-                clip-rule="evenodd" />
-            </svg>
-          </a>
-
-          {{-- Active Page --}}
-          <a href="#"
-            class="border-button-main bg-button-main inline-flex h-8 w-8 items-center justify-center rounded-md border text-sm font-medium text-white"
-            aria-current="page">
-            1
-          </a>
-          <a href="#"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
-            2
-          </a>
-          <a href="#"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
-            3
-          </a>
-          <a href="#"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
-            4
-          </a>
-          <span class="inline-flex h-8 w-8 items-center justify-center text-sm text-gray-500">
-            ...
-          </span>
-          <a href="#"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
-            26
-          </a>
-          <a href="#"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-500 hover:bg-gray-50">
-            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd"
-                d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z"
-                clip-rule="evenodd" />
-            </svg>
-          </a>
+          {{ $products->onEachSide(1)->links() }}
         </x-slot>
       </x-content.data-table>
     </div>

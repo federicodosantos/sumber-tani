@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ItemCategoryController;
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductStockController;
@@ -48,6 +49,10 @@ Route::middleware('auth')->group(function () {
     Route::put('/stock/{stock_id}', [ProductStockController::class, 'update'])->name('stock.update');
     Route::post('/stock', [ProductStockController::class, 'store'])->name('stock.store');
     Route::delete('/stock/{stock_id}', [ProductStockController::class, 'destroy'])->name('stock.destroy');
+
+    // ACTIVITY LOG ROUTES
+    Route::get('/riwayat-aktivitas', [ActivityLogController::class, 'index'])->name('activity-log.index');
+    Route::get('/riwayat-aktivitas/{activity}', [ActivityLogController::class, 'show'])->name('activity-log.show');
 });
 
 Route::middleware('auth')->group(function () {
