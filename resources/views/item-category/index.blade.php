@@ -1,5 +1,5 @@
 <x-app-layout>
-  <div class="py-2 flex justify-center items-center font-mont">
+  <div class="py-6 flex justify-center items-start min-h-screen font-mont">
     <div class="mx-auto w-full sm:px-6 lg:px-8">
       <div class="mb-4 flex justify-start">
         <x-button.add-button href="item-category/create">

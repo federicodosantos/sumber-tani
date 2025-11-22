@@ -86,9 +86,8 @@
 
                     @forelse ($products as $product)
                         <tr class="hover:bg-gray-50/50">
-
                             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-black">
-                                {{ $product->product_id }}
+                                {{ $product->code_id }}
                             </td>
 
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-black">
@@ -128,13 +127,13 @@
                             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
                                 @if (is_null($product->stock_opname))
                                     <a href="{{ route('stock.create', ['product_id' => $product->product_id]) }}"
-                                        class="font-bold text-blue-600 hover:text-blue-800">
+                                        class="font-bold text-button-main hover:text-button-hover">
                                         Isi Stok Awal
                                     </a>
                                 @else
                                     <div class="flex items-center gap-3">
                                         <a href="{{ route('stock.edit', $product->stock_id) }}"
-                                            class="text-blue-600 hover:text-blue-800" title="Edit">
+                                            class="text-button-main hover:text-button-hover" title="Edit">
                                             <img src="{{ asset('update-button.svg') }}" alt="Edit"
                                                 class="inline h-5 w-5">
                                         </a>

@@ -27,6 +27,7 @@ class ProductStockController extends Controller
         })
         ->select(
             'products.id as product_id', 
+            'products.code_id as code_id',
             'products.name', 
             'products.description',
             'ps.id as stock_id',   

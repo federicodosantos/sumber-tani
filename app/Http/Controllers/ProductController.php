@@ -6,6 +6,7 @@ use App\Models\ItemCategory;
 use App\Models\Product;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -62,6 +63,8 @@ class ProductController extends Controller
                     ->withInput()
                     ->withErrors(['general' => 'ID atau nama produk sudah digunakan.']);
             }
+
+            $validated['code_id'] = Str::upper($validated['code_id']);
 
             Product::create($validated);
 
