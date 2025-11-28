@@ -24,11 +24,18 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        try {
         $request->authenticate();
 
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard', absolute: false));
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()
+                ->back()
+                ->withInput($request->only('email', 'remember'))
+                ->withErrors(['email' => 'Gagal masuk. Silakan periksa kredensial Anda dan coba lagi.']);
+        }
     }
 
     /**
