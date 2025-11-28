@@ -27,13 +27,33 @@
 
                 <nav class="space-y-1">
                     @foreach ($categories as $item)
-                        @php $isActive = request('category') == $item->id; @endphp
+                        @php
+                            // Cek apakah ada request search?
+                            $isSearching = request()->has('search') && request('search') != '';
+
+                            // Item aktif jika ID cocok DAN tidak sedang searching
+                            $isActive = request('category') == $item->id && !$isSearching;
+                        @endphp
+
                         <a href="{{ route('cashier', ['category' => $item->id]) }}"
                             class="{{ $isActive ? 'bg-button-main text-white font-medium' : 'text-gray-700 hover:bg-gray-100' }} block rounded-lg px-4 py-2.5 transition-colors">
                             {{ $item->name }}
                         </a>
                     @endforeach
                 </nav>
+
+                @if (request('search'))
+                    <div class="mt-4 px-4">
+                        <a href="{{ route('cashier') }}"
+                            class="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 py-2 text-sm text-red-600 hover:bg-red-100">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Reset Pencarian
+                        </a>
+                    </div>
+                @endif
             </div>
 
             <div class="border-t border-gray-200 bg-white p-4">

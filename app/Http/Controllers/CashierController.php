@@ -8,17 +8,15 @@ use Illuminate\Http\Request;
 
 class CashierController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         $categories = ItemCategory::all();
-
-        if (!$request->has('category') && $categories->isNotEmpty()) {
         
+        $categoryId = $request->query('category');
+        $search = $request->query('search');
+
+        if (!$categoryId && !$search && $categories->isNotEmpty()) {
             $firstCategoryId = $categories->first()->id;
-    
             return redirect()->route('cashier', ['category' => $firstCategoryId]);
         }
 
@@ -28,63 +26,38 @@ class CashierController extends Controller
             'products.description',
             'ps.stock_opname',
             'ps.price',
-            'ic.name as category_name')
+            'ic.name as category_name'
+        )
             ->join('product_stocks as ps', 'products.id', '=', 'ps.product_id')
             ->join('item_categories as ic', 'products.item_category_id', '=', 'ic.id')
-            ->when($request->query('category'), function ($query, $categoryId) {
-                return $query->where('item_category_id', $categoryId);
+            
+            ->when($categoryId && !$search, function ($query) use ($categoryId) {
+                return $query->where('products.item_category_id', $categoryId);
             })
+
+            // Logic Search
+            ->when($search, function ($query, $search) {
+                return $query->where('products.name', 'like', "%{$search}%");
+            })
+
+            // Logic Sorting
+            ->when($request->query('sort'), function ($query, $sort) {
+                switch ($sort) {
+                    case 'price_low': return $query->orderBy('ps.price', 'asc');
+                    case 'price_high': return $query->orderBy('ps.price', 'desc');
+                    case 'stock_low': return $query->orderBy('ps.stock_opname', 'asc');
+                    case 'stock_high': return $query->orderBy('ps.stock_opname', 'desc');
+                    case 'name_za': return $query->orderBy('products.name', 'desc');
+                    default: return $query->orderBy('products.name', 'asc');
+                }
+            }, function ($query) {
+                return $query->orderBy('products.name', 'asc');
+            })
+            
             ->whereNull('products.deleted_at')
-            ->whereNull('ps.deleted_at')->get();
+            ->whereNull('ps.deleted_at')
+            ->get();
 
         return view('cashier.index', compact('categories', 'products'));
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
     }
 }
