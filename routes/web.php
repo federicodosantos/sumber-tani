@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductStockController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -55,6 +56,10 @@ Route::middleware('auth')->group(function () {
     // ACTIVITY LOG ROUTES
     Route::get('/riwayat-aktivitas', [ActivityLogController::class, 'index'])->name('activity-log.index');
     Route::get('/riwayat-aktivitas/{activity}', [ActivityLogController::class, 'show'])->name('activity-log.show');
+
+
+    // TRANSACTION ROUTES
+    Route::post('/checkout', [TransactionController::class, 'store'])->name('trx.store');
 });
 
 Route::middleware('auth')->group(function () {

@@ -1,6 +1,5 @@
 export default function cashierHandler() {
     return {
-        
         cart: Alpine.$persist([]).as('pos-cart'),
 
         get totalQty() {
@@ -10,6 +9,10 @@ export default function cashierHandler() {
         get totalPrice() {
             return this.cart.reduce((total, item) => total + (item.price * item.qty), 0);
         },
+        get totalAmount() {
+            return this.formatRupiah(this.totalPrice);
+        },
+
 
         addToCart(id, name, stock, price) {
             const existingItem = this.cart.find(item => item.id === id);
@@ -59,13 +62,31 @@ export default function cashierHandler() {
 
         processCheckout() {
             if (this.cart.length === 0) return alert('Keranjang kosong');
+            if (!confirm('Proses Transaksi?')) return;
+            
+            const payload = {
+                items: this.cart,
+                totalQty: this.totalQty,
+                totalAmount: this.totalPrice
+            };
 
-            console.log('Checkout:', JSON.parse(JSON.stringify(this.cart)));
-
-            if (confirm('Proses Transaksi?')) {
-                this.cart = [];
+            // Kirim ke controller
+            fetch('/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify(payload)
+            }).then(res => res.json()).then(response => {
+                console.log('Response server:', response);
                 alert('Transaksi Berhasil!');
-            }
+                // Kosongkan keranjang setelah data berhasil dikirim
+                this.cart = [];
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('Gagal mengirim data ke server!');
+            });
         }
     };
 }
