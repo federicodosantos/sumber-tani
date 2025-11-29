@@ -5,6 +5,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductStockController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -19,13 +20,14 @@ Route::get('/create', function () {
     return view('tutorial-pakai-template.test-create-update');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})
-    ->middleware(['auth'])
-    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    // DASHBOARD ROUTE
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    
+    // CASHIER ROUTE
+    Route::get('/cashier', [App\Http\Controllers\CashierController::class, 'index'])->name('cashier');
+    
     // ITEM CATEGORY ROUTES
     Route::get('/item-category', [ItemCategoryController::class, 'index'])->name('item-category');
     Route::get('/item-category/create', [ItemCategoryController::class, 'create'])->name('item-category.create');

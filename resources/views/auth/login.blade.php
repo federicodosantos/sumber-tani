@@ -1,4 +1,11 @@
 <x-guest-layout>
+    @if(session('error') || session('status') || $errors->any())
+        <div class="mb-4 p-3 rounded text-sm
+            @if(session('error')) bg-red-50 text-red-700 border border-red-200
+            @else bg-yellow-50 text-yellow-700 border border-yellow-200 @endif">
+            {{ session('error') ?? session('status') ?? $errors->first() }}
+        </div>
+    @endif
     <form method="POST" action="{{ route('login') }}">
         @csrf
 

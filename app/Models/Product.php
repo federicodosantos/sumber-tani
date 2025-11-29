@@ -43,6 +43,11 @@ class Product extends Model
         return $this->belongsTo(ItemCategory::class, 'item_category_id', 'id');
     }
 
+    public function stock()
+    {
+        return $this->hasMany(ProductStock::class, 'product_id', 'id');
+    }
+
     public function getIdAttribute($value)
     {
         return $value;
