@@ -70,7 +70,6 @@ export default function cashierHandler() {
                 totalAmount: this.totalPrice
             };
 
-            // Kirim ke controller
             fetch('/checkout', {
                 method: 'POST',
                 headers: {
@@ -81,8 +80,8 @@ export default function cashierHandler() {
             }).then(res => res.json()).then(response => {
                 console.log('Response server:', response);
                 alert('Transaksi Berhasil!');
-                // Kosongkan keranjang setelah data berhasil dikirim
                 this.cart = [];
+                location.reload(); 
             }).catch(error => {
                 console.error('Error:', error);
                 alert('Gagal mengirim data ke server!');
