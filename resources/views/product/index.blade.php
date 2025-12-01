@@ -6,7 +6,7 @@
           <x-slot name="icon">
             <img src="{{ asset('icon/add-icon.svg') }}" alt="Add Icon" class="h-5 w-5">
           </x-slot>
-          <span class="font-bold">ADD PRODUCT</span>
+          <span class="font-bold">TAMBAH PRODUK</span>
         </x-button.add-button>
       </div>
 
@@ -84,7 +84,7 @@
           @empty
             <tr>
               <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500 italic">
-                No products found.
+                Belum ada data produk.
               </td>
             </tr>
           @endforelse

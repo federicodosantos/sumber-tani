@@ -9,10 +9,10 @@ export default function cashierHandler() {
         get totalPrice() {
             return this.cart.reduce((total, item) => total + (item.price * item.qty), 0);
         },
+        
         get totalAmount() {
             return this.formatRupiah(this.totalPrice);
         },
-
 
         addToCart(id, name, stock, price) {
             const existingItem = this.cart.find(item => item.id === id);
@@ -37,15 +37,58 @@ export default function cashierHandler() {
             if (!item) return;
 
             const newQty = item.qty + change;
+            
             if (newQty > item.stock) {
-                alert('Stok mentok boss!');
+                alert('Stok tidak mencukupi! Stok tersedia: ' + item.stock);
                 return;
             }
+            
             if (newQty <= 0) {
                 this.removeItem(id);
             } else {
                 item.qty = newQty;
             }
+        },
+
+        // Method baru untuk handle input manual
+        setQty(id, value) {
+            const item = this.cart.find(item => item.id === id);
+            if (!item) return;
+
+            // Parse input jadi integer
+            let newQty = parseInt(value) || 0;
+
+            // Validasi: jika kosong atau 0, set ke 1
+            if (newQty <= 0) {
+                newQty = 1;
+            }
+
+            // Validasi: jika melebihi stok
+            if (newQty > item.stock) {
+                alert(`Stok tidak mencukupi!\nStok tersedia: ${item.stock}\nJumlah yang diminta: ${newQty}`);
+                item.qty = item.stock; // Set ke maksimal stok
+                return;
+            }
+
+            // Set quantity yang valid
+            item.qty = newQty;
+        },
+
+        // Method untuk handle blur (saat user selesai mengetik)
+        handleQtyBlur(id, event) {
+            const value = event.target.value;
+            const item = this.cart.find(item => item.id === id);
+            
+            if (!item) return;
+
+            // Jika input kosong, kembalikan ke nilai sebelumnya atau 1
+            if (!value || value === '' || parseInt(value) <= 0) {
+                event.target.value = item.qty;
+                alert('Jumlah minimal adalah 1');
+                return;
+            }
+
+            this.setQty(id, value);
         },
 
         removeItem(id) {

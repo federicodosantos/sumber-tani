@@ -6,7 +6,7 @@
           <x-slot name="icon">
             <img src="{{ asset('icon/add-icon.svg') }}" alt="Add Icon" class="h-5 w-5">
           </x-slot>
-          <span class="font-bold">ADD CATEGORY</span>
+          <span class="font-bold">TAMBAH KATEGORI<span>
         </x-button.add-button>
       </div>
 
@@ -76,7 +76,7 @@
           @empty
             <tr>
               <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500 italic">
-                No categories found.
+                Belum ada data kategori.
               </td>
             </tr>
           @endforelse

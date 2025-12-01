@@ -6,6 +6,7 @@ use App\Models\ProductStock;
 use App\Models\Transaction;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
@@ -35,7 +36,7 @@ class TransactionController extends Controller
         $totalAmount = $request->totalAmount;
 
         try {
-            \DB::beginTransaction();
+            DB::beginTransaction();
 
             $transaction = Transaction::create([
                 'total_quantity' => $totalQty,
@@ -57,7 +58,7 @@ class TransactionController extends Controller
                 }
             }
 
-            \DB::commit();
+            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -66,7 +67,7 @@ class TransactionController extends Controller
                 'totalAmount' => $totalAmount,
             ]);
         } catch (\Exception $e) {
-            \DB::rollBack();
+            DB::rollBack();
 
             return response()->json(
                 [

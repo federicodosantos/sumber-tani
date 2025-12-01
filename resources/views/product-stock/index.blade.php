@@ -5,7 +5,7 @@
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2 md:divide-x md:divide-gray-200">
 
             <div class="flex items-center justify-center gap-5 pt-6 md:pt-0">
-                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-cyan-600">
+                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-button-main text-white">
                     <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9h16.5m-16.5 6.25h16.5" />
@@ -19,7 +19,7 @@
             </div>
 
             <div class="flex items-center justify-center gap-5 pt-6 md:pt-0">
-                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-cyan-600">
+                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-button-main text-white">
                     <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round"

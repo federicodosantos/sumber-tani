@@ -28,10 +28,8 @@
                 <nav class="space-y-1">
                     @foreach ($categories as $item)
                         @php
-                            // Cek apakah ada request search?
                             $isSearching = request()->has('search') && request('search') != '';
 
-                            // Item aktif jika ID cocok DAN tidak sedang searching
                             $isActive = request('category') == $item->id && !$isSearching;
                         @endphp
 
@@ -98,15 +96,24 @@
 
                         <div class="flex items-center gap-3">
                             <button @click="updateQty(item.id, -1)"
-                                class="bg-button-main flex h-8 w-8 items-center justify-center rounded-lg text-white">
+                                class="bg-button-main hover:bg-button-hover flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors"
+                                type="button">
                                 -
                             </button>
-                            <input type="number" :value="item.qty" readonly
-                                class="h-8 w-12 rounded-lg border bg-white text-center">
+
+                            <input type="number" :value="item.qty" @input="setQty(item.id, $event.target.value)"
+                                @blur="handleQtyBlur(item.id, $event)" min="1" :max="item.stock"
+                                class="h-8 w-16 rounded-lg border border-gray-300 bg-white text-center focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+
                             <button @click="updateQty(item.id, 1)"
-                                class="bg-button-main flex h-8 w-8 items-center justify-center rounded-lg text-white">
+                                class="bg-button-main hover:bg-button-hover flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors"
+                                type="button">
                                 +
                             </button>
+
+                            <span class="ml-2 text-xs text-gray-500">
+                                / <span x-text="item.stock"></span>
+                            </span>
                         </div>
                     </div>
                 </template>
