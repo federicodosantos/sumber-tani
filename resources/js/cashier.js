@@ -106,7 +106,7 @@ export default function cashierHandler() {
         processCheckout() {
             if (this.cart.length === 0) return alert('Keranjang kosong');
             if (!confirm('Proses Transaksi?')) return;
-            
+
             const payload = {
                 items: this.cart,
                 totalQty: this.totalQty,
@@ -120,15 +120,27 @@ export default function cashierHandler() {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                 },
                 body: JSON.stringify(payload)
-            }).then(res => res.json()).then(response => {
+            })
+                .then(res => res.json())
+                .then(response => {
                 console.log('Response server:', response);
-                alert('Transaksi Berhasil!');
-                this.cart = [];
-                location.reload(); 
-            }).catch(error => {
-                console.error('Error:', error);
-                alert('Gagal mengirim data ke server!');
-            });
-        }
+
+                // ⭐ DI SINI kamu panggil print nota
+            if (response.transaction_id) {
+                printReceipt(response.transaction_id);
+            }
+
+            alert('Transaksi Berhasil!');
+            this.cart = [];
+
+        // beri delay supaya print tidak terganggu refresh
+            setTimeout(() => location.reload(), 500);
+        })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Gagal mengirim data ke server!');
+    });
+}
+
     };
 }

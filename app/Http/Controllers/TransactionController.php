@@ -62,7 +62,7 @@ class TransactionController extends Controller
 
             return response()->json([
                 'success' => true,
-                'transaction' => $transaction->id,
+                'transaction_id' => $transaction->id,
                 'totalQty' => $totalQty,
                 'totalAmount' => $totalAmount,
             ]);
@@ -82,9 +82,36 @@ class TransactionController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Transaction $transaction)
+    public function show($id)
     {
-        //
+        // Load transaction + details + product
+        $transaction = Transaction::with(['transactionDetails.product'])->findOrFail($id);
+
+        // Map details into clean JSON objects
+        $items = $transaction->transactionDetails->map(function ($detail) {
+            return [
+                'name' => $detail->product?->name ?? 'Unknown',
+                'price' => (float) $detail->product_price,
+                'qty' => (int) $detail->quantity,
+                'total' => (float) $detail->total_price,
+            ];
+        });
+
+        return response()->json([
+            'store' => [
+                'name' => 'TOKO MAKMUR JAYA',
+                'address' => 'Jl. Merdeka No. 12',
+            ],
+
+            'transaction' => [
+                'id' => $transaction->id,
+                'datetime' => $transaction->created_at->format('d/m/Y H:i:s'),
+                'total_qty' => (int) $transaction->total_quantity,
+                'total' => (float) $transaction->total_price,
+            ],
+
+            'items' => $items,
+        ]);
     }
 
     /**

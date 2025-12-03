@@ -8,6 +8,127 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Cashier - {{ config('app.name', 'SUMBER TANI') }}</title>
+    <script src="{{ asset('qz/qz-tray.js') }}"></script>
+    <script>
+        // auto connect saat halaman dibuka
+        function connectQZ() {
+            if (!qz.websocket.isActive()) {
+                qz.websocket.connect().then(() => {
+                    console.log("QZ connected");
+                }).catch(err => console.error(err));
+            }
+        }
+
+        function disconnectQZ() {
+            if (qz.websocket.isActive()) {
+                qz.websocket.disconnect();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', connectQZ);
+        window.addEventListener('beforeunload', disconnectQZ);
+    </script>
+    <script>
+        function listPrinters() {
+            qz.printers.find().then(function(printers) {
+                console.log("Daftar printer:", printers);
+                alert(printers.join("\n"));
+            });
+        }
+    </script>
+    <script>
+        const LINE_CHARS = 42; // atau 48 sesuai printer
+
+        function padRight(text, length) {
+            return (text + ' '.repeat(length)).slice(0, length);
+        }
+
+        function padLeft(text, length) {
+            text = String(text);
+            return (' '.repeat(length) + text).slice(-length);
+        }
+
+        function formatItemLine(name, qty, price, total) {
+            // contoh: "Aqua 600ml x2  6.000  12.000"
+            const namePart = padRight(name, 20);
+            const qtyPart = padLeft(qty, 3);
+            const pricePart = padLeft(price, 8);
+            const totalPart = padLeft(total, 9);
+            return namePart + qtyPart + pricePart + totalPart;
+        }
+    </script>
+    <script>
+        const PRINTER_NAME = "Generic / Text Only"; // ganti hasil dari listPrinters()
+
+        function printReceipt(saleId) {
+
+            fetch(`/receipt/${saleId}`)
+                .then(res => res.json())
+                .then(async (data) => {
+
+                    // Pastikan koneksi QZ aktif
+                    if (!qz.websocket.isActive()) {
+                        await qz.websocket.connect();
+                    }
+
+                    return data; // ⬅ WAJIB return data agar bisa dipakai next then
+                })
+                .then((data) => {
+
+                    let config = qz.configs.create(PRINTER_NAME);
+
+                    let esc = "\x1B"; // ESC
+                    let gs = "\x1D"; // GS
+
+                    let cmds = [];
+
+                    // Init
+                    cmds.push(esc + "@");
+                    cmds.push(esc + "M" + "\x00");
+
+                    // Center
+                    cmds.push(esc + "a" + "\x01");
+                    cmds.push(data.store.name + "\n");
+                    cmds.push(data.store.address + "\n");
+                    cmds.push("------------------------------\n");
+
+                    // Left
+                    cmds.push(esc + "a" + "\x00");
+                    cmds.push("Tanggal: " + data.transaction.datetime + "\n");
+                    cmds.push("------------------------------\n");
+
+                    // Items
+                    data.items.forEach(item => {
+                        let line = formatItemLine(
+                            item.name,
+                            item.qty,
+                            item.price.toLocaleString('id-ID'),
+                            item.total.toLocaleString('id-ID')
+                        );
+                        cmds.push(line + "\n");
+                    });
+
+                    cmds.push("------------------------------\n");
+
+                    // Total
+                    cmds.push("TOTAL : " + padLeft(
+                        data.transaction.total.toLocaleString('id-ID'),
+                        15
+                    ) + "\n");
+
+                    cmds.push("\n\n");
+
+                    // Cut
+                    cmds.push(gs + "V" + "\x00");
+
+                    // Print
+                    return qz.print(config, cmds);
+                })
+                .catch(err => console.error("QZ ERROR:", err));
+        }
+    </script>
+
+    {{-- <button onclick="listPrinters()">Cek Printer QZ</button> --}}
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
