@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/laporan-keuangan', [FinanceReportController::class, 'index'])->name('finance.index');
 
     // TRANSACTION ROUTES
+    Route::get('/receipt/{id}', [TransactionController::class, 'show']);
     Route::post('/checkout', [TransactionController::class, 'store'])->name('trx.store');
 });
 

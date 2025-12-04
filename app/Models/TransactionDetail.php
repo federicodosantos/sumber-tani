@@ -8,16 +8,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class TransactionDetail extends Model
 {
     protected $table = 'transaction_details';
-    protected $fillable = [
-        'transaction_id',
-        'product_id',
-        'product_price',
-        'quantity',
-        'total_price',
-    ];
+    protected $fillable = ['transaction_id', 'product_id', 'product_price', 'quantity', 'total_price'];
 
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class, 'transaction_id');
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'product_id');
     }
 }
