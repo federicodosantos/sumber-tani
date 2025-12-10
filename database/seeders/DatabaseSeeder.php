@@ -17,10 +17,18 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
+        $role = ['OWNER', 'EMPLOYEE'];
+
         User::factory()->create([
-            'username' => 'atmin',
+            'username' => 'owner',
             'password' => bcrypt('password123'),
-            'role' => 'admin',
+            'role' => $role[0],
+        ]);
+
+        User::factory()->create([
+            'username' => 'employee',
+            'password' => bcrypt('password123'),
+            'role' => $role[1],
         ]);
     }
 }

@@ -6,7 +6,8 @@ use App\Models\Product;
 use App\Models\ItemCategory;
 use App\Models\ProductStock;
 use Exception;
-use Illuminate\Support\Facades\DB;
+use App\Models\Transaction;
+use Carbon\Carbon;
 
 class DashboardService
 {
@@ -31,11 +32,12 @@ class DashboardService
             $summary = compact('totalProducts', 'totalStock', 'fiveLowest', 'totalCategories', 'mostItemCategory', 'leastItemCategory');
 
             if ($user && $user->isOwner()) {
-                // $summary["monthlyIncome"] = DB::table("orders")
-                //     ->whereYear("created_at", now()->year)
-                //     ->whereMonth("created_at", now()->month)
-                //     ->sum("total_amount");
-                $summary['isOwner'] = $user->isOwner();
+                $now = Carbon::now();
+                
+                $monthlySales = Transaction::whereYear('created_at', $now->year)->whereMonth('created_at', $now->month)->sum('total_price');
+                
+                
+                $summary['monthlyIncome'] = $monthlySales;
             } else {
                 $summary['monthlyIncome'] = null;
             }

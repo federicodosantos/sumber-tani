@@ -87,6 +87,7 @@
           </a>
         </li>
 
+        @if (auth()->user() && auth()->user()->isOwner())
         <li>
           <a href="{{ url('laporan-keuangan') }}"
             class="flex items-stretch flex-row transition-colors duration-200 rounded-lg
@@ -102,6 +103,7 @@
             </div>
           </a>
         </li>
+        @endif
 
         <li>
           <a href="{{ url('riwayat-aktivitas') }}"

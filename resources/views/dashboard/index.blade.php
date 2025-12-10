@@ -12,7 +12,7 @@
         </div>
 
         <!-- Stats Cards -->
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 {{ $user && $user->isOwner() ? 'lg:grid-cols-4' : 'lg:grid-cols-3' }}">
             <div class="rounded-lg border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
                 <div class="flex items-center justify-between">
                     <div>
@@ -58,6 +58,7 @@
                 </div>
             </div>
 
+            @if ($user && $user->isOwner())
             <div class="rounded-lg border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
                 <div class="flex items-center justify-between">
                     <div>
@@ -78,6 +79,7 @@
                     </div>
                 </div>
             </div>
+            @endif
         </div>
 
         <!-- Category Stats -->
