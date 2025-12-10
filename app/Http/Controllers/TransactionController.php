@@ -99,13 +99,15 @@ class TransactionController extends Controller
 
         return response()->json([
             'store' => [
-                'name' => 'TOKO MAKMUR JAYA',
+                'name' => 'TOKO SUMBERTANI',
                 'address' => 'Jl. Merdeka No. 12',
+                'phone' => '08123456789',
+                'email' => 'admin@sumbertani.net',
             ],
 
             'transaction' => [
                 'id' => $transaction->id,
-                'datetime' => $transaction->created_at->format('d/m/Y H:i:s'),
+                'datetime' => $transaction->created_at->translatedFormat('d M Y H:i'),
                 'total_qty' => (int) $transaction->total_quantity,
                 'total' => (float) $transaction->total_price,
             ],

@@ -50,40 +50,56 @@ const LINE_CHARS = 42;
 function padRight(text, len) { return (text + " ".repeat(len)).slice(0, len); }
 function padLeft(text, len) { return (" ".repeat(len) + text).slice(-len); }
 
+// =====================
+//     PRINT RECEIPT
+// =====================
+function separator(width = 32) {
+    return "-".repeat(width) + "\n";
+}
+
 function formatItemLine(name, qty, price, total) {
+    const col1 = 24;  // name
+    const col2 = 6;   // qty
+    const col3 = 9;   // price
+    const col4 = 9;   // total
+
+    // Cropping jika nama terlalu panjang
+    if (name.length > col1) {
+        name = name.substring(0, col1 - 1) + "…";
+    }
+
     return (
-        padRight(name, 20) +
-        padLeft(qty, 3) +
-        padLeft(price, 8) +
-        padLeft(total, 9)
+        name.padEnd(col1) +
+        qty.toString().padStart(col2) +
+        price.toString().padStart(col3) +
+        total.toString().padStart(col4)
     );
 }
 
 
-// =====================
-//     PRINT RECEIPT
-// =====================
 async function printReceipt(saleId) {
     try {
-        // pastikan QZ connect
         await connectQZ();
 
         const res = await fetch(`/receipt/${saleId}`);
         const data = await res.json();
 
         const config = qz.configs.create(PRINTER_NAME);
-        const esc = "\x1B";   // ESC
-        const gs  = "\x1D";   // GS
+        const esc = "\x1B";
+        const gs  = "\x1D";
 
         const cmds = [
-            esc + "@",                     // init
-            esc + "a" + "\x01",            // center
+            esc + "@",
+
+            // header center
+            esc + "a" + "\x01",
             data.store.name + "\n",
-            data.store.address + "\n",
-            "------------------------------\n",
-            esc + "a" + "\x00",            // left
+            data.store.address + "\n\n\n",
+
+            // left
+            esc + "a" + "\x00",
             "Tanggal: " + data.transaction.datetime + "\n",
-            "------------------------------\n"
+            separator(48)
         ];
 
         data.items.forEach(item => {
@@ -96,19 +112,26 @@ async function printReceipt(saleId) {
                 ) + "\n"
             );
         });
-
+        const totalStr = data.transaction.total.toLocaleString("id-ID");
         cmds.push(
-            "------------------------------\n",
-            "TOTAL : " + padLeft(data.transaction.total.toLocaleString("id-ID"), 15) + "\n",
+            separator(48),
+            "TOTAL : ".padEnd(48 - totalStr.length) + totalStr + "\n",
+            separator(48),
             "\n\n",
-            gs + "V" + "\x00"              // cut
+            esc + "a" + "\x01",
+            "Terima kasih atas kunjungan Anda!\n",
+            "Silahkan datang kembali!\n\n",
+            "Hubungi kami:\n",
+            data.store.phone + "\n",
+            data.store.email + "\n",
+            gs + "V" + "\x00"
         );
 
         await qz.print(config, cmds);
-        console.log("Print berhasil.");
 
     } catch (err) {
         console.error("QZ ERROR:", err);
         alert("Gagal mencetak struk.\n" + err);
     }
 }
+
