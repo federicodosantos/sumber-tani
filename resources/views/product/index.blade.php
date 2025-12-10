@@ -12,8 +12,12 @@
 
       <x-content.data-table>
         <x-slot name="sortOptions">
-          <option>Name</option>xx`
-          <option>Tanggal</option>
+          <option value="product_code_asc" {{ request('sort') == 'product_code_asc' ? 'selected' : '' }}>Kode Produk (A → Z)</option>
+          <option value="product_code_desc" {{ request('sort') == 'product_code_desc' ? 'selected' : '' }}>Kode Produk (Z → A)</option>
+          <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>Nama (A → Z)</option>
+          <option value="name_desc" {{ request('sort') == 'name_desc' ? 'selected' : '' }}>Nama (Z → A)</option>
+          <option value="date_new" {{ request('sort') == 'date_new' ? 'selected' : '' }}>Tanggal Terbaru</option>
+          <option value="date_old" {{ request('sort') == 'date_old' ? 'selected' : '' }}>Tanggal Terlama</option>
         </x-slot>
         <x-slot name="header">
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">

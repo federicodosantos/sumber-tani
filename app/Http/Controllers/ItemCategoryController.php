@@ -11,11 +11,41 @@ class ItemCategoryController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $req)
     {
-        $categories = ItemCategory::orderBy("name", "asc")->get();
+        $query = ItemCategory::query();
 
-        return view("item-category.index", compact("categories"));
+        if ($req->filled('search')) {
+            $search = $req->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        switch ($req->get('sort')) {
+            case 'name_asc':
+                $query->orderBy('name', 'asc');
+                break;
+
+            case 'name_desc':
+                $query->orderBy('name', 'desc');
+                break;
+
+            case 'date_new':
+                $query->orderBy('created_at', 'desc');
+                break;
+
+            case 'date_old':
+                $query->orderBy('created_at', 'asc');
+                break;
+
+            default:
+                $query->orderBy('name', 'asc');
+        }
+
+        $categories = $query->paginate(10)->withQueryString();
+
+        return view('item-category.index', compact('categories'));
     }
 
     /**
@@ -23,7 +53,7 @@ class ItemCategoryController extends Controller
      */
     public function create()
     {
-        return view("item-category.create");
+        return view('item-category.create');
     }
 
     /**
@@ -32,25 +62,23 @@ class ItemCategoryController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            "name" => "required|string|max:100",
-            "description" => "nullable|string",
+            'name' => 'required|string|max:100',
+            'description' => 'nullable|string',
         ]);
 
-        $isExist = ItemCategory::where("name", $validated["name"])->exists();
+        $isExist = ItemCategory::where('name', $validated['name'])->exists();
         if ($isExist) {
             return redirect()
                 ->back()
                 ->withInput()
                 ->withErrors([
-                    "name" => "Kategori dengan nama tersebut sudah ada.",
+                    'name' => 'Kategori dengan nama tersebut sudah ada.',
                 ]);
         }
 
         ItemCategory::create($validated);
 
-        return redirect()
-            ->route("item-category")
-            ->with("success", "Item category created successfully.");
+        return redirect()->route('item-category')->with('success', 'Item category created successfully.');
     }
 
     /**
@@ -66,7 +94,7 @@ class ItemCategoryController extends Controller
      */
     public function edit(ItemCategory $itemCategory)
     {
-        return view("item-category.edit", compact("itemCategory"));
+        return view('item-category.edit', compact('itemCategory'));
     }
 
     /**
@@ -75,28 +103,24 @@ class ItemCategoryController extends Controller
     public function update(Request $request, ItemCategory $itemCategory)
     {
         $validated = $request->validate([
-            "name" => "required|string|max:100",
-            "description" => "nullable|string",
+            'name' => 'required|string|max:100',
+            'description' => 'nullable|string',
         ]);
 
-        $isExist = ItemCategory::where("name", $validated["name"])
-            ->where("id", "!=", $itemCategory->id)
-            ->exists();
+        $isExist = ItemCategory::where('name', $validated['name'])->where('id', '!=', $itemCategory->id)->exists();
 
         if ($isExist) {
             return redirect()
                 ->back()
                 ->withInput()
                 ->withErrors([
-                    "name" => "Kategori dengan nama tersebut sudah ada.",
+                    'name' => 'Kategori dengan nama tersebut sudah ada.',
                 ]);
         }
 
         $itemCategory->update($validated);
 
-        return redirect()
-            ->route("item-category")
-            ->with("success", "Item category updated successfully.");
+        return redirect()->route('item-category')->with('success', 'Item category updated successfully.');
     }
 
     /**
@@ -104,23 +128,18 @@ class ItemCategoryController extends Controller
      */
     public function destroy(ItemCategory $itemCategory)
     {
-        $isCategoryUsed = Product::where(
-            "item_category_id",
-            $itemCategory->id,
-        )->exists();
+        $isCategoryUsed = Product::where('item_category_id', $itemCategory->id)->exists();
         if ($isCategoryUsed) {
             return redirect()
                 ->back()
                 ->withInput()
                 ->withErrors([
-                    "name" => "Kategori dengan nama tersebut sudah ada.",
+                    'name' => 'Kategori dengan nama tersebut sudah ada.',
                 ]);
         }
 
         $itemCategory->delete();
 
-        return redirect()
-            ->route("item-category")
-            ->with("success", "Item category deleted successfully.");
+        return redirect()->route('item-category')->with('success', 'Item category deleted successfully.');
     }
 }

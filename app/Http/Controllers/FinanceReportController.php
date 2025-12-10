@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use App\Models\TransactionDetail;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -11,13 +12,12 @@ class FinanceReportController extends Controller
     public function index(Request $request)
     {
         $transactionFilter = $request->get('transaction_filter', 'daily'); // daily, weekly, monthly, yearly
-        $chartFilter = $request->get('chart_filter', 'weekly'); // weekly, monthly, yearly
 
         $stats = $this->getStats($transactionFilter);
-        $chartData = $this->getChartData($chartFilter);
+        $chartData = $this->getChartData($transactionFilter);
         $financeReports = $this->getFinanceReports();
 
-        return view('finance.index', compact('stats', 'chartData', 'financeReports', 'transactionFilter', 'chartFilter'));
+        return view('finance.index', compact('stats', 'chartData', 'financeReports', 'transactionFilter'));
     }
 
     private function getStats($transactionFilter)
@@ -155,23 +155,45 @@ class FinanceReportController extends Controller
 
     private function getFinanceReports()
     {
-        $financeReports = Transaction::selectRaw(
-            '
-        SUM(total_price) as total_income,
-        SUM(total_quantity) as total_items_sold,
-        DATE(created_at) as date
-    ',
-        )
-            ->groupBy('date')
-            ->orderBy('date', 'desc')
-            ->limit(30)
-            ->get()
-            ->map(function ($item) {
-                $item->date = Carbon::parse($item->date);
-                return $item;
-            });
+        $sort = request('sort', 'date_new');
 
-        return $financeReports;
+        switch ($sort) {
+            case 'trx_id_asc':
+                $orderBy = ['id', 'asc'];
+                break;
+
+            case 'trx_id_desc':
+                $orderBy = ['id', 'desc'];
+                break;
+
+            case 'income_in_asc':
+                $orderBy = ['total_price', 'asc'];
+                break;
+
+            case 'income_in_desc':
+                $orderBy = ['total_price', 'desc'];
+                break;
+
+            case 'date_old':
+                $orderBy = ['created_at', 'asc'];
+                break;
+
+            case 'date_new':
+            default:
+                $orderBy = ['created_at', 'desc'];
+                break;
+        }
+
+        $query = Transaction::orderBy($orderBy[0], $orderBy[1]);
+
+        return $query->paginate(25)->through(function ($t) {
+            return (object) [
+                'id' => $t->id,
+                'date' => $t->created_at,
+                'total_items_sold' => $t->total_quantity,
+                'total_income' => $t->total_price,
+            ];
+        });
     }
 
     private function getFilterLabel($filter)
@@ -183,5 +205,11 @@ class FinanceReportController extends Controller
             'yearly' => 'Tahunan',
             default => 'Harian',
         };
+    }
+
+    public function show(Transaction $transaction)
+    {
+        $transactionDetails = TransactionDetail::where('transaction_id', $transaction->id)->with('product')->get();
+        return view('finance.show', compact('transaction', 'transactionDetails'));
     }
 }

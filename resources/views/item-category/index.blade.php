@@ -12,9 +12,12 @@
 
       <x-content.data-table>
         <x-slot name="sortOptions">
-          <option>Name</option>
-          <option>Tanggal</option>
+          <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>Nama (A → Z)</option>
+          <option value="name_desc" {{ request('sort') == 'name_desc' ? 'selected' : '' }}>Nama (Z → A)</option>
+          <option value="date_new" {{ request('sort') == 'date_new' ? 'selected' : '' }}>Tanggal Terbaru</option>
+          <option value="date_old" {{ request('sort') == 'date_old' ? 'selected' : '' }}>Tanggal Terlama</option>
         </x-slot>
+
         <x-slot name="header">
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
             NO.
@@ -41,8 +44,9 @@
           @forelse($categories as $i => $category)
             <tr class="hover:bg-gray-50/50">
               <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                {{ $i + 1 }}
+                {{ ($categories->currentPage() - 1) * $categories->perPage() + $i + 1 }}
               </td>
+
               <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
                 {{ $category->name }}
               </td>
@@ -88,48 +92,7 @@
 
         </x-slot>
         <x-slot name="pagination">
-          <a href="#"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-500 hover:bg-gray-50">
-            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd"
-                d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z"
-                clip-rule="evenodd" />
-            </svg>
-          </a>
-
-          {{-- Active Page --}}
-          <a href="#"
-            class="border-button-main bg-button-main inline-flex h-8 w-8 items-center justify-center rounded-md border text-sm font-medium text-white"
-            aria-current="page">
-            1
-          </a>
-          <a href="#"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
-            2
-          </a>
-          <a href="#"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
-            3
-          </a>
-          <a href="#"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
-            4
-          </a>
-          <span class="inline-flex h-8 w-8 items-center justify-center text-sm text-gray-500">
-            ...
-          </span>
-          <a href="#"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">
-            26
-          </a>
-          <a href="#"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-500 hover:bg-gray-50">
-            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd"
-                d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z"
-                clip-rule="evenodd" />
-            </svg>
-          </a>
+          {{ $categories->onEachSide(1)->links() }}
         </x-slot>
       </x-content.data-table>
     </div>

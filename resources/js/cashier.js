@@ -125,22 +125,21 @@ export default function cashierHandler() {
                 .then(response => {
                 console.log('Response server:', response);
 
-                // ⭐ DI SINI kamu panggil print nota
             if (response.transaction_id) {
                 printReceipt(response.transaction_id);
             }
+                alert('Transaksi Berhasil!');
+                this.cart = [];
 
-            alert('Transaksi Berhasil!');
-            this.cart = [];
+                setTimeout(() => location.reload(), 500);
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('Gagal mengirim data ke server!');
+            });
+        },
 
-        // beri delay supaya print tidak terganggu refresh
-            setTimeout(() => location.reload(), 500);
-        })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Gagal mengirim data ke server!');
-    });
-}
-
+        isInCart(id) {
+            return this.cart.some(item => item.id == id);
+        },
     };
 }

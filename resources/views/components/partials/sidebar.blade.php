@@ -97,11 +97,7 @@
             <div class="bg-white w-3"></div>
             <div
               class="{{ request()->is('laporan-keuangan*') ? 'bg-button-main text-white tracking-wide font-bold' : 'bg-transparent' }} flex items-center w-full px-4 py-3 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                stroke="currentColor" class="w-6 h-6">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.75A.75.75 0 0 1 3 4.5h.75m0 0H21" />
-              </svg>
+              <img src="/icon/finance.svg" alt="finance icon" class="w-6 h-6">
               <span class="ml-3">Laporan Keuangan</span>
             </div>
           </a>
@@ -131,24 +127,19 @@
   </div>
 
   <div>
+    <div class="w-full h-0.5 bg-gray-200 ml-2"></div>
     <nav>
       <ul class="space-y-2">
         <li>
-          <a href="{{ url('settings') }}"
+          <a href="{{ route('cashier') }}"
             class="flex items-stretch flex-row transition-colors duration-200 rounded-lg
-                                                            {{ request()->is('settings*') ? 'text-white font-semibold' : 'text-gray-600 hover:bg-gray-100' }}">
-            <div
-              class="{{ request()->is('settings*') ? 'bg-button-main rounded-r-lg' : 'bg-transparent' }} w-2 rounded-l-lg">
-            </div>
-            <div class="bg-white w-3"></div>
-            <div
-              class="{{ request()->is('settings*') ? 'bg-button-main text-white tracking-wide font-bold' : 'bg-transparent' }} flex items-center w-full px-4 py-3 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                stroke="currentColor" class="w-6 h-6">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M9.594 3.94c.09-.542.56-1.003 1.11-1.226.55-.223 1.156-.223 1.706 0 .55.223 1.02.684 1.11 1.226" />
+                                                            text-gray-600 hover:bg-gray-100">
+            <div class="bg-transparent flex items-center w-full px-5 py-3 rounded-lg">
+              <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              <span class="ml-3">Settings</span>
+              Kasir
             </div>
           </a>
         </li>

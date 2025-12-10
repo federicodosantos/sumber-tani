@@ -15,7 +15,7 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with('category')->orderBy('name', 'asc');
+        $query = Product::with('category');
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -26,6 +26,36 @@ class ProductController extends Controller
                     ->orWhere('code_id', 'like', "%{$search}%");
             });
         }
+
+        switch ($request->get('sort')) {
+            case 'product_code_asc':
+                $query->orderBy('code_id', 'asc');
+                break;
+
+            case 'product_code_desc':
+                $query->orderBy('code_id', 'desc');
+                break;
+
+            case 'name_asc':
+                $query->orderBy('name', 'asc');
+                break;
+
+            case 'name_desc':
+                $query->orderBy('name', 'desc');
+                break;
+
+            case 'date_new':
+                $query->orderBy('created_at', 'desc');
+                break;
+
+            case 'date_old':
+                $query->orderBy('created_at', 'asc');
+                break;
+
+            default:
+                $query->orderBy('code_id', 'asc');
+        }
+
 
         $products = $query->paginate(10)->withQueryString();
 
