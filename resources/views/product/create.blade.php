@@ -19,7 +19,7 @@
         </x-slot:leftCol>
 
         <x-slot:rightCol>
-          <x-content.form-textarea label="Deskripsi Produk" name="description" placeholder="Udin sedunia..."
+          <x-content.form-textarea label="Deskripsi Produk" name="description" placeholder="Isi deskripsi produk"
             rows="6" />
         </x-slot:rightCol>
 
