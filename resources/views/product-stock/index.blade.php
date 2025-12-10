@@ -5,7 +5,7 @@
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2 md:divide-x md:divide-gray-200">
 
             <div class="flex items-center justify-center gap-5 pt-6 md:pt-0">
-                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-button-main text-white">
+                <div class="bg-button-main flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-white">
                     <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9h16.5m-16.5 6.25h16.5" />
@@ -19,7 +19,7 @@
             </div>
 
             <div class="flex items-center justify-center gap-5 pt-6 md:pt-0">
-                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-button-main text-white">
+                <div class="bg-button-main flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-white">
                     <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -53,27 +53,47 @@
             </div>
 
             <x-content.data-table>
-
+                <x-slot name="sortOptions">
+                    <option value="product_code_asc" {{ request('sort') == 'product_code_asc' ? 'selected' : '' }}>Kode
+                        Produk (A → Z)</option>
+                    <option value="product_code_desc" {{ request('sort') == 'product_code_desc' ? 'selected' : '' }}>
+                        Kode Produk (Z → A)</option>
+                    <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>Nama (A → Z)</option>
+                    <option value="name_desc" {{ request('sort') == 'name_desc' ? 'selected' : '' }}>Nama (Z → A)
+                    </option>
+                    <option value="stock_asc" {{ request('sort') == 'stock_asc' ? 'selected' : '' }}>Stok Tersedikit
+                    </option>
+                    <option value="stock_desc" {{ request('sort') == 'stock_desc' ? 'selected' : '' }}>Stok Terbanyak
+                    </option>
+                    <option value="price_asc" {{ request('sort') == 'price_asc' ? 'selected' : '' }}>Harga Terendah
+                    </option>
+                    <option value="price_desc" {{ request('sort') == 'price_desc' ? 'selected' : '' }}>Harga Tertinggi
+                    </option>
+                </x-slot>
                 <x-slot name="header">
-                    <x-sortable-th name="product_id">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
                         KODE PRODUK
-                    </x-sortable-th>
+                    </th>
 
-                    <x-sortable-th name="name">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
                         NAMA PRODUK
-                    </x-sortable-th>
+                    </th>
 
                     <th scope="col"
                         class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
                         DESKRIPSI PRODUK
                     </th>
-                    <x-sortable-th name="stock_opname">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
                         STOK
-                    </x-sortable-th>
+                    </th>
 
-                    <x-sortable-th name="price">
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
                         HARGA PRODUK/UNIT
-                    </x-sortable-th>
+                    </th>
 
                     <th scope="col"
                         class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
@@ -127,7 +147,7 @@
                             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
                                 @if (is_null($product->stock_opname))
                                     <a href="{{ route('stock.create', ['product_id' => $product->product_id]) }}"
-                                        class="font-bold text-button-main hover:text-button-hover">
+                                        class="text-button-main hover:text-button-hover font-bold">
                                         Isi Stok Awal
                                     </a>
                                 @else

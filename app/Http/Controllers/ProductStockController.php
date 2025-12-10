@@ -14,63 +14,65 @@ class ProductStockController extends Controller
      */
     public function index(Request $request)
     {
-        $allowedSorts = [
-            'product_id'   => 'products.id',
-            'name'         => 'products.name',
-            'stock_opname' => 'ps.stock_opname',
-            'price'        => 'ps.price',
-        ];
-
         $query = Product::leftJoin('product_stocks as ps', function ($join) {
-            $join->on('products.id', '=', 'ps.product_id')
-                 ->whereNull('ps.deleted_at'); 
-        })
-        ->select(
-            'products.id as product_id', 
-            'products.code_id as code_id',
-            'products.name', 
-            'products.description',
-            'ps.id as stock_id',   
-            'ps.stock_opname', 
-            'ps.price'
-        );
-    
+            $join->on('products.id', '=', 'ps.product_id')->whereNull('ps.deleted_at');
+        })->select('products.id as product_id', 'products.code_id as code_id', 'products.name', 'products.description', 'ps.id as stock_id', 'ps.stock_opname', 'ps.price');
+
         if ($request->filled('search')) {
             $search = $request->input('search');
-            
+
             $query->where(function ($q) use ($search) {
                 $q->where('products.name', 'like', "%{$search}%")
-                  ->orWhere('products.id', 'like', "%{$search}%")
-                  ->orWhere('products.description', 'like', "%{$search}%")
-                  ->orWhere('ps.deleted_at', 'null');
+                    ->orWhere('products.code_id', 'like', "%{$search}%")
+                    ->orWhere('products.description', 'like', "%{$search}%");
             });
         }
 
-        $sortColumn = $request->input('sort', 'name'); 
-        $sortDirection = $request->input('direction', 'asc'); 
+        switch ($request->get('sort')) {
+            case 'product_code_asc':
+                $query->orderBy('products.code_id', 'asc');
+                break;
 
-        $sortColumnDb = $allowedSorts[$sortColumn] ?? 'products.name';
+            case 'product_code_desc':
+                $query->orderBy('products.code_id', 'desc');
+                break;
 
-        if (!in_array($sortDirection, ['asc', 'desc'])) {
-            $sortDirection = 'asc';
+            case 'name_asc':
+                $query->orderBy('products.name', 'asc');
+                break;
+
+            case 'name_desc':
+                $query->orderBy('products.name', 'desc');
+                break;
+
+            case 'stock_asc':
+                $query->orderBy('ps.stock_opname', 'asc');
+                break;
+
+            case 'stock_desc':
+                $query->orderBy('ps.stock_opname', 'desc');
+                break;
+            case 'price_asc':
+                $query->orderBy('ps.price', 'asc');
+                break;
+            case 'price_desc':
+                $query->orderBy('ps.price', 'desc');
+                break;
+
+            default:
+                $query->orderBy('products.code_id', 'asc');
         }
-
-        $query->orderBy($sortColumnDb, $sortDirection);
 
         $products = $query->paginate(10)->appends($request->query());
 
         $totalStock = ProductStock::whereNull('deleted_at')->sum('stock_opname');
 
-        $topProduct = ProductStock::whereNull('product_stocks.deleted_at')
-            ->join('products', 'products.id', '=', 'product_stocks.product_id')
-            ->select('products.name', 'product_stocks.stock_opname')
-            ->orderByDesc('product_stocks.stock_opname')
-            ->first();
+        $topProduct = ProductStock::whereNull('product_stocks.deleted_at')->join('products', 'products.id', '=', 'product_stocks.product_id')->select('products.name', 'product_stocks.stock_opname')->orderByDesc('product_stocks.stock_opname')->first();
 
         return view('product-stock.index', [
-            'products'      => $products,
-            'totalStock'    => $totalStock,
-            'topProduct'    => $topProduct,
+            'products' => $products,
+            'totalStock' => $totalStock,
+            'topProduct' => $topProduct,
         ]);
     }
 
@@ -80,7 +82,7 @@ class ProductStockController extends Controller
     public function create(Request $request)
     {
         $products = Product::select('id', 'name')->get();
-        
+
         $selectedProductId = $request->query('product_id');
 
         return view('product-stock.create', [
@@ -94,27 +96,25 @@ class ProductStockController extends Controller
      */
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'product_id' => [
-                'required',
-                'exists:products,id',
-                
-                Rule::unique('product_stocks', 'product_id')->whereNull('deleted_at')
+        $validatedData = $request->validate(
+            [
+                'product_id' => ['required', 'exists:products,id', Rule::unique('product_stocks', 'product_id')->whereNull('deleted_at')],
+                'stock_opname' => 'required|numeric|min:0',
+                'price' => 'required|numeric|min:0',
             ],
-            'stock_opname' => 'required|numeric|min:0',
-            'price'        => 'required|numeric|min:0',
-        ], [
-            'product_id.unique' => 'Produk ini sudah memiliki data stok. Gunakan opsi "Ubah Jumlah Stok".'
-        ]);
+            [
+                'product_id.unique' => 'Produk ini sudah memiliki data stok. Gunakan opsi "Ubah Jumlah Stok".',
+            ],
+        );
 
         try {
-
             ProductStock::create($validatedData);
 
             return redirect()->route('stock.index')->with('success', 'Stok awal berhasil ditambahkan.');
-        
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat menyimpan data stok: ' . $e->getMessage()])->withInput();
+            return back()
+                ->withErrors(['error' => 'Terjadi kesalahan saat menyimpan data stok: ' . $e->getMessage()])
+                ->withInput();
         }
     }
 
@@ -123,8 +123,7 @@ class ProductStockController extends Controller
      */
     public function edit(int $stock_id)
     {
-        $stock = ProductStock::where('id', $stock_id)
-        ->with('product')->firstOrFail();
+        $stock = ProductStock::where('id', $stock_id)->with('product')->firstOrFail();
         return view('product-stock.edit', compact('stock'));
     }
 
@@ -135,17 +134,18 @@ class ProductStockController extends Controller
     {
         $validatedData = $request->validate([
             'stock_opname' => 'required|numeric|min:0',
-            'price'        => 'required|numeric|min:0',
+            'price' => 'required|numeric|min:0',
         ]);
         try {
-
             $stock = ProductStock::where('id', $stock_id)->firstOrFail();
 
             $stock->update($validatedData);
 
             return redirect()->route('stock.index')->with('success', 'Stok produk berhasil diperbarui.');
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat memperbarui data stok: ' . $e->getMessage()])->withInput();
+            return back()
+                ->withErrors(['error' => 'Terjadi kesalahan saat memperbarui data stok: ' . $e->getMessage()])
+                ->withInput();
         }
     }
 
