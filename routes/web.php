@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FinanceReportController;
+use App\Http\Controllers\QzSecurityController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -73,5 +74,21 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+Route::get('/qz/digital-certificate', [QzSecurityController::class, 'certificate']);
+Route::post('/qz/sign', [QzSecurityController::class, 'sign']);
+
+Route::get('/test-sign', function () {
+    $data = json_encode(["test" => "hello"]);
+    $privateKey = openssl_pkey_get_private(file_get_contents(storage_path("app/private/qz/private-key.pem")));
+    openssl_sign($data, $signature, $privateKey, OPENSSL_ALGO_SHA256);
+
+    return response()->json([
+        "signature" => base64_encode($signature),
+        "len" => strlen($signature)
+    ]);
+});
+
+
 
 require __DIR__ . '/auth.php';

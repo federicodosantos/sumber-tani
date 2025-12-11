@@ -100,8 +100,8 @@ class TransactionController extends Controller
         return response()->json([
             'store' => [
                 'name' => 'TOKO SUMBERTANI',
-                'address' => 'Jl. Merdeka No. 12',
-                'phone' => '08123456789',
+                'address' => 'Jl. Trans Sulawesi, Motolohu, Kec. Randangan, '.PHP_EOL.'Kab. Pohuwato, Gorontalo 96469',
+                'phone' => '+6282293913193',
                 'email' => 'admin@sumbertani.net',
             ],
 

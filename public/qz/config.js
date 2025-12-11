@@ -2,6 +2,32 @@
 // QZ TRAY GLOBAL CONFIG
 // =====================
 
+qz.security.setCertificatePromise(function(resolve, reject) {
+    fetch("/qz/digital-certificate", { cache: "no-store" })
+        .then(res => res.text())
+        .then(resolve)
+        .catch(reject);
+});
+
+qz.security.setSignaturePromise(function(toSign) {
+    return function(resolve, reject) {
+        console.log("DEBUG toSign RAW:", toSign);
+        fetch("/qz/sign", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ toSign })
+        })
+        .then(async res => {
+            const text = await res.text();
+            console.log("DEBUG signature from backend:", text);
+            return text;
+        }).then(resolve).catch(reject);
+    };
+});
+
 // --- QZ auto connect with retry ---
 async function connectQZ() {
     if (qz.websocket.isActive()) return;
