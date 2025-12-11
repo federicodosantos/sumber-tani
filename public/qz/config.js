@@ -1,42 +1,46 @@
 // =====================
 // QZ TRAY GLOBAL CONFIG
 // =====================
+// Set SHA512 algorithm (IMPORTANT!)
+qz.security.setSignatureAlgorithm("SHA512");
 
+// Load certificate
 qz.security.setCertificatePromise(function(resolve, reject) {
-    fetch("/qz/digital-certificate", { cache: "no-store" })
-        .then(res => res.text())
-        .then(resolve)
-        .catch(reject);
+    fetch("/qz/digital-certificate", { 
+        cache: "no-store",
+        headers: { 'Content-Type': 'text/plain' }
+    })
+    .then(res => res.text())
+    .then(resolve)
+    .catch(reject);
 });
 
+// Sign requests
 qz.security.setSignaturePromise(function(toSign) {
     return function(resolve, reject) {
-        console.log("DEBUG toSign RAW:", toSign);
         fetch("/qz/sign", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
             },
-            body: JSON.stringify({ toSign })
+            body: JSON.stringify({ toSign: toSign })
         })
-        .then(async res => {
-            const text = await res.text();
-            console.log("DEBUG signature from backend:", text);
-            return text;
-        }).then(resolve).catch(reject);
+        .then(res => res.text())
+        .then(resolve)
+        .catch(reject);
     };
 });
 
-// --- QZ auto connect with retry ---
+// Connect
 async function connectQZ() {
     if (qz.websocket.isActive()) return;
-
+    
     try {
         await qz.websocket.connect();
-        console.log("QZ Connected.");
+        console.log("QZ Connected - Silent printing enabled!");
     } catch (err) {
-        console.warn("QZ gagal connect, retry dalam 1s...");
+        console.error("QZ Connection failed:", err);
         setTimeout(connectQZ, 1000);
     }
 }

@@ -131,7 +131,7 @@ export default function cashierHandler() {
                 alert('Transaksi Berhasil!');
                 this.cart = [];
 
-                // setTimeout(() => location.reload(), 500);
+                setTimeout(() => location.reload(), 2000);
             }).catch(error => {
                 console.error('Error:', error);
                 alert('Gagal mengirim data ke server!');
