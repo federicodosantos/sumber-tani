@@ -8,9 +8,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Cashier - {{ config('app.name', 'SUMBER TANI') }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+
     <script src="{{ asset('qz/qz-tray.js') }}"></script>
     <script src="{{ asset('qz/config.js') }}"></script>
-
     {{-- <button onclick="listPrinters()">Cek Printer QZ</button> --}}
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
