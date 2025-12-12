@@ -44,7 +44,7 @@
                         <div>
                             <x-content.form-select label="Nama Produk" name="product_id" x-model="selectedId"
                                 x-bind:disabled="isPreselected" required>
-                                <option value="">Pilih Product Name</option>
+                                <option value="">Pilih Nama Produk</option>
                                 @foreach ($products as $product)
                                     <option value="{{ $product->id }}" :selected="selectedId == '{{ $product->id }}'">
                                         {{ $product->name }}
@@ -57,7 +57,7 @@
                         <div>
                             <x-content.form-input label="Kode Produk" name="product_code_display"
                                 x-bind:value="selectedId ? productsMap[selectedId].code : '-'" disabled readonly
-                                class="bg-gray-100" />
+                                class="cursor-not-allowed border-gray-300 bg-gray-100" />
                         </div>
 
                         {{-- Harga Produk per Satuan (Konsumen) --}}
@@ -111,11 +111,11 @@
 
                 <x-slot:actions>
                     <x-button.remove-button href="{{ route('stock.index') }}">
-                        CANCEL
+                        BATAL
                     </x-button.remove-button>
 
                     <x-button.add-button type="submit">
-                        ADD STOCK
+                        TAMBAH STOK
                     </x-button.add-button>
                 </x-slot:actions>
             </x-content.form-card>

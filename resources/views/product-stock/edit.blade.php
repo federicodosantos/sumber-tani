@@ -33,10 +33,10 @@
                     <div class="space-y-5">
 
                         <x-content.form-input label="Nama Produk" name="product_name_display" :value="$stock->product->name" disabled
-                            readonly class="bg-gray-100" />
+                            readonly class="cursor-not-allowed border-gray-300 bg-gray-100" />
 
                         <x-content.form-input label="Kode Produk" name="product_code_display" :value="$stock->product->code_id ?? $stock->product_id" disabled
-                            readonly class="bg-gray-100" />
+                            readonly class="cursor-not-allowed border-gray-300 bg-gray-100" />
 
                         <x-content.form-currency label="Harga Produk per Satuan (Konsumen)" name="price_consumer"
                             placeholder="Rp 10 xxx" :value="old('price_consumer', $stock->price_consumer ?? 0)" />
