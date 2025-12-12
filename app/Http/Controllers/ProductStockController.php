@@ -81,7 +81,7 @@ class ProductStockController extends Controller
      */
     public function create(Request $request)
     {
-        $products = Product::select('id', 'name')->get();
+        $products = Product::select('id', 'code_id', 'name')->get();
 
         $selectedProductId = $request->query('product_id');
 
@@ -123,7 +123,8 @@ class ProductStockController extends Controller
      */
     public function edit(int $stock_id)
     {
-        $stock = ProductStock::where('id', $stock_id)->with('product')->firstOrFail();
+        $stock = ProductStock::with(['product:id,code_id,name'])->where('id', $stock_id)->firstOrFail();
+
         return view('product-stock.edit', compact('stock'));
     }
 

@@ -1,11 +1,13 @@
-@props(['label', 'name'])
+@props(['label' => null, 'name'])
 
 <div class="w-full">
-    <label for="{{ $name }}" class="mb-1.5 block text-sm font-bold text-black">
-        {{ $label }}
-    </label>
+    @if (!empty($label))
+        <label for="{{ $name }}" class="mb-1.5 block text-sm font-bold text-black">
+            {{ $label }}
+        </label>
+    @endif
     <select id="{{ $name }}" name="{{ $name }}"
-        {{ $attributes->merge(['class' => 'block w-full px-2 rounded-lg border-2 focus:border-button-hover focus:outline-none py-2 cursor-pointer transition-all duration-100 text-sm font-normal']) }}>
+        {{ $attributes->merge(['class' => 'form-control']) }}>
         {{ $slot }}
     </select>
 
