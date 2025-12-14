@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="space-y-6">
+    <div class="space-y-6 font-mont">
         <div class="flex justify-end">
             <a href="{{ route('cashier') }}"
                 class="bg-button-main hover:bg-button-hover inline-flex transform items-center rounded-lg px-6 py-3 font-semibold text-white shadow-lg transition-all duration-200 hover:scale-105 hover:from-blue-700 hover:shadow-xl">

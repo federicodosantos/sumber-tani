@@ -73,7 +73,7 @@ async function listPrinters() {
 // =====================
 //  Print Configuration
 // =====================
-const PRINTER_NAME = "Generic / Text Only";    // update sesuai listPrinters
+const PRINTER_NAME = "Generic / Text Only";
 const LINE_CHARS = 42;
 
 // helper formatting

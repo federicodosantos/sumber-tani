@@ -1,6 +1,6 @@
 <x-app-layout>
 
-    <div class="mb-6 rounded-xl bg-white p-5 shadow-sm" style="border: 1px solid #e5e7eb;">
+    <div class="mb-6 rounded-xl bg-white p-5 shadow-sm font-mont" style="border: 1px solid #e5e7eb;">
 
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2 md:divide-x md:divide-gray-200">
 
@@ -12,8 +12,8 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="text-sm text-gray-500">Total Stok</div>
-                    <div class="text-2xl font-semibold text-gray-900"> {{ number_format($totalStock) }}
+                    <div class="text-xs text-gray-500">Total Stok</div>
+                    <div class="text-xl font-semibold text-gray-900"> {{ number_format($totalStock) }}
                     </div>
                 </div>
             </div>
@@ -27,8 +27,8 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="text-sm text-gray-500">Produk Terbanyak</div>
-                    <div class="text-2xl font-semibold text-gray-900">{{ $topProduct->name ?? 'Belum ada' }}</div>
+                    <div class="text-xs text-gray-500">Produk Terbanyak</div>
+                    <div class="text-xl font-semibold text-gray-900">{{ $topProduct->name ?? 'Belum ada' }}</div>
                 </div>
             </div>
 
@@ -41,14 +41,14 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-12 font-mont">
         <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
             <div class="mb-4 flex justify-start gap-x-4">
                 <x-button.add-button href="{{ route('stock.create') }}">
                     <x-slot name="icon">
                         <img src="{{ asset('icon/add-icon.svg') }}" alt="Add" class="inline h-5 w-5">
                     </x-slot>
-                    TAMBAH STOK
+                    <span class="font-bold">TAMBAH STOK</span>
                 </x-button.add-button>
             </div>
 

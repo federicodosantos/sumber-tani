@@ -1,4 +1,4 @@
-@props(['label' => null, 'name'])
+@props(['label', 'name'])
 
 <div class="w-full">
     @if (!empty($label))
@@ -7,7 +7,7 @@
         </label>
     @endif
     <select id="{{ $name }}" name="{{ $name }}"
-        {{ $attributes->merge(['class' => 'form-control']) }}>
+        {{ $attributes->merge(['class' => 'block w-full px-2 rounded-lg border-2 focus:border-button-hover focus:outline-none py-2 cursor-pointer transition-all duration-100 text-sm font-normal']) }}>
         {{ $slot }}
     </select>
 

@@ -26,7 +26,7 @@
 
     <x-flash-message />
 
-    <div class="flex min-h-screen">
+    <div class="flex min-h-screen font-mont">
         {{-- sidebar --}}
         <x-partials.sidebar />
 
