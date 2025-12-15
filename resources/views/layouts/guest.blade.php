@@ -16,7 +16,8 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="h-screen font-mont text-black antialiased bg-gray-100 flex flex-row w-screen overflow-hidden">
-        <div class="w-1/2 p-8">
+        <!-- Background Section - Hidden below lg -->
+        <div class="hidden lg:flex lg:w-1/2 p-8">
             <div
                 class="w-full h-full bg-no-repeat bg-cover bg-center p-8 rounded-2xl"
                 style="background-image: url('{{ asset('auth/login-bg.svg') }}')"
@@ -24,7 +25,8 @@
             </div>
         </div>
 
-        <div class="flex flex-col sm:justify-center items-center pt-6 sm:pt-0 w-1/2">
+        <!-- Login Section - Full width below lg, half width on lg+ -->
+        <div class="flex flex-col justify-center items-center w-full lg:w-1/2 px-4 sm:px-6">
             <div>
                 <a href="/dashboard">
                     <x-auth.application-logo class="w-24 h-24 fill-current text-gray-500" />

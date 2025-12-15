@@ -57,7 +57,7 @@
                         <div>
                             <x-content.form-input label="Kode Produk" name="product_code_display"
                                 x-bind:value="selectedId ? productsMap[selectedId].code : '-'" disabled readonly
-                                class="cursor-not-allowed border-gray-300 bg-gray-100" />
+                                class="cursor-not-allowed bg-gray-100" />
                         </div>
 
                         {{-- Harga Produk per Satuan (Konsumen) --}}

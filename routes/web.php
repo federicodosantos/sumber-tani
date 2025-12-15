@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FinanceReportController;
+use App\Http\Controllers\ProductPurchaseController;
 use App\Http\Controllers\QzSecurityController;
 
 Route::get('/', function () {
@@ -46,6 +47,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/product/{product}/edit', [ProductController::class, 'edit'])->name('product.edit');
     Route::put('/product/{product}', [ProductController::class, 'update'])->name('product.update');
     Route::delete('/product/{product}', [ProductController::class, 'destroy'])->name('product.destroy');
+
+    // PRODUCT BUY ROUTES
+    Route::get('/purchase', [ProductPurchaseController::class, 'index'])->name('purchase');
+    Route::get('/purchase/create', [ProductPurchaseController::class, 'create'])->name('purchase.create');
+    Route::post('/purchase', [ProductPurchaseController::class, 'store'])->name('purchase.store');
+    Route::get('/purchase/{purchase}/edit', [ProductPurchaseController::class, 'edit'])->name('purchase.edit');
+    Route::put('/purchase/{purchase}', [ProductPurchaseController::class, 'update'])->name('purchase.update');
+    Route::delete('/purchase/{purchase}', [ProductPurchaseController::class, 'destroy'])->name('purchase.destroy');
 
     // PRODUCT STOCK ROUTES
     Route::get('/stock', [ProductStockController::class, 'index'])->name('stock.index');

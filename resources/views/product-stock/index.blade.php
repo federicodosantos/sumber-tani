@@ -1,38 +1,79 @@
 <x-app-layout>
 
-    <div class="mb-6 rounded-xl bg-white p-5 shadow-sm font-mont" style="border: 1px solid #e5e7eb;">
+    <div class="hidden lg:flex justify-center font-mont">
+        <div class="grid grid-cols-2 gap-6 max-w-4xl w-3/5">
 
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 md:divide-x md:divide-gray-200">
-
-            <div class="flex items-center justify-center gap-5 pt-6 md:pt-0">
-                <div class="bg-button-main flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-white">
-                    <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+            {{-- Total Stok --}}
+            <div class="flex items-center gap-4 rounded-xl bg-white p-5 shadow-sm" style="border: 1px solid #e5e7eb;">
+                <div class="bg-button-main flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white">
+                    <svg class="h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9h16.5m-16.5 6.25h16.5" />
                     </svg>
                 </div>
                 <div>
-                    <div class="text-xs text-gray-500">Total Stok</div>
-                    <div class="text-xl font-semibold text-gray-900"> {{ number_format($totalStock) }}
+                    <div class="text-sm text-gray-500">Total Stok</div>
+                    <div class="text-xl font-semibold text-gray-900">
+                        {{ number_format($totalStock) }}
                     </div>
                 </div>
             </div>
 
-            <div class="flex items-center justify-center gap-5 pt-6 md:pt-0">
+            {{-- Produk Terbanyak --}}
+            <div class="flex items-center gap-4 rounded-xl bg-white p-5 shadow-sm" style="border: 1px solid #e5e7eb;">
                 <div class="bg-button-main flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-white">
-                    <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    <svg class="h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                         stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25L3 7.5m18 0v9l-9 5.25L3 16.5V7.5m9 14.25V12.75" />
                     </svg>
                 </div>
                 <div>
-                    <div class="text-xs text-gray-500">Produk Terbanyak</div>
-                    <div class="text-xl font-semibold text-gray-900">{{ $topProduct->name ?? 'Belum ada' }}</div>
+                    <div class="text-sm text-gray-500">Produk Terbanyak</div>
+                    <div class="text-xl font-semibold text-gray-900">
+                        {{ $topProduct->name ?? 'Belum ada' }}
+                    </div>
                 </div>
             </div>
-
         </div>
+    </div>
+
+
+    <div class="lg:hidden grid grid-cols-2 gap-4 w-full">
+
+        {{-- Total Stok --}}
+        <div class="rounded-lg flex flex-row items-center bg-white shadow-sm p-4 gap-2">
+            <div class="bg-button-main flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white">
+                <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9h16.5m-16.5 6.25h16.5" />
+                </svg>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500">Total Stok</div>
+                <div class="text-md font-semibold text-gray-900">
+                    {{ number_format($totalStock) }}
+                </div>
+            </div>
+        </div>
+
+        {{-- Produk Terbanyak --}}
+        <div class="rounded-lg flex flex-row items-center bg-white shadow-sm p-4 gap-2">
+            <div class="bg-button-main flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white">
+                <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25L3 7.5m18 0v9l-9 5.25L3 16.5V7.5m9 14.25V12.75" />
+                </svg>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500">Produk Terbanyak</div>
+                <div class="text-md font-semibold text-gray-900">
+                    {{ $topProduct->name ?? 'Belum ada' }}
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <x-slot name="header">
@@ -147,7 +188,7 @@
                             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
                                 @if (is_null($product->stock_opname))
                                     <a href="{{ route('stock.create', ['product_id' => $product->product_id]) }}"
-                                        class="text-button-main hover:text-button-hover font-bold">
+                                        class="text-button-main hover:text-button-hover font-bold text-xs">
                                         Isi Stok Awal
                                     </a>
                                 @else

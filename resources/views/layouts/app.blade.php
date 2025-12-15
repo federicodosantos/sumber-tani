@@ -24,18 +24,36 @@
 
 <body class="bg-gray-100 font-sans antialiased">
 
-    <x-flash-message />
+<x-flash-message />
 
-    <div class="flex min-h-screen font-mont">
-        {{-- sidebar --}}
-        <x-partials.sidebar />
+<div class="flex min-h-screen font-mont" x-data="{ sidebarOpen: false }">
 
-        {{-- main content --}}
-        <main class="ml-72 flex-1 p-6 transition-all">
+    {{-- Sidebar Component --}}
+    <x-partials.sidebar />
+
+    {{-- Main content --}}
+    <main class="flex-1 transition-all lg:ml-72 overflow-x-hidden">
+
+        {{-- Mobile menu button --}}
+        <button @click="sidebarOpen = true"
+                class="lg:hidden fixed top-4 left-4 z-30 p-2 rounded-lg bg-white shadow-lg text-gray-600 hover:bg-gray-100">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor"
+                 viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
+
+        {{-- Content --}}
+        <div class="p-4 lg:p-6 pt-16 lg:pt-6">
             {{ $slot }}
-        </main>
-    </div>
-    @stack('scripts')
+        </div>
+
+    </main>
+</div>
+
+@stack('scripts')
 </body>
 
 </html>
