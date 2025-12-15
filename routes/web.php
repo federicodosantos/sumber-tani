@@ -49,7 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/product/{product}', [ProductController::class, 'destroy'])->name('product.destroy');
 
     // PRODUCT BUY ROUTES
-    Route::get('/purchase', [ProductPurchaseController::class, 'index'])->name('purchase');
+    Route::get('/purchase', [ProductPurchaseController::class, 'index'])->name('purchase.index');
     Route::get('/purchase/create', [ProductPurchaseController::class, 'create'])->name('purchase.create');
     Route::post('/purchase', [ProductPurchaseController::class, 'store'])->name('purchase.store');
     Route::get('/purchase/{purchase}/edit', [ProductPurchaseController::class, 'edit'])->name('purchase.edit');

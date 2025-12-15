@@ -56,7 +56,7 @@
     </div>
 
     {{-- TABLE with horizontal scroll - ONLY THIS PART SCROLLS --}}
-    <div class="overflow-x-auto lg:overflow-x-visible">
+    <div class="overflow-x-auto ">
         <table class="w-full divide-y divide-gray-200 min-w-[1200px] lg:min-w-0">
             <thead class="bg-white">
                 <tr>

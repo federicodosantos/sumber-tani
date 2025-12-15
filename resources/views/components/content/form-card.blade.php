@@ -33,6 +33,13 @@
       </div>
     @endif
 
+    {{-- Dynamic Rows Section (NEW) --}}
+    @if(isset($dynamicRows))
+      <div class="mb-6">
+        {{ $dynamicRows }}
+      </div>
+    @endif
+
     {{-- Main Content Section with Border --}}
     @if(isset($mainSection))
       <div class="mb-6 rounded-lg border border-gray-200 p-5">
@@ -43,10 +50,12 @@
       </div>
     @else
       {{-- Default Layout without Border (for backward compatibility) --}}
-      <div class="grid grid-cols-1 gap-x-6 md:grid-cols-2 lg:gap-x-8">
-        <div class="space-y-5">{{ $leftCol ?? '' }}</div>
-        <div class="space-y-5">{{ $rightCol ?? '' }}</div>
-      </div>
+      @if(isset($leftCol) || isset($rightCol))
+        <div class="grid grid-cols-1 gap-x-6 md:grid-cols-2 lg:gap-x-8">
+          <div class="space-y-5">{{ $leftCol ?? '' }}</div>
+          <div class="space-y-5">{{ $rightCol ?? '' }}</div>
+        </div>
+      @endif
     @endif
 
     {{-- Detail Section with Border and Title --}}
