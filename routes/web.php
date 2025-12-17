@@ -24,14 +24,13 @@ Route::get('/create', function () {
     return view('tutorial-pakai-template.test-create-update');
 });
 
-
 Route::middleware('auth')->group(function () {
     // DASHBOARD ROUTE
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     // CASHIER ROUTE
     Route::get('/cashier', [App\Http\Controllers\CashierController::class, 'index'])->name('cashier');
-    
+
     // ITEM CATEGORY ROUTES
     Route::get('/item-category', [ItemCategoryController::class, 'index'])->name('item-category');
     Route::get('/item-category/create', [ItemCategoryController::class, 'create'])->name('item-category.create');
@@ -72,7 +71,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/laporan-keuangan', [FinanceReportController::class, 'index'])->name('finance.index');
     Route::get('/laporan-keuangan/{transaction}', [FinanceReportController::class, 'show'])->name('finance.show');
 
-
     // TRANSACTION ROUTES
     Route::get('/receipt/{id}', [TransactionController::class, 'show']);
     Route::post('/checkout', [TransactionController::class, 'store'])->name('trx.store');
@@ -88,16 +86,14 @@ Route::get('/qz/digital-certificate', [QzSecurityController::class, 'certificate
 Route::post('/qz/sign', [QzSecurityController::class, 'sign']);
 
 Route::get('/test-sign', function () {
-    $data = json_encode(["test" => "hello"]);
-    $privateKey = openssl_pkey_get_private(file_get_contents(storage_path("app/private/qz/private-key.pem")));
+    $data = json_encode(['test' => 'hello']);
+    $privateKey = openssl_pkey_get_private(file_get_contents(storage_path('app/private/qz/private-key.pem')));
     openssl_sign($data, $signature, $privateKey, OPENSSL_ALGO_SHA256);
 
     return response()->json([
-        "signature" => base64_encode($signature),
-        "len" => strlen($signature)
+        'signature' => base64_encode($signature),
+        'len' => strlen($signature),
     ]);
 });
-
-
 
 require __DIR__ . '/auth.php';

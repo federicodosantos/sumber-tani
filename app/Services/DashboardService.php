@@ -17,11 +17,7 @@ class DashboardService
             $totalProducts = Product::count();
             $totalStock = ProductStock::sum('stock_opname');
 
-            $fiveLowest = Product::select('products.id','name', 'ps.stock_opname')
-            ->join('product_stocks as ps', 'products.id', '=', 'ps.product_id')
-            ->whereNull('products.deleted_at')
-            ->whereNull('ps.deleted_at')
-            ->orderBy('ps.stock_opname', 'asc')->limit(5)->get();
+            $fiveLowest = Product::select('products.id', 'products.name', 'ps.stock_opname')->join('product_stocks as ps', 'products.id', '=', 'ps.product_id')->whereNull('products.deleted_at')->whereNull('ps.deleted_at')->orderBy('ps.stock_opname', 'asc')->limit(5)->get();
 
             $totalCategories = ItemCategory::count();
 
@@ -29,22 +25,37 @@ class DashboardService
 
             $leastItemCategory = ItemCategory::withCount('products')->orderBy('products_count', 'asc')->first();
 
-            $summary = compact('totalProducts', 'totalStock', 'fiveLowest', 'totalCategories', 'mostItemCategory', 'leastItemCategory');
+            /**
+             * =========================
+             * EXPIRED TERDEKAT (PER PRODUK)
+             * =========================
+             */
+            $nearestExpiredStocks = ProductStock::select('product_stocks.product_id', 'product_stocks.batch', 'product_stocks.expired_date', 'products.name')
+                ->join('products', 'products.id', '=', 'product_stocks.product_id')
+                ->whereNotNull('product_stocks.expired_date')
+                ->whereDate('product_stocks.expired_date', '>=', Carbon::today())
+                ->whereNull('product_stocks.deleted_at')
+                ->orderBy('product_stocks.expired_date', 'asc')
+                ->limit(5)
+                ->get()
+                ->map(function ($item) {
+                    $item->days_left = Carbon::today()->diffInDays(Carbon::parse($item->expired_date), false);
+                    return $item;
+                });
+
+            $summary = compact('totalProducts', 'totalStock', 'fiveLowest', 'totalCategories', 'mostItemCategory', 'leastItemCategory', 'nearestExpiredStocks');
 
             if ($user && $user->isOwner()) {
                 $now = Carbon::now();
-                
-                $monthlySales = Transaction::whereYear('created_at', $now->year)->whereMonth('created_at', $now->month)->sum('total_price');
-                
-                
-                $summary['monthlyIncome'] = $monthlySales;
+
+                $summary['monthlyIncome'] = Transaction::whereYear('created_at', $now->year)->whereMonth('created_at', $now->month)->sum('total_price');
             } else {
                 $summary['monthlyIncome'] = null;
             }
 
             return $summary;
         } catch (\Exception $e) {
-            throw new Exception('Failed to retrieve dashboard summary: ' . $e->getMessage());
+            throw new \Exception('Failed to retrieve dashboard summary: ' . $e->getMessage());
         }
     }
 }

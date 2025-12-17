@@ -15,7 +15,7 @@
         @if ($user && $user->isOwner())
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             @else
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @endif
         <div class="rounded-lg border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
             <div class="flex items-center justify-between">
@@ -114,6 +114,72 @@
             </div>
         </div>
     </div>
+
+    <!-- Expired Terdekat -->
+    <div class="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm mt-6">
+        <div class="border-b border-gray-100 p-6">
+            <h3 class="flex items-center font-semibold text-gray-800">
+                <svg class="mr-2 h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Expired Terdekat
+            </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr class="text-sm text-gray-600">
+                        <th class="px-6 py-3 text-left font-medium">Produk</th>
+                        <th class="px-6 py-3 text-left font-medium">Batch</th>
+                        <th class="px-6 py-3 text-left font-medium">Tanggal Expired</th>
+                        <th class="px-6 py-3 text-left font-medium">Sisa</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse ($nearestExpiredStocks as $item)
+                        @php
+                            if ($item->days_left <= 14) {
+                                $badge = 'bg-red-100 text-red-800';
+                            } elseif ($item->days_left <= 30) {
+                                $badge = 'bg-orange-100 text-orange-800';
+                            } elseif ($item->days_left <= 90) {
+                                $badge = 'bg-yellow-100 text-yellow-800';
+                            } else {
+                                $badge = 'bg-green-100 text-green-800';
+                            }
+                        @endphp
+
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-3 text-sm font-medium text-gray-800">
+                                {{ $item->name }}
+                            </td>
+                            <td class="px-6 py-3 text-sm text-gray-600">
+                                Batch {{ $item->batch }}
+                            </td>
+                            <td class="px-6 py-3 text-sm text-gray-600">
+                                {{ \Carbon\Carbon::parse($item->expired_date)->locale('id')->translatedFormat('d M Y') }}
+                            </td>
+                            <td class="px-6 py-3">
+                                <span
+                                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ $badge }}">
+                                    {{ $item->days_left }} hari
+                                </span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="py-6 text-center text-gray-500">
+                                Tidak ada data expired terdekat
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 
     <!-- Low Stock Table -->
     <div class="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">

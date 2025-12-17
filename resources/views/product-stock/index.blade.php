@@ -110,6 +110,8 @@
                     </option>
                     <option value="price_desc" {{ request('sort') == 'price_desc' ? 'selected' : '' }}>Harga Tertinggi
                     </option>
+                    <option value="expired_asc" {{ request('sort') == 'expired_asc' ? 'selected' : '' }}>Expired Terdekat
+                    </option>
                 </x-slot>
                 <x-slot name="header">
                     <th scope="col"
@@ -124,11 +126,7 @@
 
                     <th scope="col"
                         class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
-                        DESKRIPSI PRODUK
-                    </th>
-                    <th scope="col"
-                        class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
-                        STOK
+                        TOTAL STOK
                     </th>
 
                     <th scope="col"
@@ -144,6 +142,10 @@
                     <th scope="col"
                         class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
                         HARGA R2
+                    </th>
+
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                        EXPIRY TERDEKAT
                     </th>
 
                     <th scope="col"
@@ -165,24 +167,18 @@
                                 {{ $product->name }}
                             </td>
 
-                            <td class="max-w-sm px-6 py-4 text-sm text-black">
-                                <span class="line-clamp-2">
-                                    {{ $product->description }}
-                                </span>
-                            </td>
-
                             <td class="whitespace-nowrap px-6 py-4 text-sm">
-                                @if (is_null($product->stock_opname))
+                                @if (is_null($product->stock_total))
                                     <span class="rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-black">
                                         Jumlah Stok Belum Diatur
                                     </span>
-                                @elseif ($product->stock_opname == 0)
+                                @elseif ($product->stock_total == 0)
                                     <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700">
                                         0 (Habis)
                                     </span>
                                 @else
                                     <span class="font-medium text-black">
-                                        {{ number_format($product->stock_opname) }}
+                                        {{ number_format($product->stock_total) }}
                                     </span>
                                 @endif
                             </td>
@@ -194,9 +190,9 @@
                                     Rp {{ number_format($product->price_consument, 0, ',', '.') }}
                                 @endif
                             </td>
-                            
+
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-black">
-                                @if (is_null($product->price_consument))
+                                @if (is_null($product->price_r1))
                                     <span class="text-black">-</span>
                                 @else
                                     Rp {{ number_format($product->price_r1, 0, ',', '.') }}
@@ -204,29 +200,70 @@
                             </td>
 
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-black">
-                                @if (is_null($product->price_consument))
+                                @if (is_null($product->price_r2))
                                     <span class="text-black">-</span>
                                 @else
                                     Rp {{ number_format($product->price_r2, 0, ',', '.') }}
                                 @endif
                             </td>
 
+                            <td class="whitespace-nowrap px-6 py-4 text-sm">
+                                @if ($product->expired_date)
+                                    @php
+                                        $daysLeft = \Carbon\Carbon::today()->diffInDays(
+                                            \Carbon\Carbon::parse($product->expired_date),
+                                            false,
+                                        );
+
+                                        if ($daysLeft <= 14) {
+                                            $badge = 'bg-red-100 text-red-700';
+                                        } elseif ($daysLeft <= 30) {
+                                            $badge = 'bg-orange-100 text-orange-700';
+                                        } elseif ($daysLeft <= 90) {
+                                            $badge = 'bg-yellow-100 text-yellow-700';
+                                        } else {
+                                            $badge = 'bg-green-100 text-green-700';
+                                        }
+                                    @endphp
+
+                                    <div class="flex flex-col gap-1">
+                                        <span
+                                            class="inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold {{ $badge }}">
+                                            @if ($daysLeft < 0)
+                                                Expired
+                                            @else
+                                                {{ $daysLeft }} hari lagi
+                                            @endif
+                                        </span>
+
+                                        <span class="text-sm font-medium text-gray-900">
+                                            {{ \Carbon\Carbon::parse($product->expired_date)->locale('id')->translatedFormat('d M Y') }}
+                                        </span>
+
+                                        <span class="text-xs text-gray-500">
+                                            Batch {{ $product->expiry_batch }}
+                                        </span>
+                                    </div>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </td>
+
+
+
                             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
-                                @if (is_null($product->stock_opname))
+                                @if (is_null($product->latest_stock_id))
                                     <a href="{{ route('stock.create', ['product_id' => $product->product_id]) }}"
                                         class="text-button-main hover:text-button-hover font-bold text-xs">
                                         Isi Stok Awal
                                     </a>
                                 @else
                                     <div class="flex items-center gap-3">
-                                        <a href="{{ route('stock.edit', $product->stock_id) }}"
+                                        <a href="{{ route('stock.edit', $product->latest_stock_id) }}"
                                             class="text-button-main hover:text-button-hover" title="Edit">
                                             <img src="{{ asset('update-button.svg') }}" alt="Edit"
                                                 class="inline h-5 w-5">
                                         </a>
-
-                                        <x-delete :module="'stok produk'" :name="$product->name" :action="route('stock.destroy', $product->stock_id)" />
-
                                     </div>
                                 @endif
                             </td>
