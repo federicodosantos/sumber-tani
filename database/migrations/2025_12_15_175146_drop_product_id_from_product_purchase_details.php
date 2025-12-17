@@ -9,12 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 1️⃣ DROP FOREIGN KEY JIKA ADA
         Schema::table('product_purchase_details', function (Blueprint $table) {
             $table->dropForeign('product_purchase_details_product_id_foreign');
         });
 
-        // 2️⃣ DROP COLUMN
         Schema::table('product_purchase_details', function (Blueprint $table) {
             $table->dropColumn('product_id');
         });

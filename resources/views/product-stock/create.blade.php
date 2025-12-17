@@ -91,7 +91,7 @@
                                 <x-content.form-currency name="expiry_date" type="number" placeholder="1"
                                     min="1" required />
 
-                                <x-content.form-select name="expiry_unit" required>
+                                <x-content.form-select name="expiry_unit" required :bold="true">
                                     <option value="days" selected>HARI</option>
                                     <option value="weeks">MINGGU</option>
                                     <option value="months">BULAN</option>

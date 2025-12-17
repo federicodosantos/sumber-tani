@@ -133,7 +133,17 @@
 
                     <th scope="col"
                         class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
-                        HARGA PRODUK/UNIT
+                        HARGA KONSUMEN
+                    </th>
+
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                        HARGA R1
+                    </th>
+
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                        HARGA R2
                     </th>
 
                     <th scope="col"
@@ -178,10 +188,26 @@
                             </td>
 
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-black">
-                                @if (is_null($product->price))
+                                @if (is_null($product->price_consument))
                                     <span class="text-black">-</span>
                                 @else
-                                    Rp {{ number_format($product->price, 0, ',', '.') }}
+                                    Rp {{ number_format($product->price_consument, 0, ',', '.') }}
+                                @endif
+                            </td>
+                            
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-black">
+                                @if (is_null($product->price_consument))
+                                    <span class="text-black">-</span>
+                                @else
+                                    Rp {{ number_format($product->price_r1, 0, ',', '.') }}
+                                @endif
+                            </td>
+
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-black">
+                                @if (is_null($product->price_consument))
+                                    <span class="text-black">-</span>
+                                @else
+                                    Rp {{ number_format($product->price_r2, 0, ',', '.') }}
                                 @endif
                             </td>
 

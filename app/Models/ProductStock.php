@@ -18,9 +18,14 @@ class ProductStock extends Model
 
     protected $fillable = [
         'product_id',
+        'batch',
         'stock_opname',
-        'price',
+        'price_consument',
+        'price_r1',
+        'price_r2',
+        'expired_date',
     ];
+
 
     protected $dates = ['deleted_at'];
 
