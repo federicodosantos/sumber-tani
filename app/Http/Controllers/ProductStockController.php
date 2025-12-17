@@ -266,9 +266,11 @@ class ProductStockController extends Controller
                     $expiredDate = now()->add($validated['expiry_unit'], (int) $validated['expiry_date'])->startOfDay();
                 }
 
+                $nextBatch = ($lastBatch ?? 0) + 1;
+
                 ProductStock::create([
                     'product_id' => $productId,
-                    'batch' => ($lastBatch ?? 0) + 1,
+                    'batch' => $nextBatch,
                     'stock_opname' => $validated['stock_opname'],
                     'price_consument' => $validated['price_consument'],
                     'price_r1' => $validated['price_r1'],

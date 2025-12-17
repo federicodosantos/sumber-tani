@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->decimal('price_consument', 15, 2)->change();
             $table->decimal('price_r1', 15, 2)->default(0)->after('price_consument');
             $table->decimal('price_r2', 15, 2)->default(0)->after('price_r1');
-            $table->string('batch', 100)->after('price_r2');
+            $table->unsignedInteger('batch')->after('price_r2');
         });
     }
 
