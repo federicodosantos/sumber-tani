@@ -12,7 +12,7 @@
                     <div class="flex items-center gap-3">
 
                         <x-content.form-select name="batch_id" class="w-full">
-                            <option value="">Pilih Batch</option>
+                            <option value="">Batch Baru</option>
                             @if (isset($batches))
                                 @foreach ($batches as $batch)
                                     <option value="{{ $batch->id }}">BATCH {{ $batch->number }}</option>
@@ -43,7 +43,8 @@
                         {{-- Nama Produk --}}
                         <div>
                             <x-content.form-select label="Nama Produk" name="product_id" x-model="selectedId"
-                                x-bind:disabled="isPreselected" required>
+                                x-bind:class="isPreselected ? 'cursor-not-allowed bg-gray-100 pointer-events-none' : ''"
+                                required>
                                 <option value="">Pilih Nama Produk</option>
                                 @foreach ($products as $product)
                                     <option value="{{ $product->id }}" :selected="selectedId == '{{ $product->id }}'">

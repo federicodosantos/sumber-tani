@@ -84,14 +84,14 @@
 
     <div class="py-12 font-mont">
         <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-            <div class="mb-4 flex justify-start gap-x-4">
+            <!-- <div class="mb-4 flex justify-start gap-x-4">
                 <x-button.add-button href="{{ route('stock.create') }}">
                     <x-slot name="icon">
                         <img src="{{ asset('icon/add-icon.svg') }}" alt="Add" class="inline h-5 w-5">
                     </x-slot>
                     <span class="font-bold">TAMBAH STOK</span>
                 </x-button.add-button>
-            </div>
+            </div> -->
 
             <x-content.data-table>
                 <x-slot name="sortOptions">

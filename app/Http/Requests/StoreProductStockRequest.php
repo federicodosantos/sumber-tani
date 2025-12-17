@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class StoreProductStockRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'product_id' => [
+                'required',
+                'exists:products,id',
+                Rule::unique('product_stocks', 'product_id')
+                    ->whereNull('deleted_at'),
+            ],
+            'stock_opname'     => 'required|numeric|min:0',
+            'price_consument'  => 'required|numeric|min:0',
+            'price_r1'         => 'required|numeric|min:0',
+            'price_r2'         => 'required|numeric|min:0',
+            'expiry_date'      => 'required|numeric|min:0',
+            'expiry_unit'      => 'required|in:days,weeks,months,years',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'product_id.required' => 'Produk wajib dipilih.',
+            'product_id.exists'   => 'Produk tidak ditemukan.',
+            'product_id.unique'   => 'Produk ini sudah memiliki data stok. Gunakan opsi "Ubah Jumlah Stok".',
+
+            'stock_opname.required' => 'Jumlah stok wajib diisi.',
+            'stock_opname.numeric'  => 'Jumlah stok harus berupa angka.',
+            'stock_opname.min'      => 'Jumlah stok tidak boleh kurang dari 0.',
+
+            'expiry_unit.in'        => 'Satuan kedaluwarsa tidak valid.',
+        ];
+    }
+}
