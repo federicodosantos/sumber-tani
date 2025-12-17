@@ -1,3 +1,8 @@
+@php
+    $expiryValue = old('expiry_date', 0);
+    $expiryUnit  = old('expiry_unit', 'days');
+@endphp
+
 <x-app-layout>
     <x-slot name="header">
         <h2 class="text-xl font-semibold leading-tight text-gray-800">
@@ -86,20 +91,44 @@
                         {{-- Waktu Kadaluarsa dari Hari Ini --}}
                         <div>
                             <label class="mb-2 block text-sm font-semibold text-gray-900">
-                                Waktu Kadaluarsa dari Hari Ini
+                                Waktu Kadaluarsa dari Hari Ini <br>
+                                <span class="text-xs font-normal text-gray-600">
+                                    {{ \Carbon\Carbon::today()->locale('id')->translatedFormat('l, d F Y') }}
+                                </span>
                             </label>
+
                             <div class="grid grid-cols-2 gap-3">
-                                <x-content.form-currency name="expiry_date" type="number" placeholder="1"
-                                    min="1" required />
+                                {{-- JUMLAH --}}
+                                <input type="number" name="expiry_date" min="0" value="{{ $expiryValue }}"
+                                    class="w-full rounded-lg border-2 border-black px-4 text-lg" placeholder="Jumlah" />
 
-                                <x-content.form-select name="expiry_unit" required :bold="true">
-                                    <option value="days" selected>HARI</option>
-                                    <option value="weeks">MINGGU</option>
-                                    <option value="months">BULAN</option>
-                                    <option value="years">TAHUN</option>
+                                {{-- UNIT --}}
+                                <x-content.form-select name="expiry_unit">
+                                    <option value="days" {{ old('expiry_unit', 'days') == 'days' ? 'selected' : '' }}>
+                                        HARI
+                                    </option>
+                                    <option value="weeks" {{ old('expiry_unit') == 'weeks' ? 'selected' : '' }}>
+                                        MINGGU
+                                    </option>
+                                    <option value="months" {{ old('expiry_unit') == 'months' ? 'selected' : '' }}>
+                                        BULAN
+                                    </option>
+                                    <option value="years" {{ old('expiry_unit') == 'years' ? 'selected' : '' }}>
+                                        TAHUN
+                                    </option>
                                 </x-content.form-select>
-
+                                
                             </div>
+
+                            <p id="expiredPreview" class="mt-2 text-xs font-medium text-gray-700">
+                                Kadaluarsa pada:
+                                <span class="text-xs font-semibold text-gray-900">
+                                    {{ \Carbon\Carbon::today()
+                                        ->add($expiryUnit, (int) $expiryValue)
+                                        ->locale('id')
+                                        ->translatedFormat('l, d F Y') }}
+                                </span>
+                            </p>
                         </div>
 
                         {{-- Harga Produk per Satuan (R1) --}}
