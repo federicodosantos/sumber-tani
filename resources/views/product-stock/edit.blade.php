@@ -38,11 +38,11 @@
                         <x-content.form-input label="Kode Produk" name="product_code_display" :value="$stock->product->code_id ?? $stock->product_id" disabled
                             readonly class="cursor-not-allowed border-gray-300 bg-gray-100" />
 
-                        <x-content.form-currency label="Harga Produk per Satuan (Konsumen)" name="price_consumer"
-                            placeholder="Rp 10 xxx" :value="old('price_consumer', $stock->price_consumer ?? 0)" />
+                        <x-content.form-currency label="Harga Produk per Satuan (Konsumen)" name="price_consument"
+                            placeholder="Rp 10 xxx" :value="old('price_consument', $stock->price_consument ?? 0)" />
 
-                        <x-content.form-currency label="Harga Produk per Satuan (R3)" name="price_r3"
-                            placeholder="Rp 10 xxx" :value="old('price_r3', $stock->price_r3 ?? 0)" />
+                        <x-content.form-currency label="Harga Produk per Satuan (R2)" name="price_r2"
+                            placeholder="Rp 10 xxx" :value="old('price_r2', $stock->price_r2 ?? 0)" />
 
                     </div>
                 </x-slot:leftCol>

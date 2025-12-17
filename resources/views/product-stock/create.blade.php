@@ -62,13 +62,13 @@
 
                         {{-- Harga Produk per Satuan (Konsumen) --}}
                         <div>
-                            <x-content.form-currency label="Harga Produk per Satuan (Konsumen)" name="price_consumer"
+                            <x-content.form-currency label="Harga Produk per Satuan (Konsumen)" name="price_consument"
                                 placeholder="Rp 10 xxx" required />
                         </div>
 
                         {{-- Harga Produk per Satuan (R3) --}}
                         <div>
-                            <x-content.form-currency label="Harga Produk per Satuan (R3)" name="price_r3"
+                            <x-content.form-currency label="Harga Produk per Satuan (R2)" name="price_r2"
                                 placeholder="Rp 10 xxx" required />
                         </div>
                     </div>

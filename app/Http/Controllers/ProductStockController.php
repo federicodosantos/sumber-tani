@@ -16,7 +16,7 @@ class ProductStockController extends Controller
     {
         $query = Product::leftJoin('product_stocks as ps', function ($join) {
             $join->on('products.id', '=', 'ps.product_id')->whereNull('ps.deleted_at');
-        })->select('products.id as product_id', 'products.code_id as code_id', 'products.name', 'products.description', 'ps.id as stock_id', 'ps.stock_opname', 'ps.price');
+        })->select('products.id as product_id', 'products.code_id as code_id', 'products.name', 'products.description', 'ps.id as stock_id', 'ps.stock_opname', 'ps.price_consument');
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -53,10 +53,10 @@ class ProductStockController extends Controller
                 $query->orderBy('ps.stock_opname', 'desc');
                 break;
             case 'price_asc':
-                $query->orderBy('ps.price', 'asc');
+                $query->orderBy('ps.price_consument', 'asc');
                 break;
             case 'price_desc':
-                $query->orderBy('ps.price', 'desc');
+                $query->orderBy('ps.price_consument', 'desc');
                 break;
 
             default:
