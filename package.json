@@ -3,7 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
+        "build": "vite build && cp public/build/manifest.webmanifest public/manifest.webmanifest",
         "dev": "vite"
     },
     "devDependencies": {
@@ -18,6 +18,9 @@
     },
     "dependencies": {
         "@alpinejs/persist": "^3.15.2",
-        "autonumeric": "^4.10.9"
+        "autonumeric": "^4.10.9",
+        "dexie": "^4.2.1",
+        "vite-plugin-pwa": "^1.2.0",
+        "workbox-window": "^7.4.0"
     }
 }

@@ -50,50 +50,50 @@ class CashierController extends Controller
             ->leftJoinSub($totalStockSub, 'ts', 'ts.product_id', '=', 'products.id')
             ->leftJoinSub($latestBatchSub, 'lb', 'lb.product_id', '=', 'products.id')
             ->join('item_categories as ic', 'products.item_category_id', '=', 'ic.id')
-            ->select(['products.id', 'products.name', 'products.description', 'ic.name as category_name', DB::raw('COALESCE(ts.total_stock, 0) as stock_opname'), 'lb.price_consument', 'lb.price_r1', 'lb.price_r2'])
+            ->select(['products.id', 'products.name', 'products.item_category_id', 'products.description', 'ic.name as category_name', DB::raw('COALESCE(ts.total_stock, 0) as stock_opname'), 'lb.price_consument', 'lb.price_r1', 'lb.price_r2'])
 
             ->whereNull('products.deleted_at')
 
             // FILTER CATEGORY
-            ->when($categoryId && !$search, function ($query) use ($categoryId) {
-                $query->where('products.item_category_id', $categoryId);
-            })
+            // ->when($categoryId && !$search, function ($query) use ($categoryId) {
+            //     $query->where('products.item_category_id', $categoryId);
+            // })
 
-            // SEARCH
-            ->when($search, function ($query, $search) {
-                $query->where('products.name', 'like', "%{$search}%");
-            })
+            // // SEARCH
+            // ->when($search, function ($query, $search) {
+            //     $query->where('products.name', 'like', "%{$search}%");
+            // })
 
-            // SORTING
-            ->when(
-                $request->query('sort'),
-                function ($query, $sort) {
-                    switch ($sort) {
-                        case 'price_low':
-                            $query->orderBy('price', 'asc');
-                            break;
-                        case 'price_high':
-                            $query->orderBy('price', 'desc');
-                            break;
-                        case 'stock_low':
-                            $query->orderBy('stock_opname', 'asc');
-                            break;
-                        case 'stock_high':
-                            $query->orderBy('stock_opname', 'desc');
-                            break;
-                        case 'name_za':
-                            $query->orderBy('products.name', 'desc');
-                            break;
-                        default:
-                            $query->orderBy('products.name', 'asc');
-                    }
-                },
-                function ($query) {
-                    $query->orderBy('products.name', 'asc');
-                },
-            )
+            // // SORTING
+            // ->when(
+            //     $request->query('sort'),
+            //     function ($query, $sort) {
+            //         switch ($sort) {
+            //             case 'price_low':
+            //                 $query->orderBy('price', 'asc');
+            //                 break;
+            //             case 'price_high':
+            //                 $query->orderBy('price', 'desc');
+            //                 break;
+            //             case 'stock_low':
+            //                 $query->orderBy('stock_opname', 'asc');
+            //                 break;
+            //             case 'stock_high':
+            //                 $query->orderBy('stock_opname', 'desc');
+            //                 break;
+            //             case 'name_za':
+            //                 $query->orderBy('products.name', 'desc');
+            //                 break;
+            //             default:
+            //                 $query->orderBy('products.name', 'asc');
+            //         }
+            //     },
+            //     function ($query) {
+            //         $query->orderBy('products.name', 'asc');
+            //     },
+            // )
             ->get();
 
-        return view('cashier.index', compact('categories', 'products'));
+        return view('cashier.index', ['categories'=> $categories, 'products' => $products]);
     }
 }

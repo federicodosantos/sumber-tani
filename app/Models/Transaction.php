@@ -12,6 +12,9 @@ class Transaction extends Model
     protected $fillable = [
         'total_quantity',
         'total_price',
+        'created_at',
+        'updated_at',
+        'offline_uuid',
     ];
 
     public function transactionDetails(): HasMany

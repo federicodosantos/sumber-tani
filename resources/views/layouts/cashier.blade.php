@@ -1,4 +1,4 @@
-@props(['categories'])
+@props(['categories', 'products' => []])
 
 <!DOCTYPE html>
 <html lang="id">
@@ -9,40 +9,82 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Cashier - {{ config('app.name', 'SUMBER TANI') }}</title>
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="manifest" href="{{ asset('build/manifest.webmanifest') }}">
 
-    <script src="{{ asset('qz/qz-tray.js') }}"></script>
-    <script src="{{ asset('qz/config.js') }}"></script>
+    <!-- <script src="{{ asset('qz/qz-tray.js') }}"></script>
+    <script src="{{ asset('qz/config.js') }}"></script> -->
     {{-- <button onclick="listPrinters()">Cek Printer QZ</button> --}}
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body class="antialiased">
-    <div class="flex h-screen overflow-hidden bg-gray-50" x-data="cashierHandler()">
+    <div class="flex h-screen overflow-hidden bg-gray-50" x-data="cashierHandler({{ Js::from($products) }}, {{ Js::from($categories) }})">
         <aside class="flex w-64 flex-col border-r border-gray-200 bg-white">
             <div class="border-b border-gray-200 p-6">
                 <img src="{{ asset('images/logo-kasir.svg') }}" alt="Sumber Tani">
             </div>
+            <div x-data="{
+                count: 0,
+                async checkDB() {
+                    try {
+                        // Cek apakah global db sudah siap
+                        if (window.db) {
+                            // Update variable count (gunakan 'this' untuk akses data sendiri)
+                            this.count = await window.db.offline_transactions
+                                .where('is_synced').equals(0)
+                                .count();
+                        }
+                    } catch (e) {
+                        // Silent error, mungkin db belum load, biarkan saja
+                    }
+                }
+            }" x-init="// Panggil sekali saat load
+            checkDB();
+            
+            // Panggil ulang setiap 2 detik
+            setInterval(() => checkDB(), 2000);" x-show="count > 0" style="display: none;"
+                class="fixed left-0 top-0 z-50 w-full animate-pulse bg-yellow-500 py-2 text-center font-bold text-white shadow-md">
+
+                <div class="flex items-center justify-center gap-2">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>
+                        ⚠️ PERHATIAN: Ada <span x-text="count"
+                            class="mx-1 rounded-full bg-white px-2 text-yellow-600"></span> Transaksi Belum Tersimpan!
+                    </span>
+                </div>
+                <span class="mt-1 block text-sm font-normal text-yellow-100 sm:inline">Jangan tutup browser atau hapus
+                    cache.</span>
+            </div>
 
             <div class="flex-1 overflow-y-auto p-4">
+                <div x-show="isOffline"
+                    class="mb-4 rounded border border-red-400 bg-red-100 px-4 py-2 text-center text-xs font-bold text-red-700">
+                    MODE OFFLINE
+                </div>
                 <div class="mb-3 flex items-center gap-2">
                     <img src="{{ asset('images/logo-kategori-kasir.svg') }}" alt="">
                     <h2 class="font-semibold text-gray-700">KATEGORI</h2>
                 </div>
 
                 <nav class="space-y-1">
-                    @foreach ($categories as $item)
-                        @php
-                            $isSearching = request()->has('search') && request('search') != '';
+                    <button @click="selectedCategory = null"
+                        :class="selectedCategory === null ? 'bg-button-main text-white' : 'text-gray-700 hover:bg-gray-100'"
+                        class="block w-full rounded-lg px-4 py-2.5 text-left font-medium transition-colors">
+                        Semua Kategori
+                    </button>
 
-                            $isActive = request('category') == $item->id && !$isSearching;
-                        @endphp
-
-                        <a href="{{ route('cashier', ['category' => $item->id]) }}"
-                            class="{{ $isActive ? 'bg-button-main text-white font-medium' : 'text-gray-700 hover:bg-gray-100' }} block rounded-lg px-4 py-2.5 transition-colors">
-                            {{ $item->name }}
-                        </a>
-                    @endforeach
+                    <template x-for="item in categories" :key="item.id">
+                        <button @click="selectedCategory = item.id"
+                            :class="selectedCategory === item.id ? 'bg-button-main text-white' :
+                                'text-gray-700 hover:bg-gray-100'"
+                            class="block w-full rounded-lg px-4 py-2.5 text-left font-medium transition-colors">
+                            <span x-text="item.name"></span>
+                        </button>
+                    </template>
                 </nav>
 
                 @if (request('search'))
@@ -108,7 +150,7 @@
 
                             <input type="number" :value="item.qty" @input="setQty(item.id, $event.target.value)"
                                 @blur="handleQtyBlur(item.id, $event)" min="1" :max="item.stock"
-                                class="h-8 w-16 rounded-lg border border-gray-300 bg-white text-center focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                                class="focus:border-button-main focus:ring-button-main h-8 w-16 rounded-lg border border-gray-300 bg-white text-center focus:outline-none focus:ring-2">
 
                             <button @click="updateQty(item.id, 1)"
                                 class="bg-button-main hover:bg-button-hover flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors"
@@ -146,6 +188,31 @@
             </div>
         </aside>
     </div>
+
+    <script>
+        // ============================================
+        // MOCKUP PRINTER (PENGGANTI SEMENTARA QZ TRAY)
+        // ============================================
+        // Fungsi ini menggantikan fungsi asli QZ Tray agar JS tidak error
+
+        window.printReceipt = function(data) {
+            console.log("------------------------------------------");
+            console.log("🖨️ [SIMULASI PRINT] Struk sedang dicetak...");
+            console.log("DATA:", data);
+            console.log("------------------------------------------");
+
+            // Return Promise agar flow async/await di cashier.js tetap jalan
+            return Promise.resolve(true);
+        }
+
+        window.printReceiptOffline = function(data) {
+            console.log("------------------------------------------");
+            console.log("🖨️ [SIMULASI PRINT OFFLINE] Struk Offline...");
+            console.log("DATA:", data);
+            console.log("------------------------------------------");
+            return Promise.resolve(true);
+        }
+    </script>
 
 </body>
 

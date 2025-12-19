@@ -12,6 +12,10 @@ use App\Http\Controllers\FinanceReportController;
 use App\Http\Controllers\ProductPurchaseController;
 use App\Http\Controllers\QzSecurityController;
 
+Route::get('/refresh-csrf', function () {
+    return csrf_token();
+});
+
 Route::get('/', function () {
     return view('auth.login');
 });
