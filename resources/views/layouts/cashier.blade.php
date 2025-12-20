@@ -224,10 +224,15 @@
                             </div>
 
                             <template x-if="manualTotal !== null && cart.length > 0">
+<<<<<<< Updated upstream
                                 <p class="mt-0.5 text-xs font-medium text-gray-400 line-through"
                                     title="Harga Asli Sebelum Edit">
+=======
+                                <p class="text-xs text-gray-900 mt-0.5 "
+                                    title="Harga Asli Sebelum Edit">Harga Sistem: 
+>>>>>>> Stashed changes
                                     <span
-                                        x-text="formatRupiah(cart.reduce((t, i) => t + (i.price * i.qty), 0))"></span>
+                                        x-text="formatRupiah(cart.reduce((t, i) => t + (i.price * i.qty), 0))" class="font-bold"></span>
                                 </p>
                             </template>
 

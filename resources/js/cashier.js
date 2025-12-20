@@ -242,6 +242,10 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     await this.decrementLocalStock(cleanCart);
                     
                     alert('OFFLINE: Transaksi tersimpan lokal.');
+
+                    if (typeof window.printReceipt === 'function') {
+                        window.printReceipt(null, payload); 
+                    }
                     this.cart = [];
                 } catch (e) {
                     console.error(e);
@@ -263,6 +267,10 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                 })
                 .then(async response => {
                     await this.decrementLocalStock(cleanCart);
+
+                    if (response.transaction_id && typeof window.printReceipt === 'function') {
+                        window.printReceipt(response.transaction_id);
+                    }
 
                     alert('Transaksi Berhasil!');
                     this.cart = [];
