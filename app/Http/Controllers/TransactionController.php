@@ -38,6 +38,9 @@ class TransactionController extends Controller
             'totalAmount' => 'required|numeric',
             'created_at' => 'nullable|date',
             'offline_uuid' => 'nullable|string',
+            'discount' => 'nullable|numeric|min:0',
+            'payment_method' => 'required|string|in:Cash,Kredit,QRIS,Transfer',
+            'is_paid' => 'required|boolean',
         ]);
 
         if ($request->filled('offline_uuid')) {
@@ -62,7 +65,7 @@ class TransactionController extends Controller
         $items = $request->items;
         $totalQty = $request->totalQty;
         $totalAmount = $request->totalAmount;
-
+        $discount = $request->discount ?? 0;
         $transactionDate = $request->created_at ?? Carbon::now('Asia/Jakarta');
 
         try {
@@ -71,6 +74,9 @@ class TransactionController extends Controller
             $transaction = Transaction::create([
                 'total_quantity' => $totalQty,
                 'total_price' => $totalAmount,
+                'discount' => $discount,
+                'payment_method' => $request->payment_method,
+                'is_paid' => $request->is_paid,
                 'created_at' => $transactionDate,
                 'updated_at' => $transactionDate,
                 'offline_uuid' => $request->offline_uuid,

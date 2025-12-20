@@ -15,6 +15,9 @@ class Transaction extends Model
         'created_at',
         'updated_at',
         'offline_uuid',
+        'discount',
+        'payment_method',
+        'is_paid',
     ];
 
     public function transactionDetails(): HasMany

@@ -8,6 +8,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         
         search: '',
         selectedCategory: null, 
+        paymentMethod: 'Cash',
         sortType: 'name_az',    
         priceMode: 'consument',
         isOffline: !navigator.onLine,
@@ -226,13 +227,24 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
             const cleanCart = JSON.parse(JSON.stringify(this.cart));
             const offlineUuid = self.crypto.randomUUID();
+            const originalTotal = cleanCart.reduce((total, item) => total + (item.price * item.qty), 0);
+            const isPaid = this.paymentMethod === 'Kredit' ? 0 : 1;
+
+            let discountValue = 0;
+            if (this.manualTotal !== null) {
+                discountValue = originalTotal - parseFloat(this.manualTotal);
+                if (discountValue < 0) discountValue = 0; 
+            }
 
             const payload = {
                 items: cleanCart,
                 totalQty: this.totalQty,
                 totalAmount: this.totalPrice,
+                discount: discountValue,
+                paymentMethod: this.paymentMethod,
                 created_at: new Date().toISOString(),
-                offline_uuid: offlineUuid
+                offline_uuid: offlineUuid,
+                is_paid: isPaid
             };
 
             if (this.isOffline) {

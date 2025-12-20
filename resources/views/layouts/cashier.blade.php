@@ -18,7 +18,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body class="antialiased">
+<body class="antialiased font-mont">
     <div class="flex h-screen overflow-hidden bg-gray-50" x-data="cashierHandler({{ Js::from($products) }}, {{ Js::from($categories) }})">
         <aside class="flex w-64 flex-col border-r border-gray-200 bg-white">
             <div class="border-b border-gray-200 p-6">
@@ -166,6 +166,99 @@
                 </template>
             </div>
 
+            <div class="w-full border-t border-gray-200 flex justify-between items-center pt-4 px-6 mb-2">
+                <div>
+                    <h3 class="font-bold text-gray-700">Metode Pembayaran</h3>
+                </div>
+
+                <div x-data="{ open: false }" class="relative">
+
+                    <button @click="open = !open"
+                        class="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-bold text-gray-700 bg-white hover:border-button-main hover:text-button-main transition-all shadow-sm active:scale-95">
+
+                        <template x-if="paymentMethod === 'Cash'">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z">
+                                </path>
+                            </svg>
+                        </template>
+                        <template x-if="paymentMethod === 'QRIS'">
+                            <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
+                                </path>
+                            </svg>
+                        </template>
+                        <template x-if="paymentMethod === 'Transfer'">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z">
+                                </path>
+                            </svg>
+                        </template>
+                        <template x-if="paymentMethod === 'Kredit'">
+                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                                </path>
+                            </svg>
+                        </template>
+
+                        <span x-text="paymentMethod" class="uppercase tracking-wide"></span>
+
+                        <svg class="w-4 h-4 ml-1 text-gray-400 transition-transform duration-200"
+                            :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                    </button>
+
+                    <div x-show="open" @click.outside="open = false"
+                        x-transition:enter="transition ease-out duration-100"
+                        x-transition:enter-start="transform opacity-0 scale-95 translate-y-2"
+                        x-transition:enter-end="transform opacity-100 scale-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-75"
+                        x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
+                        x-transition:leave-end="transform opacity-0 scale-95 translate-y-2"
+                        class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-gray-300 py-1 z-20 overflow-hidden">
+
+                        <p class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Pilih Metode
+                        </p>
+
+                        <button @click="paymentMethod = 'Cash'; open = false"
+                            class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 flex items-center gap-3"
+                            :class="paymentMethod === 'Cash' ? 'text-green-600 bg-green-50' : 'text-gray-700'">
+                            <span>💵</span> CASH
+                        </button>
+
+                        <button @click="paymentMethod = 'QRIS'; open = false"
+                            class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 flex items-center gap-3"
+                            :class="paymentMethod === 'QRIS' ? 'text-gray-900 bg-gray-100' : 'text-gray-700'">
+                            <span>📱</span> QRIS
+                        </button>
+
+                        <button @click="paymentMethod = 'Transfer'; open = false"
+                            class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 flex items-center gap-3"
+                            :class="paymentMethod === 'Transfer' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'">
+                            <span>💳</span> TRANSFER
+                        </button>
+
+                        <div class="border-t border-gray-100 my-1"></div>
+
+                        <button @click="paymentMethod = 'Kredit'; open = false"
+                            class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-red-50 flex items-center gap-3"
+                            :class="paymentMethod === 'Kredit' ? 'text-red-600 bg-red-50' : 'text-gray-700'">
+                            <span>📝</span> KREDIT / BON
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="p-6">
                 <div class="bg-button-main rounded-3xl p-5 shadow-xl">
                     <div class="mb-4 flex items-center justify-between px-1">
@@ -224,15 +317,9 @@
                             </div>
 
                             <template x-if="manualTotal !== null && cart.length > 0">
-<<<<<<< Updated upstream
-                                <p class="mt-0.5 text-xs font-medium text-gray-400 line-through"
-                                    title="Harga Asli Sebelum Edit">
-=======
-                                <p class="text-xs text-gray-900 mt-0.5 "
-                                    title="Harga Asli Sebelum Edit">Harga Sistem: 
->>>>>>> Stashed changes
-                                    <span
-                                        x-text="formatRupiah(cart.reduce((t, i) => t + (i.price * i.qty), 0))" class="font-bold"></span>
+                                <p class="text-xs text-gray-900 mt-0.5 " title="Harga Asli Sebelum Edit">Harga Sistem:
+                                    <span x-text="formatRupiah(cart.reduce((t, i) => t + (i.price * i.qty), 0))"
+                                        class="font-bold"></span>
                                 </p>
                             </template>
 
