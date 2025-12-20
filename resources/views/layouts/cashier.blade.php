@@ -189,31 +189,6 @@
         </aside>
     </div>
 
-    <script>
-        // ============================================
-        // MOCKUP PRINTER (PENGGANTI SEMENTARA QZ TRAY)
-        // ============================================
-        // Fungsi ini menggantikan fungsi asli QZ Tray agar JS tidak error
-
-        window.printReceipt = function(data) {
-            console.log("------------------------------------------");
-            console.log("🖨️ [SIMULASI PRINT] Struk sedang dicetak...");
-            console.log("DATA:", data);
-            console.log("------------------------------------------");
-
-            // Return Promise agar flow async/await di cashier.js tetap jalan
-            return Promise.resolve(true);
-        }
-
-        window.printReceiptOffline = function(data) {
-            console.log("------------------------------------------");
-            console.log("🖨️ [SIMULASI PRINT OFFLINE] Struk Offline...");
-            console.log("DATA:", data);
-            console.log("------------------------------------------");
-            return Promise.resolve(true);
-        }
-    </script>
-
 </body>
 
 </html>

@@ -32,36 +32,30 @@ class TransactionController extends Controller
      */
     public function store(Request $request)
     {
-        // 1. TAMBAHAN: Validasi input agar aman
         $request->validate([
             'items' => 'required|array',
             'totalQty' => 'required|numeric',
             'totalAmount' => 'required|numeric',
-            'created_at' => 'nullable|date', // Ini field kunci untuk offline mode
+            'created_at' => 'nullable|date',
             'offline_uuid' => 'nullable|string',
         ]);
 
         if ($request->filled('offline_uuid')) {
-            // Cek apakah transaksi dengan offline_uuid ini sudah ada
             $existingTransaction = Transaction::where('offline_uuid', $request->offline_uuid)->first();
             if ($existingTransaction) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Transaksi dengan ID offline ini sudah disimpan sebelumnya.',
                     'transaction_id' => $existingTransaction->id,
-                ]); // Conflict
+                ]);
             }
         }
 
         if ($request->filled('created_at')) {
-            // 1. Parse tanggal dari JS (yang formatnya UTC / Zulu Time 'Z')
-            // Carbon otomatis tahu ini UTC karena ada huruf 'Z' di belakang string ISO
             $date = Carbon::parse($request->created_at);
 
-            // 2. Ubah ke Timezone Aplikasi (Asia/Jakarta / WIB)
             $transactionDate = $date->setTimezone(config('app.timezone'));
         } else {
-            // Jika tidak ada kiriman (Online biasa), pakai waktu server sekarang
             $transactionDate = Carbon::now();
         }
 
@@ -69,36 +63,34 @@ class TransactionController extends Controller
         $totalQty = $request->totalQty;
         $totalAmount = $request->totalAmount;
 
-        // Ambil waktu dari request (jika sync offline) atau pakai waktu sekarang (jika online biasa)
         $transactionDate = $request->created_at ?? Carbon::now('Asia/Jakarta');
 
         try {
             DB::beginTransaction();
 
-            // 2. MODIFIKASI: Masukkan created_at secara manual
             $transaction = Transaction::create([
                 'total_quantity' => $totalQty,
                 'total_price' => $totalAmount,
-                'created_at' => $transactionDate, // Override timestamp
-                'updated_at' => $transactionDate, // Samakan saja
+                'created_at' => $transactionDate,
+                'updated_at' => $transactionDate,
                 'offline_uuid' => $request->offline_uuid,
             ]);
 
             foreach ($items as $item) {
                 $transaction->transactionDetails()->create([
                     'product_id' => $item['id'],
-                    'product_price' => $item['price'], // Cek apakah key di JS 'price' atau 'product_price'
+                    'product_price' => $item['price'], 
                     'quantity' => $item['qty'],
                     'total_price' => $item['price'] * $item['qty'],
-                    'created_at' => $transactionDate, // Detail juga harus ikut waktu asli
+                    'created_at' => $transactionDate, 
                     'updated_at' => $transactionDate,
                 ]);
 
                 // Update Stok
                 $productStock = ProductStock::where('product_id', $item['id'])
                     ->whereNull('deleted_at')
-                    ->where('stock_opname', '>', 0) // Tambahan: Hanya ambil yang stoknya ada
-                    ->orderBy('created_at', 'asc') // Tambahan: Ambil stok terlama dulu (FIFO)
+                    ->where('stock_opname', '>', 0)
+                    ->orderBy('created_at', 'asc')
                     ->first();
 
                 if ($productStock) {
@@ -131,10 +123,8 @@ class TransactionController extends Controller
      */
     public function show($id)
     {
-        // Load transaction + details + product
         $transaction = Transaction::with(['transactionDetails.product'])->findOrFail($id);
 
-        // Map details into clean JSON objects
         $items = $transaction->transactionDetails->map(function ($detail) {
             return [
                 'name' => $detail->product?->name ?? 'Unknown',

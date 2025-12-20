@@ -1,8 +1,5 @@
 <x-cashier-layout :categories="$categories" :products="$products">
 
-    {{-- =========================
-        FILTER + SEARCH (CLIENT SIDE)
-    ========================= --}}
     <div class="flex items-center justify-end gap-4 px-8 py-4">
         
         {{-- SORT BUTTONS --}}
@@ -31,9 +28,6 @@
         </div>
     </div>
 
-    {{-- =========================
-        MODE HARGA
-    ========================= --}}
     <div class="flex gap-2 px-8 pb-2">
         <p class="font-bold">Mode Harga: </p>
         
@@ -56,9 +50,6 @@
         </button>
     </div>
 
-    {{-- =========================
-        PRODUCT GRID (ALPINE LOOP)
-    ========================= --}}
     <div class="flex-1 overflow-y-auto px-8 py-6">
         
         <div x-show="filteredProducts.length === 0" class="flex h-64 flex-col items-center justify-center text-gray-500" style="display: none;">

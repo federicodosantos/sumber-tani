@@ -1,35 +1,24 @@
 import { db } from './db';
 
-// Pastikan export default menerima props dari Layout
 export default function cashierHandler(initialProducts = [], initialCategories = []) {
     return {
-        // --- DATA STATE ---
         products: [],
         categories: [],
         cart: Alpine.$persist([]).as('pos-cart'),
         
-        // --- UI STATE ---
         search: '',
         selectedCategory: null, 
         sortType: 'name_az',    
         priceMode: 'consument',
         isOffline: !navigator.onLine,
 
-        // ============================================================
-        // BAGIAN YANG DIMODIFIKASI (SMART INIT)
-        // ============================================================
         async init() {
             window.addEventListener('online', () => { this.isOffline = false; this.syncTransactions(); });
             window.addEventListener('offline', () => { this.isOffline = true; });
 
             try {
-                // 1. Cek dulu: Apakah ada transaksi offline yang belum terkirim?
                 const pendingCount = await db.offline_transactions.where('is_synced').equals(0).count();
 
-                // 2. Logika Update Database:
-                // Kita HANYA menimpa DB lokal dengan data Server (initialProducts) JIKA:
-                // a. Ada data dari server.
-                // b. DAN Tidak ada transaksi offline yang nyangkut (pendingCount === 0).
                 if (initialProducts.length > 0 && pendingCount === 0) {
                     
                     console.log("🔄 Data Server bersih & lebih baru. Mengupdate DB Lokal...");
@@ -40,37 +29,27 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     await db.categories.bulkPut(initialCategories);
                     
                 } else {
-                    // Jika pendingCount > 0, kita JANGAN update dari server.
-                    // Karena data di DB Lokal lebih akurat (stoknya sudah berkurang karena transaksi offline).
                     console.log("⚠️ Ada Transaksi Offline. Menggunakan Data Lokal (Agar stok tidak reset).");
                 }
             } catch (e) {
                 console.error('Gagal inisialisasi DB:', e);
             }
 
-            // 3. Load Data Akhir ke Tampilan (Alpine State)
-            // Selalu ambil dari IndexedDB agar konsisten
             this.products = await db.products.toArray();
             this.categories = await db.categories.toArray();
         },
-        // ============================================================
-
-        // --- CORE LOGIC: FILTERING & SORTING ---
         get filteredProducts() {
             let result = this.products;
 
-            // Filter Category
             if (this.selectedCategory) {
                 result = result.filter(p => p.item_category_id == this.selectedCategory);
             }
 
-            // Filter Search
             if (this.search) {
                 const q = this.search.toLowerCase();
                 result = result.filter(p => p.name.toLowerCase().includes(q));
             }
 
-            // Sorting
             return result.sort((a, b) => {
                 switch (this.sortType) {
                     case 'price_low': return this.getPrice(a) - this.getPrice(b);
@@ -83,7 +62,6 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             });
         },
 
-        // --- HELPER: HARGA DINAMIS ---
         getPrice(product) {
             let p = 0;
             if (this.priceMode === 'r1') p = product.price_r1;
@@ -93,7 +71,6 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             return Number(p) || 0;
         },
 
-        // --- CART LOGIC ---
         addToCart(product) {
             const activePrice = this.getPrice(product);
             const existingItem = this.cart.find(item => item.id === product.id);
@@ -120,18 +97,13 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             }
         },
 
-        // --- UPDATE STOK REALTIME ---
         async decrementLocalStock(soldItems) {
             for (let item of soldItems) {
-                // 1. Cari produk di State Alpine (Tampilan Layar)
                 const product = this.products.find(p => p.id === item.id);
                 
                 if (product) {
-                    // Kurangi stok di layar
-                    // (Saya rapikan syntaxnya sedikit agar lebih standar JS)
                     product.stock_opname -= item.qty;
 
-                    // 2. Update juga di IndexedDB 'products' 
                     if (window.db) {
                         try {
                             await db.products.update(product.id, {
@@ -209,7 +181,6 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             return this.cart.reduce((total, item) => total + (item.price * item.qty), 0);
         },
 
-        // --- CHECKOUT & SYNC ---
         async processCheckout() {
             if (this.cart.length === 0) return alert('Keranjang kosong');
             if (!confirm('Proses Transaksi?')) return;
@@ -226,11 +197,9 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             };
 
             if (this.isOffline) {
-                // OFFLINE FLOW
                 try {
                     await db.offline_transactions.add({ ...payload, is_synced: 0 });
                     
-                    // Update Stok
                     await this.decrementLocalStock(cleanCart);
                     
                     alert('OFFLINE: Transaksi tersimpan lokal.');
@@ -240,7 +209,6 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     alert('Gagal simpan offline');
                 }
             } else {
-                // ONLINE FLOW
                 fetch('/checkout', { 
                     method: 'POST',
                     headers: {
@@ -251,12 +219,10 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     body: JSON.stringify(payload)
                 })
                 .then(res => {
-                    // Tambahkan return res.json() agar data response bisa dipakai
                     if (!res.ok) throw new Error(res.statusText);
                     return res.json(); 
                 })
                 .then(async response => {
-                    // Update Stok
                     await this.decrementLocalStock(cleanCart);
 
                     alert('Transaksi Berhasil!');
@@ -266,7 +232,6 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     console.error('Network Error, saving offline...', error);
                     await db.offline_transactions.add({...payload, is_synced: 0});
 
-                    // Update Stok
                     await this.decrementLocalStock(cleanCart);
                     
                     alert('Koneksi terputus. Tersimpan offline.');
