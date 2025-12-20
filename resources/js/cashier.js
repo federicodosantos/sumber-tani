@@ -11,10 +11,27 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         sortType: 'name_az',    
         priceMode: 'consument',
         isOffline: !navigator.onLine,
+        manualTotal: null,
 
         async init() {
             window.addEventListener('online', () => { this.isOffline = false; this.syncTransactions(); });
             window.addEventListener('offline', () => { this.isOffline = true; });
+
+            setInterval(async () => {
+                if (navigator.onLine) {
+                    try {
+                    if (window.db) {    
+                        const pendingCount = await db.offline_transactions.where('is_synced').equals(0).count();
+                        if (pendingCount > 0) {
+                            this.syncTransactions();
+                        }
+                    }
+                }
+                catch (e) {
+                    console.error('Gagal sinkronisasi otomatis:', e);
+                    }
+                }
+            }, 10000);
 
             try {
                 const pendingCount = await db.offline_transactions.where('is_synced').equals(0).count();
@@ -76,6 +93,19 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             const existingItem = this.cart.find(item => item.id === product.id);
 
             if (existingItem) {
+                if (existingItem.price !== activePrice) {
+                    const oldPrice = this.formatRupiah(existingItem.price);
+                    const newPrice = this.formatRupiah(activePrice);
+
+                    alert(
+                        `⚠️ GAGAL MENAMBAH ITEM!\n\n` +
+                        `Produk ini sudah ada di keranjang dengan harga: ${oldPrice}\n` +
+                        `Sedangkan mode harga Anda saat ini adalah: ${newPrice}\n\n` +
+                        `Solusi: Hapus item dari keranjang terlebih dahulu jika ingin menggunakan harga baru.`
+                    );
+                    return;
+                }
+
                 if (existingItem.qty < product.stock_opname) {
                     existingItem.qty++;
                     existingItem.price = activePrice; 
@@ -178,6 +208,15 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         },
         
         get totalPrice() {
+            if (this.cart.length === 0) {
+                this.manualTotal = null;
+                return 0;
+            }
+
+            if (this.manualTotal !== null) {
+                return this.manualTotal;
+            }
+
             return this.cart.reduce((total, item) => total + (item.price * item.qty), 0);
         },
 
@@ -227,6 +266,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
                     alert('Transaksi Berhasil!');
                     this.cart = [];
+                    this.manualTotal = null;
                 })
                 .catch(async error => {
                     console.error('Network Error, saving offline...', error);
@@ -236,6 +276,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     
                     alert('Koneksi terputus. Tersimpan offline.');
                     this.cart = [];
+                    this.manualTotal = null;
                 });
             }
         },
@@ -276,6 +317,13 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     if (response.ok) {
                         console.log('Sinkronisasi berhasil untuk ID:', trx.id);
                         await db.offline_transactions.delete(trx.id);
+
+                        const toast = document.createElement('div');
+                        toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow';
+                        toast.innerText = `Data offline (ID: ${trx.id}) berhasil disimpan ke server.`;
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.remove(), 5000);
+
                         continue;
                     }
 
