@@ -13,7 +13,7 @@
 
     <script src="{{ asset('qz/qz-tray.js') }}"></script>
     <script src="{{ asset('qz/config.js') }}"></script>
-    <button onclick="listPrinters()">Cek Printer QZ</button>
+    {{-- <button onclick="listPrinters()">Cek Printer QZ</button> --}}
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -182,16 +182,14 @@
                             </p>
 
                             <div x-data="{ isEditing: false }" class="relative">
-
                                 <div x-show="!isEditing" class="group flex items-center justify-end gap-2">
-
                                     <p class="text-xl font-black text-gray-900" x-text="formatRupiah(totalPrice)"></p>
 
                                     <button x-show="cart.length > 0"
                                         @click="isEditing = true; 
-                                                manualTotal = manualTotal || totalPrice; 
-                                                $nextTick(() => $refs.totalInput.focus());"
-                                        class="text-gray-400 opacity-0 transition-opacity hover:text-blue-500 group-hover:opacity-100"
+                manualTotal = manualTotal || totalPrice; 
+                $nextTick(() => $refs.totalInput.focus());"
+                                        class="transition-opacity hover:text-blue-500"
                                         title="Edit Harga Total Manual">
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24">
@@ -204,20 +202,15 @@
                                 <div x-show="isEditing" class="mt-1 flex items-center justify-end gap-1">
                                     <div class="relative w-32">
                                         <span class="absolute left-2 top-1.5 text-xs font-bold text-gray-500">Rp</span>
-
-                                        <input x-ref="totalInput" type="number" x-model="manualTotal"
+                                        <input x-ref="totalInput" type="text" x-model="manualTotal"
                                             @blur="
-                                                   let autoTotal = cart.reduce((t, i) => t + (i.price * i.qty), 0);
-                                                   if(Number(manualTotal) === autoTotal) { manualTotal = null; }
-                                                   isEditing = false;
-                                               "
-                                            @keydown.enter.prevent="
-                                                   // .prevent Mencegah form submit/refresh halaman
-                                                   $el.blur(); // Memicu event @blur di atas untuk validasi & tutup
-                                               "
-                                            class="w-full rounded border border-blue-400 py-1 pl-6 pr-2 text-right text-sm font-bold outline-none focus:ring-2 focus:ring-blue-200">
+                        let autoTotal = cart.reduce((t, i) => t + (i.price * i.qty), 0);
+                        if(Number(manualTotal) === autoTotal) { manualTotal = null; }
+                        isEditing = false;
+                    "
+                                            @keydown.enter.prevent="$el.blur();"
+                                            class="w-full rounded border py-1 pl-6 pr-2 text-right text-sm font-bold outline-none focus:ring-2 focus:ring-button-hover focus:bg-white">
                                     </div>
-
                                     <button @click="manualTotal = null; isEditing = false;"
                                         class="rounded p-1 text-red-500 hover:bg-red-50"
                                         title="Reset ke Harga Otomatis">
@@ -229,6 +222,15 @@
                                     </button>
                                 </div>
                             </div>
+
+                            <template x-if="manualTotal !== null && cart.length > 0">
+                                <p class="text-xs text-gray-400 line-through mt-0.5 font-medium"
+                                    title="Harga Asli Sebelum Edit">
+                                    <span
+                                        x-text="formatRupiah(cart.reduce((t, i) => t + (i.price * i.qty), 0))"></span>
+                                </p>
+                            </template>
+
                         </div>
                     </div>
                     <button @click="processCheckout()"
