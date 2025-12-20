@@ -209,7 +209,7 @@
                         isEditing = false;
                     "
                                             @keydown.enter.prevent="$el.blur();"
-                                            class="w-full rounded border py-1 pl-6 pr-2 text-right text-sm font-bold outline-none focus:ring-2 focus:ring-button-hover focus:bg-white">
+                                            class="focus:ring-button-hover w-full rounded border py-1 pl-6 pr-2 text-right text-sm font-bold outline-none focus:bg-white focus:ring-2">
                                     </div>
                                     <button @click="manualTotal = null; isEditing = false;"
                                         class="rounded p-1 text-red-500 hover:bg-red-50"
@@ -224,7 +224,7 @@
                             </div>
 
                             <template x-if="manualTotal !== null && cart.length > 0">
-                                <p class="text-xs text-gray-400 line-through mt-0.5 font-medium"
+                                <p class="mt-0.5 text-xs font-medium text-gray-400 line-through"
                                     title="Harga Asli Sebelum Edit">
                                     <span
                                         x-text="formatRupiah(cart.reduce((t, i) => t + (i.price * i.qty), 0))"></span>
