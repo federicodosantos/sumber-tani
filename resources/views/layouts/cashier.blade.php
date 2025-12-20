@@ -11,9 +11,9 @@
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <link rel="manifest" href="{{ asset('build/manifest.webmanifest') }}">
 
-    <!-- <script src="{{ asset('qz/qz-tray.js') }}"></script>
-    <script src="{{ asset('qz/config.js') }}"></script> -->
-    {{-- <button onclick="listPrinters()">Cek Printer QZ</button> --}}
+    <script src="{{ asset('qz/qz-tray.js') }}"></script>
+    <script src="{{ asset('qz/config.js') }}"></script>
+    <button onclick="listPrinters()">Cek Printer QZ</button>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -177,52 +177,54 @@
                         <div class="text-right">
                             <p class="text-xs font-semibold uppercase tracking-wider text-gray-700 opacity-70">
                                 Total Bayar
-                                <span x-show="manualTotal !== null" class="ml-1 font-bold text-red-500">(Manual)</span>
+                                <span x-show="manualTotal !== null"
+                                    class="ml-1 font-bold text-red-500">(Manual)</span>
                             </p>
-                        
+
                             <div x-data="{ isEditing: false }" class="relative">
-                        
+
                                 <div x-show="!isEditing" class="group flex items-center justify-end gap-2">
-                                    
+
                                     <p class="text-xl font-black text-gray-900" x-text="formatRupiah(totalPrice)"></p>
-                        
-                                    <button
-                                        x-show="cart.length > 0" 
+
+                                    <button x-show="cart.length > 0"
                                         @click="isEditing = true; 
                                                 manualTotal = manualTotal || totalPrice; 
                                                 $nextTick(() => $refs.totalInput.focus());"
                                         class="text-gray-400 opacity-0 transition-opacity hover:text-blue-500 group-hover:opacity-100"
                                         title="Edit Harga Total Manual">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                         </svg>
                                     </button>
                                 </div>
-                        
+
                                 <div x-show="isEditing" class="mt-1 flex items-center justify-end gap-1">
                                     <div class="relative w-32">
                                         <span class="absolute left-2 top-1.5 text-xs font-bold text-gray-500">Rp</span>
-                                        
-                                        <input x-ref="totalInput" 
-                                               type="number" 
-                                               x-model="manualTotal"
-                                               @blur="
+
+                                        <input x-ref="totalInput" type="number" x-model="manualTotal"
+                                            @blur="
                                                    let autoTotal = cart.reduce((t, i) => t + (i.price * i.qty), 0);
                                                    if(Number(manualTotal) === autoTotal) { manualTotal = null; }
                                                    isEditing = false;
-                                               " 
-                                               @keydown.enter.prevent="
+                                               "
+                                            @keydown.enter.prevent="
                                                    // .prevent Mencegah form submit/refresh halaman
                                                    $el.blur(); // Memicu event @blur di atas untuk validasi & tutup
                                                "
-                                               class="w-full rounded border border-blue-400 py-1 pl-6 pr-2 text-right text-sm font-bold outline-none focus:ring-2 focus:ring-blue-200">
+                                            class="w-full rounded border border-blue-400 py-1 pl-6 pr-2 text-right text-sm font-bold outline-none focus:ring-2 focus:ring-blue-200">
                                     </div>
-                        
+
                                     <button @click="manualTotal = null; isEditing = false;"
                                         class="rounded p-1 text-red-500 hover:bg-red-50"
                                         title="Reset ke Harga Otomatis">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </button>
                                 </div>
