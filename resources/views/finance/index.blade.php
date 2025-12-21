@@ -47,10 +47,19 @@
             Tanggal
           </th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+            Metode Pembayaran
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
             Stok Terjual
           </th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+            Diskon
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
             Pendapatan Masuk
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+            Sudah Lunas
           </th>
           <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
             Action
@@ -78,11 +87,23 @@
               <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                 {{ $report->date->translatedFormat('d F Y') }}
               </td>
+              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900 felx ">
+                {{ strtoupper($report->payment_method) }}
+              </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                 {{ number_format($report->total_items_sold, 0, ',', '.') }} item
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                Rp {{ number_format($report->discount, 0, ',', '.') }}
+              </td>
+              <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                 Rp {{ number_format($report->total_income, 0, ',', '.') }}
+              </td>
+              <td class="whitespace-nowrap px-6 py-4 text-sm">
+                  <span class="px-3 py-1 rounded-full
+                      {{ $report->is_paid ? 'bg-green-200 text-green-700 font-bold' : 'bg-red-200 text-red-700 font-bold' }}">
+                      {{ $report->is_paid ? 'Sudah' : 'Belum' }}
+                  </span>
               </td>
               <td class="whitespace-nowrap px-6 py-4 text-sm">
                 <a href="{{ route('finance.show', $report->id) }}"

@@ -190,6 +190,9 @@ class FinanceReportController extends Controller
             return (object) [
                 'id' => $t->id,
                 'date' => $t->created_at,
+                'payment_method' => $t->payment_method,
+                'discount' => $t->discount,
+                'is_paid' => $t->is_paid,
                 'total_items_sold' => $t->total_quantity,
                 'total_income' => $t->total_price,
             ];

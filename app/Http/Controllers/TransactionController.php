@@ -85,19 +85,15 @@ class TransactionController extends Controller
             foreach ($items as $item) {
                 $transaction->transactionDetails()->create([
                     'product_id' => $item['id'],
-                    'product_price' => $item['price'], 
+                    'product_price' => $item['price'],
                     'quantity' => $item['qty'],
                     'total_price' => $item['price'] * $item['qty'],
-                    'created_at' => $transactionDate, 
+                    'created_at' => $transactionDate,
                     'updated_at' => $transactionDate,
                 ]);
 
                 // Update Stok
-                $productStock = ProductStock::where('product_id', $item['id'])
-                    ->whereNull('deleted_at')
-                    ->where('stock_opname', '>', 0)
-                    ->orderBy('created_at', 'asc')
-                    ->first();
+                $productStock = ProductStock::where('product_id', $item['id'])->whereNull('deleted_at')->where('stock_opname', '>', 0)->orderBy('created_at', 'asc')->first();
 
                 if ($productStock) {
                     $productStock->decrement('stock_opname', $item['qty']);
@@ -170,9 +166,19 @@ class TransactionController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Transaction $transaction)
+    public function updateStatus(Request $request, $id)
     {
-        //
+        $transaction = Transaction::findOrFail($id);
+
+        $request->validate([
+            'is_paid' => 'required|boolean',
+        ]);
+
+        $transaction->update([
+            'is_paid' => $request->is_paid,
+        ]);
+
+        return redirect()->back()->with('success', 'Status pembayaran berhasil diperbarui');
     }
 
     /**

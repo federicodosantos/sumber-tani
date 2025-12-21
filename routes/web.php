@@ -78,6 +78,8 @@ Route::middleware('auth')->group(function () {
     // TRANSACTION ROUTES
     Route::get('/receipt/{id}', [TransactionController::class, 'show']);
     Route::post('/checkout', [TransactionController::class, 'store'])->name('trx.store');
+    Route::put('/transactions/{id}/update-status', [TransactionController::class, 'updateStatus'])
+        ->name('transactions.updateStatus');
 });
 
 Route::middleware('auth')->group(function () {
