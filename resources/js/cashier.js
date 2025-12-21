@@ -9,6 +9,8 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         search: '',
         selectedCategory: null, 
         paymentMethod: 'Cash',
+        isPaid: false,
+        discount: 0,
         sortType: 'name_az',    
         priceMode: 'consument',
         isOffline: !navigator.onLine,
@@ -241,7 +243,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                 totalQty: this.totalQty,
                 totalAmount: this.totalPrice,
                 discount: discountValue,
-                paymentMethod: this.paymentMethod,
+                payment_method: this.paymentMethod,
                 created_at: new Date().toISOString(),
                 offline_uuid: offlineUuid,
                 is_paid: isPaid
@@ -259,6 +261,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         window.printReceipt(null, payload); 
                     }
                     this.cart = [];
+                    this.manualTotal = null;
                 } catch (e) {
                     console.error(e);
                     alert('Gagal simpan offline');
@@ -323,6 +326,11 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             for (let trx of unsynced) {
                 if (authError) break;
 
+                const payloadToSend = { ...trx };
+                delete payloadToSend.id;
+                delete payloadToSend.is_synced;
+                delete payloadToSend.sync_error;
+
                 try {
                     const response = await fetch('/checkout', { 
                         method: 'POST',
@@ -331,7 +339,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                             'Accept': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         },
-                        body: JSON.stringify(trx)
+                        body: JSON.stringify(payloadToSend)
                     });
 
                     if (response.ok) {
