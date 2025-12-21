@@ -6,52 +6,59 @@
                 @csrf
 
                 <x-slot:dynamicRows>
-                    {{-- PPN & Diskon Controls --}}
-                    <div
-                        class="mb-6 flex items-center justify-end gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                        <div class="flex items-center gap-2">
-                            <label class="text-sm font-semibold text-gray-700">
-                                Tanggal Pembelian:
-                            </label>
-                            <input type="date" name="purchase_date"
-                                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-1 border"
-                                value="{{ now()->toDateString() }}" required>
-                        </div>
+                    {{-- PPN & Diskon Controls - Responsive Grid --}}
+                    <div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            {{-- Tanggal Pembelian --}}
+                            <div class="flex flex-col gap-1">
+                                <label class="text-sm font-semibold text-gray-700">
+                                    Tanggal Pembelian:
+                                </label>
+                                <input type="date" name="purchase_date"
+                                    class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-1 border"
+                                    value="{{ now()->toDateString() }}" required>
+                            </div>
 
+                            {{-- PPN --}}
+                            <div class="flex flex-col gap-1">
+                                <label class="text-sm font-semibold text-gray-700">PPN:</label>
+                                <select name="ppn" id="ppnSelect"
+                                    class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="0">Tanpa PPN</option>
+                                    <option value="11">PPN 11%</option>
+                                    <option value="12">PPN 12%</option>
+                                </select>
+                            </div>
 
-                        <div class="flex items-center gap-2">
-                            <label class="text-sm font-semibold text-gray-700">PPN:</label>
-                            <select name="ppn" id="ppnSelect"
-                                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="0">Tanpa PPN</option>
-                                <option value="11">PPN 11%</option>
-                                <option value="12">PPN 12%</option>
-                            </select>
-                        </div>
+                            {{-- Diskon --}}
+                            <div class="flex flex-col gap-1">
+                                <label for="globalDiscount" class="text-sm font-semibold text-gray-700">Diskon (%):</label>
+                                <input type="number" name="discount" id="globalDiscount"
+                                    class="px-2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    placeholder="0" min="0" max="100" step="0.01">
+                            </div>
 
-                        <div class="flex items-center gap-2">
-                            <label for="globalDiscount" class="text-sm font-semibold text-gray-700">Diskon (%):</label>
-                            <input type="number" name="discount" id="globalDiscount"
-                                class="w-24 px-2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                placeholder="0" min="0" max="100" step="0.01">
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <label for="method" class="text-sm font-semibold text-gray-700">Metode Pembayaran:</label>
-                            <select name="method" id="method"
-                                class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 w-24 flex justify-center items-center">
-                                <option value="0">Cash</option>
-                                <option value="12">Kredit</option>
-                            </select>
-                        </div>
+                            {{-- Metode Pembayaran --}}
+                            <div class="flex flex-col gap-1">
+                                <label for="method" class="text-sm font-semibold text-gray-700">Metode Pembayaran:</label>
+                                <select name="method" id="method"
+                                    class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="0">Cash</option>
+                                    <option value="12">Kredit</option>
+                                </select>
+                            </div>
 
-                        <div class="flex items-center gap-2">
-                            <label for="isPaid" class="text-sm font-semibold text-gray-700">
-                                Lunas:
-                            </label>
-                            <input type="checkbox" name="isPaid" id="isPaid"
-                                class="h-4 w-4 accent-button-main focus:ring-button-main">
+                            {{-- Lunas --}}
+                            <div class="flex flex-col gap-1">
+                                <label for="isPaid" class="text-sm font-semibold text-gray-700">
+                                    Lunas:
+                                </label>
+                                <div class="flex items-center h-[38px]">
+                                    <input type="checkbox" name="isPaid" id="isPaid"
+                                        class="h-4 w-4 accent-button-main focus:ring-button-main">
+                                </div>
+                            </div>
                         </div>
-
                     </div>
 
                     <div id="rowsContainer">

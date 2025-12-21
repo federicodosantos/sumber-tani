@@ -113,10 +113,10 @@ const LINE_CHARS = 48; // Lebar kertas (biasanya 48 atau 32 atau 42)
 // Karena saat offline kita gak bisa nanya nama toko ke server,
 // Kita simpan hardcode disini untuk fallback.
 const STORE_CONFIG = {
-    name: "SUMBER TANI",
-    address: "Jl. Raya Pertanian No. 1",
-    phone: "0812-3456-7890",
-    email: "admin@sumbertani.com"
+    name: "TOKO SUMBERTANI",
+    address: "Jl. Trans Sulawesi, Motolohu, Kec. Randangan, Kab. Pohuwato, Gorontalo 96469",
+    phone: "+6282293913193",
+    email: "admin@sumbertani.net"
 };
 
 function separator(width = 48) {
@@ -199,7 +199,8 @@ async function printReceipt(saleId, offlineData = null) {
                 store: STORE_CONFIG, // Pakai config hardcode di atas
                 transaction: {
                     datetime: dateStr,
-                    total: offlineData.totalAmount // Ambil dari payload
+                    total: offlineData.totalAmount, // Ambil dari payload
+                    discount: offlineData.discount,
                 },
                 // Mapping items dari cart ke format struk
                 items: offlineData.items.map(item => ({
@@ -269,6 +270,7 @@ async function printReceipt(saleId, offlineData = null) {
             
             // Info kontak
             data.store.phone + "\n",
+            data.store.email + "\n",
             gs + "V" + "\x00" // Cut paper
         );
 
