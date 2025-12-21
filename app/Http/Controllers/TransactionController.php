@@ -148,6 +148,7 @@ class TransactionController extends Controller
                 'id' => $transaction->id,
                 'datetime' => $transaction->created_at->translatedFormat('d M Y H:i'),
                 'total_qty' => (int) $transaction->total_quantity,
+                'discount' => (float) $transaction->discount,
                 'total' => (float) $transaction->total_price,
             ],
 

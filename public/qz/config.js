@@ -42,19 +42,14 @@ qz.security.setSignaturePromise(function(toSign) {
         // CEK KONEKSI DULU
         if (!navigator.onLine) {
             console.warn("OFFLINE MODE: Skipping signature from server.");
-            // Resolve kosong artinya "Gak ada tanda tangan".
-            // QZ Tray bakal nampilin popup konfirmasi ke user (gak silent),
-            // tapi tetep bisa nge-print.
             resolve(); 
             return;
         }
 
-        // KALO ONLINE, BARU MINTA TTD KE SERVER
         fetch("/qz/sign", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                // Ambil token kalau ada, kalau error (misal meta tag ilang) ya sudahlah
                 "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content
             },
             body: JSON.stringify({ toSign: toSign })
