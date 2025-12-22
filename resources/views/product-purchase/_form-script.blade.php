@@ -42,7 +42,7 @@
         const discountPercent =
             parseFloat(document.getElementById('globalDiscount')?.value) || 0;
         const ppnPercent =
-            parseFloat(document.getElementById('ppnSelect')?.value) || 0;
+            parseFloat(document.getElementById('ppnInput')?.value) || 0;
 
         const discountValue = total * (discountPercent / 100);
         const afterDiscount = total - discountValue;
@@ -131,7 +131,7 @@
     document.getElementById('globalDiscount')
         ?.addEventListener('input', calculateGrandTotal);
 
-    document.getElementById('ppnSelect')
+    document.getElementById('ppnInput')
         ?.addEventListener('change', calculateGrandTotal);
 
     /* =========================
