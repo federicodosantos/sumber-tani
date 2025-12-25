@@ -1,5 +1,7 @@
 <script>
     let rowIndex = {{ $rowIndex ?? 1 }};
+    let systemCalculatedPrice = 0;
+    let isManualPriceActive = false;
 
     /* =========================
        UTIL
@@ -49,14 +51,92 @@
         const ppnValue = afterDiscount * (ppnPercent / 100);
         const grandTotal = afterDiscount + ppnValue;
 
+        // Simpan harga sistem
+        systemCalculatedPrice = grandTotal;
+
+        // Update display
         document.getElementById('totalDisplay').innerText =
             'Rp ' + formatCurrency(total);
         document.getElementById('discountDisplay').innerText =
             '- Rp ' + formatCurrency(discountValue);
         document.getElementById('ppnDisplay').innerText =
             '+ Rp ' + formatCurrency(ppnValue);
-        document.getElementById('grandTotalDisplay').innerText =
-            'Rp ' + formatCurrency(grandTotal);
+
+        // Tampilkan/sembunyikan manual price section
+        const manualSection = document.getElementById('manualPriceSection');
+        if (grandTotal > 0) {
+            manualSection?.classList.remove('hidden');
+        } else {
+            manualSection?.classList.add('hidden');
+            isManualPriceActive = false;
+            document.getElementById('systemPriceInfo')?.classList.add('hidden');
+        }
+
+        // Update grand total display
+        updateGrandTotalDisplay();
+    }
+
+    /* =========================
+       MANUAL PRICE HANDLING
+    ========================= */
+    function updateGrandTotalDisplay() {
+        if (isManualPriceActive) {
+            const manualPrice = parseCurrency(document.getElementById('manualGrandTotal')?.value);
+            document.getElementById('grandTotalDisplay').innerText =
+                'Rp ' + formatCurrency(manualPrice);
+            document.getElementById('manualGrandTotalValue').value = manualPrice;
+        } else {
+            document.getElementById('grandTotalDisplay').innerText =
+                'Rp ' + formatCurrency(systemCalculatedPrice);
+            document.getElementById('manualGrandTotalValue').value = '';
+        }
+    }
+
+    function initManualPriceHandlers() {
+        const manualInput = document.getElementById('manualGrandTotal');
+        const resetBtn = document.getElementById('resetManualPrice');
+        const systemInfo = document.getElementById('systemPriceInfo');
+        const systemValue = document.getElementById('systemPriceValue');
+        const grandDisplay = document.getElementById('grandTotalDisplay');
+        const manualValueHidden = document.getElementById('manualGrandTotalValue');
+
+        // Event listener untuk manual grand total
+        manualInput?.addEventListener('input', function(e) {
+            let value = e.target.value;
+            
+            // Hanya ambil angka untuk parsing
+            const numericValue = parseCurrency(value);
+            
+            if (numericValue > 0) {
+                // Format display dengan currency
+                e.target.value = formatCurrency(numericValue);
+                
+                isManualPriceActive = true;
+                resetBtn.disabled = false;
+                systemInfo?.classList.remove('hidden');
+                systemValue.textContent = 'Rp ' + formatCurrency(systemCalculatedPrice);
+                
+                // Update display dan hidden input dengan nilai numeric (tidak diformat)
+                grandDisplay.textContent = 'Rp ' + formatCurrency(numericValue);
+                manualValueHidden.value = numericValue; // Simpan angka murni
+            } else {
+                isManualPriceActive = false;
+                resetBtn.disabled = true;
+                systemInfo?.classList.add('hidden');
+                grandDisplay.textContent = 'Rp ' + formatCurrency(systemCalculatedPrice);
+                manualValueHidden.value = ''; // Kosongkan jika tidak ada nilai
+            }
+        });
+
+        // Reset manual price
+        resetBtn?.addEventListener('click', function() {
+            manualInput.value = '';
+            isManualPriceActive = false;
+            this.disabled = true;
+            systemInfo?.classList.add('hidden');
+            grandDisplay.textContent = 'Rp ' + formatCurrency(systemCalculatedPrice);
+            manualValueHidden.value = ''; // Pastikan hidden input juga dikosongkan
+        });
     }
 
     /* =========================
@@ -126,13 +206,13 @@
     });
 
     /* =========================
-       HEADER EVENTS (FIX UTAMA)
+       HEADER EVENTS
     ========================= */
     document.getElementById('globalDiscount')
         ?.addEventListener('input', calculateGrandTotal);
 
     document.getElementById('ppnInput')
-        ?.addEventListener('change', calculateGrandTotal);
+        ?.addEventListener('input', calculateGrandTotal);
 
     /* =========================
        PAYMENT METHOD ↔ LUNAS
@@ -154,7 +234,7 @@
     methodSelect?.addEventListener('change', syncPaymentStatus);
 
     /* =========================
-       INIT ON PAGE LOAD (INI KUNCI)
+       INIT ON PAGE LOAD
     ========================= */
     document.querySelectorAll('.product-row').forEach(row => {
         addRowListeners(row);
@@ -162,5 +242,6 @@
 
     updateRemoveButtons();
     syncPaymentStatus();
+    initManualPriceHandlers();
     calculateGrandTotal();
 </script>

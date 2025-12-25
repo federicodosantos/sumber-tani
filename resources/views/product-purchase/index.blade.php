@@ -177,7 +177,7 @@
                                             class="inline h-5 w-5">
                                     </a>
 
-                                    {{-- <x-delete :module="'data pembelian pada waktu'" :name="$purchase->purchase_date->translatedFormat('l, d M Y') " :action="route('purchase.destroy', $purchase->id)" /> --}}
+                                    <x-delete :module="'data pembelian pada waktu'" :name="$purchase->purchase_date->translatedFormat('l, d M Y') " :action="route('purchase.destroy', $purchase->id)" />
                                 </div>
                             </td>
                         </tr>

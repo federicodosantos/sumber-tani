@@ -280,8 +280,8 @@
 
                                     <button x-show="cart.length > 0"
                                         @click="isEditing = true; 
-                manualTotal = manualTotal || totalPrice; 
-                $nextTick(() => $refs.totalInput.focus());"
+                                        manualTotal = manualTotal || totalPrice; 
+                                        $nextTick(() => $refs.totalInput.focus());"
                                         class="transition-opacity hover:text-blue-500"
                                         title="Edit Harga Total Manual">
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor"
@@ -297,10 +297,10 @@
                                         <span class="absolute left-2 top-1.5 text-xs font-bold text-gray-500">Rp</span>
                                         <input x-ref="totalInput" type="text" x-model="manualTotal"
                                             @blur="
-                        let autoTotal = cart.reduce((t, i) => t + (i.price * i.qty), 0);
-                        if(Number(manualTotal) === autoTotal) { manualTotal = null; }
-                        isEditing = false;
-                    "
+                                                let autoTotal = cart.reduce((t, i) => t + (i.price * i.qty), 0);
+                                                if(Number(manualTotal) === autoTotal) { manualTotal = null; }
+                                                isEditing = false;
+                                            "
                                             @keydown.enter.prevent="$el.blur();"
                                             class="focus:ring-button-hover w-full rounded border py-1 pl-6 pr-2 text-right text-sm font-bold outline-none focus:bg-white focus:ring-2">
                                     </div>

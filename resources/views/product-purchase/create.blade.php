@@ -8,7 +8,8 @@
                 <x-slot:dynamicRows>
                     {{-- PPN & Diskon Controls - Responsive dengan rata kiri untuk mobile --}}
                     <div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4">
-                        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-4">
+                        <div
+                            class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-4">
                             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                                 <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">
                                     Tanggal Pembelian:
@@ -43,7 +44,9 @@
                             </div>
 
                             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                                <label for="method" class="text-sm font-semibold text-gray-700 whitespace-nowrap">Metode Pembayaran:</label>
+                                <label for="method"
+                                    class="text-sm font-semibold text-gray-700 whitespace-nowrap">Metode
+                                    Pembayaran:</label>
                                 <select name="method" id="method"
                                     class="w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                     <option value="0">Cash</option>
@@ -93,14 +96,16 @@
 
                                 <div class="grid grid-cols-2 gap-3 lg:col-span-5 lg:contents">
                                     <div class="lg:col-span-2">
-                                        <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Harga Satuan</label>
+                                        <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Harga
+                                            Satuan</label>
                                         <input type="text" name="products[0][price]"
                                             class="price-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
                                             placeholder="12.000" required>
                                     </div>
 
                                     <div class="lg:col-span-2">
-                                        <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Jumlah</label>
+                                        <label
+                                            class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Jumlah</label>
                                         <input type="number" name="products[0][quantity]"
                                             class="quantity-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
                                             placeholder="10" required min="1">
@@ -108,14 +113,16 @@
                                 </div>
 
                                 <div class="lg:col-span-1">
-                                    <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Satuan</label>
+                                    <label
+                                        class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Satuan</label>
                                     <input type="text" name="products[0][unit]"
                                         class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
                                         placeholder="ROLL" required>
                                 </div>
 
                                 <div class="lg:col-span-2">
-                                    <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Sub Total</label>
+                                    <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Sub
+                                        Total</label>
                                     <input type="text" name="products[0][subtotal]"
                                         class="subtotal-input w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
                                         placeholder="0" readonly>
@@ -123,7 +130,8 @@
 
                                 <div class="flex items-center justify-center lg:col-span-1">
                                     <button type="button"
-                                        class="remove-row w-full lg:w-auto rounded-md bg-red-50 px-4 py-2 text-red-600 hover:bg-red-100 hover:text-red-800 disabled:opacity-50 lg:bg-transparent lg:p-0" disabled>
+                                        class="remove-row w-full lg:w-auto rounded-md bg-red-50 px-4 py-2 text-red-600 hover:bg-red-100 hover:text-red-800 disabled:opacity-50 lg:bg-transparent lg:p-0"
+                                        disabled>
                                         <span class="lg:hidden">Hapus Baris</span>
                                         <svg class="hidden h-5 w-5 lg:inline" fill="none" stroke="currentColor"
                                             viewBox="0 0 24 24">
@@ -140,7 +148,7 @@
                     <div class="mt-4 space-y-4 flex flex-col lg:flex-row lg:justify-between">
                         {{-- Button Tambah Baris - Full width pada mobile --}}
                         <button type="button" id="addRow"
-                            class="border-button-hover text-button-hover inline-flex w-full items-center justify-center rounded-lg border bg-white px-4 py-3 text-sm font-semibold hover:bg-indigo-50 sm:w-auto sm:py-2">
+                            class="border-button-hover text-button-hover lg:h-12 inline-flex w-full items-center justify-center rounded-lg border bg-white px-4 py-3 text-sm font-semibold hover:bg-indigo-50 sm:w-auto sm:py-2">
                             <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 4v16m8-8H4" />
@@ -153,20 +161,66 @@
                             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
                                 <div class="flex justify-between lg:block lg:text-right">
                                     <div class="text-xs text-gray-500">Total</div>
-                                    <div id="totalDisplay" class="text-lg font-bold text-gray-900 lg:text-xl">Rp 0</div>
+                                    <div id="totalDisplay" class="text-lg font-bold text-gray-900 lg:text-xl">Rp 0
+                                    </div>
                                 </div>
                                 <div class="flex justify-between lg:block lg:text-right">
                                     <div class="text-xs text-gray-500">Diskon</div>
-                                    <div id="discountDisplay" class="text-base font-semibold text-red-600 lg:text-lg">- Rp 0</div>
+                                    <div id="discountDisplay" class="text-base font-semibold text-red-600 lg:text-lg">
+                                        - Rp 0</div>
                                 </div>
                                 <div class="flex justify-between lg:block lg:text-right">
                                     <div class="text-xs text-gray-500">PPN</div>
-                                    <div id="ppnDisplay" class="text-button-main text-base font-semibold lg:text-lg">+ Rp 0</div>
+                                    <div id="ppnDisplay" class="text-button-main text-base font-semibold lg:text-lg">+
+                                        Rp 0</div>
                                 </div>
                                 <div class="border-t border-gray-300 pt-3 lg:border-t-0 lg:border-l lg:pl-6 lg:pt-0">
                                     <div class="flex justify-between lg:block lg:text-right">
                                         <div class="text-xs font-medium text-gray-500">Grand Total</div>
-                                        <div id="grandTotalDisplay" class="text-button-hover text-xl font-bold lg:text-2xl">Rp 0</div>
+                                        <div id="grandTotalDisplay"
+                                            class="text-button-hover text-xl font-bold lg:text-2xl">Rp 0</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Manual Price Edit Section - Hanya tampil jika grand total > 0 --}}
+                            <div id="manualPriceSection" class="mt-4 border-t border-gray-200 pt-4 hidden">
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                                    <div class="flex-1">
+                                        <label for="manualGrandTotal"
+                                            class="mb-1 block text-xs font-semibold text-gray-600">
+                                            Edit Manual Grand Total:
+                                        </label>
+                                        <input type="text" id="manualGrandTotal"
+                                            class="w-full rounded-md border border-button-hover bg-amber-50 px-3 py-2 shadow-sm focus:border-amber-500 focus:ring-amber-500"
+                                            placeholder="Masukkan harga manual">
+                                        <input type="hidden" name="manual_grand_total" id="manualGrandTotalValue">
+                                    </div>
+                                    <button type="button" id="resetManualPrice"
+                                        class="rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-button-main/80 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap
+                                        hover:text-white transition duration-150 ease-in-out"
+                                        disabled>
+                                        Reset ke Harga Sistem
+                                    </button>
+                                </div>
+
+                                {{-- Info Harga Default Sistem --}}
+                                <div id="systemPriceInfo"
+                                    class="mt-3 rounded-md bg-blue-50 border border-blue-200 p-3 hidden">
+                                    <div class="flex items-start gap-2">
+                                        <svg class="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none"
+                                            stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-blue-800">Harga telah diedit manual
+                                            </p>
+                                            <p class="text-xs text-blue-700 mt-1">
+                                                Harga default sistem: <span id="systemPriceValue"
+                                                    class="font-bold"></span>
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

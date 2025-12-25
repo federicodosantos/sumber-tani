@@ -87,6 +87,7 @@ class ProductPurchaseController extends Controller
                 'ppn' => ['nullable', 'numeric', 'min:0'],
                 'discount' => ['nullable', 'numeric', 'min:0'],
                 'method' => ['required', 'integer', 'in:0,12'],
+                'manual_grand_total' => ['nullable', 'numeric', 'min:0'],
                 'products' => ['required', 'array', 'min:1'],
                 'products.*.code' => ['required', 'string', 'max:100'],
                 'products.*.item' => ['required', 'string', 'max:150'],
@@ -96,7 +97,6 @@ class ProductPurchaseController extends Controller
             ]);
 
             $paymentMethod = (int) $validated['method'] === 0 ? 'cash' : 'credit';
-
             $isPaid = $paymentMethod === 'cash' ? true : $request->boolean('isPaid');
 
             $items = collect($validated['products'])->map(function ($item) {
@@ -119,7 +119,8 @@ class ProductPurchaseController extends Controller
             $afterDiscount = $subtotal - $discountValue;
             $ppnPercent = (float) ($validated['ppn'] ?? 0);
             $ppnValue = $afterDiscount * ($ppnPercent / 100);
-            $grandTotal = $afterDiscount + $ppnValue;
+
+            $grandTotal = !empty($validated['manual_grand_total']) ? (float) $validated['manual_grand_total'] : $afterDiscount + $ppnValue;
 
             DB::transaction(function () use ($validated, $items, $subtotal, $discountPercent, $discountValue, $ppnPercent, $ppnValue, $grandTotal, $paymentMethod, $isPaid) {
                 $purchase = ProductPurchase::create([
@@ -178,6 +179,7 @@ class ProductPurchaseController extends Controller
                 'ppn' => ['nullable', 'numeric', 'min:0'],
                 'discount' => ['nullable', 'numeric', 'min:0'],
                 'method' => ['required', 'integer', 'in:0,12'],
+                'manual_grand_total' => ['nullable', 'numeric', 'min:0'], // 👈 TAMBAH INI
                 'products' => ['required', 'array', 'min:1'],
                 'products.*.code' => ['required', 'string'],
                 'products.*.item' => ['required', 'string'],
@@ -209,7 +211,9 @@ class ProductPurchaseController extends Controller
             $afterDiscount = $subtotal - $discountValue;
             $ppnPercent = (float) ($validated['ppn'] ?? 0);
             $ppnValue = $afterDiscount * ($ppnPercent / 100);
-            $grandTotal = $afterDiscount + $ppnValue;
+
+            // 👇 GUNAKAN MANUAL PRICE JIKA ADA
+            $grandTotal = !empty($validated['manual_grand_total']) ? (float) $validated['manual_grand_total'] : $afterDiscount + $ppnValue;
 
             DB::transaction(function () use ($purchase, $validated, $items, $subtotal, $discountPercent, $discountValue, $ppnPercent, $ppnValue, $grandTotal, $paymentMethod, $isPaid) {
                 $purchase->update([
@@ -244,9 +248,11 @@ class ProductPurchaseController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(ProductPurchase $productPurchase)
+    public function destroy(ProductPurchase $purchase)
     {
-        //
+        ProductPurchase::destroy($purchase->id);
+
+        return redirect()->route('purchase.index')->with('success', 'Pembelian berhasil dihapus.');
     }
 
     private function parseNumber(string $value): float
