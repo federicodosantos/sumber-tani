@@ -74,6 +74,7 @@ Route::middleware('auth')->group(function () {
     // FINANCE REPORT ROUTE
     Route::get('/laporan-keuangan', [FinanceReportController::class, 'index'])->name('finance.index');
     Route::get('/laporan-keuangan/{transaction}', [FinanceReportController::class, 'show'])->name('finance.show');
+    Route::post('/laporan-keuangan/download', [FinanceReportController::class, 'download'])->name('finance.download');
 
     // TRANSACTION ROUTES
     Route::get('/receipt/{id}', [TransactionController::class, 'show']);

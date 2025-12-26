@@ -6,8 +6,10 @@ use App\Models\ItemCategory;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class FinanceReportController extends Controller
 {
@@ -21,8 +23,7 @@ class FinanceReportController extends Controller
         $products = $this->getAllProduct();
         $categories = $this->getAllCategories();
 
-        return view('finance.index', compact('stats', 'chartData', 'financeReports', 
-        'transactionFilter', 'products', 'categories'));
+        return view('finance.index', compact('stats', 'chartData', 'financeReports', 'transactionFilter', 'products', 'categories'));
     }
 
     public function getAllProduct()
@@ -30,7 +31,6 @@ class FinanceReportController extends Controller
         return Product::select('id', 'name')->get();
     }
 
-    
     public function getAllCategories()
     {
         return ItemCategory::select('id', 'name')->get();
@@ -230,5 +230,141 @@ class FinanceReportController extends Controller
     {
         $transactionDetails = TransactionDetail::where('transaction_id', $transaction->id)->with('product')->get();
         return view('finance.show', compact('transaction', 'transactionDetails'));
+    }
+
+    public function download(Request $request)
+    {
+        $request->validate([
+            'range_type' => 'required|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'format_time' => 'required|in:harian,bulanan,tahunan',
+            'download_by' => 'required|in:category,product',
+            'product_ids' => 'nullable|array',
+            'product_ids.*' => 'exists:products,id',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:item_categories,id',
+        ]);
+
+        Carbon::setLocale('id');
+
+        $endDate = Carbon::now();
+        $startDate = null;
+
+        $rangeMap = [
+            '7days' => fn() => Carbon::now()->subDays(7),
+            '1month' => fn() => Carbon::now()->subMonth(),
+            '3months' => fn() => Carbon::now()->subMonths(3),
+            '6months' => fn() => Carbon::now()->subMonths(6),
+            '1year' => fn() => Carbon::now()->subYear(),
+        ];
+
+        if ($request->range_type === 'custom') {
+            $startDate = Carbon::parse($request->start_date);
+            $endDate = Carbon::parse($request->end_date);
+        } else {
+            $startDate = $rangeMap[$request->range_type]();
+        }
+
+        $periodSelect = match ($request->format_time) {
+            'harian' => DB::raw('DATE(transactions.created_at) as period'),
+            'bulanan' => DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m") as period'),
+            'tahunan' => DB::raw('YEAR(transactions.created_at) as period'),
+        };
+
+        $query = DB::table('transactions')
+            ->join('transaction_details', 'transaction_details.transaction_id', '=', 'transactions.id')
+            ->join('products', 'products.id', '=', 'transaction_details.product_id')
+            ->leftJoin('item_categories', 'item_categories.id', '=', 'products.item_category_id')
+            ->where('transactions.is_paid', 1)
+            ->whereBetween('transactions.created_at', [$startDate, $endDate]);
+
+        if ($request->download_by === 'product') {
+            $query
+                ->whereIn('products.id', $request->product_ids ?? [])
+                ->select($periodSelect, 'products.id as product_id', 'products.name as product_name', DB::raw('SUM(transaction_details.quantity) as total_qty'), DB::raw('SUM(transaction_details.total_price) as total_sales'))
+                ->groupBy('period', 'products.id', 'products.name');
+        } else {
+            $query
+                ->whereIn('item_categories.id', $request->category_ids ?? [])
+                ->select($periodSelect, 'item_categories.id as category_id', 'item_categories.name as category_name', DB::raw('SUM(transaction_details.quantity) as total_qty'), DB::raw('SUM(transaction_details.total_price) as total_sales'))
+                ->groupBy('period', 'item_categories.id', 'item_categories.name');
+        }
+
+        $data = $query->orderBy('period')->get();
+
+        $data = $data->map(function ($row) use ($request) {
+            if ($request->format_time === 'bulanan') {
+                $row->period = strtoupper(Carbon::createFromFormat('Y-m', $row->period)->translatedFormat('F, Y'));
+            } elseif ($request->format_time === 'harian') {
+                $row->period = Carbon::parse($row->period)->translatedFormat('d F Y');
+            }
+            return $row;
+        });
+
+        $columnCount = $request->download_by === 'product' ? $data->pluck('product_id')->unique()->count() : $data->pluck('category_id')->unique()->count();
+
+        $isLandscape = $columnCount <= 10;
+
+        if ($isLandscape) {
+            // kolom (produk / kategori)
+            $columns = $request->download_by === 'product' ? $data->pluck('product_name', 'product_id')->unique() : $data->pluck('category_name', 'category_id')->unique();
+
+            // TOTAL QTY (AKUMULASI SEMUA BULAN)
+            $totalQty = [];
+            foreach ($columns as $id => $name) {
+                $totalQty[$id] = $data->filter(fn($r) => $request->download_by === 'product' ? $r->product_id == $id : $r->category_id == $id)->sum('total_qty');
+            }
+
+            // TOTAL SALES PER BULAN (FOCUS KE PENDAPATAN)
+            $pivot = $data->groupBy('period')->map(function ($rows) use ($columns, $request) {
+                $out = [];
+                foreach ($columns as $id => $name) {
+                    $out[$id] = $rows->filter(fn($r) => $request->download_by === 'product' ? $r->product_id == $id : $r->category_id == $id)->sum('total_sales');
+                }
+                return $out;
+            });
+        } else {
+            $columns = [];
+            $pivot = [];
+            $totalQty = [];
+        }
+        
+        $totalSales = [];
+        foreach ($columns as $id => $name) {
+            $totalSales[$id] = $data
+                ->filter(fn ($r) =>
+                    $request->download_by === 'product'
+                        ? $r->product_id == $id
+                        : $r->category_id == $id
+                )
+                ->sum('total_sales');
+        }
+
+        $grandTotalQty   = array_sum($totalQty);
+        $grandTotalSales = array_sum($totalSales);
+        $data = $data
+        ->sortBy('period')
+        ->groupBy('period');
+
+        $pdf = Pdf::loadView('finance.report', [
+            'data' => $data,
+            'pivot' => $pivot,
+            'columns' => $columns,
+            'totalSales'  => $totalSales,
+            'grandTotalQty'     => $grandTotalQty,     
+            'grandTotalSales'   => $grandTotalSales,   
+            'totalQty' => $totalQty,
+            'isLandscape' => $isLandscape,
+            'downloadBy' => $request->download_by,
+            'startDate' => $startDate->translatedFormat('d F Y'),
+            'endDate' => $endDate->translatedFormat('d F Y'),
+        ]);
+
+        if ($isLandscape) {
+            $pdf->setPaper('A4', 'landscape');
+        }
+
+        return $pdf->download('laporan-penjualan.pdf');
     }
 }

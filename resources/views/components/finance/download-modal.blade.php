@@ -65,7 +65,7 @@
         </button>
       </div>
 
-      <form :action="action" method="POST" class="space-y-5">
+      <form action="{{ $action }}" method="POST" class="space-y-5">
         @csrf
         
         {{-- Range Waktu --}}
@@ -101,6 +101,14 @@
                      :required="isCustomDate" :min="startDate">
             </div>
           </div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Format Waktu</label>
+          <select name="format_time" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-button-hover focus:border-button-hover transition-all">
+            <option value="harian">Harian</option>
+            <option value="bulanan">Bulanan</option>
+            <option value="tahunan">Tahunan</option>
+          </select>
         </div>
 
         {{-- Download Berdasarkan --}}
@@ -194,6 +202,14 @@
                   class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
             Batal
           </button>
+          {{-- <div class="flex flex-row space-x-4">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Download As</label>
+            <select name="download_as"
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-button-hover focus:border-button-hover transition-all">
+              <option value="excel">Excel</option>
+              <option value="pdf">PDF</option>
+            </select>
+          </div> --}}
           
           <button type="submit"
                   :disabled="selectedItems.length === 0"

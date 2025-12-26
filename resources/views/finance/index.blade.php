@@ -7,7 +7,8 @@
     <h1 class="text-2xl font-semibold text-black">Laporan Keuangan</h1>
 
     {{-- Download Modal --}}
-    <x-finance.download-modal  
+    <x-finance.download-modal
+    :action="route('finance.download')"
     :products="$products"
     :categories="$categories"/>
     
