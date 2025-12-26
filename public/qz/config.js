@@ -116,7 +116,7 @@ const STORE_CONFIG = {
     name: "TOKO SUMBERTANI",
     address: "Jl. Trans Sulawesi, Motolohu, Kec. Randangan, Kab. Pohuwato, Gorontalo 96469",
     phone: "+6281356745129",
-    email: "admin@sumbertani.net"
+    email: "sumbertani0209@gmail.com"
 };
 
 function separator(width = 48) {

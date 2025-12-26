@@ -141,7 +141,7 @@ class TransactionController extends Controller
                 'name' => 'TOKO SUMBERTANI',
                 'address' => 'Jl. Trans Sulawesi, Motolohu, Kec. Randangan, ' . PHP_EOL . 'Kab. Pohuwato, Gorontalo 96469',
                 'phone' => '+6281356745129',
-                'email' => 'admin@sumbertani.net',
+                'email' => 'sumbertani0209@gmail.com',
             ],
 
             'transaction' => [
