@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ItemCategory;
+use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use Carbon\Carbon;
@@ -16,8 +18,22 @@ class FinanceReportController extends Controller
         $stats = $this->getStats($transactionFilter);
         $chartData = $this->getChartData($transactionFilter);
         $financeReports = $this->getFinanceReports();
+        $products = $this->getAllProduct();
+        $categories = $this->getAllCategories();
 
-        return view('finance.index', compact('stats', 'chartData', 'financeReports', 'transactionFilter'));
+        return view('finance.index', compact('stats', 'chartData', 'financeReports', 
+        'transactionFilter', 'products', 'categories'));
+    }
+
+    public function getAllProduct()
+    {
+        return Product::select('id', 'name')->get();
+    }
+
+    
+    public function getAllCategories()
+    {
+        return ItemCategory::select('id', 'name')->get();
     }
 
     private function getStats($transactionFilter)
