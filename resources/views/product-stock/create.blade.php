@@ -100,14 +100,14 @@
                                 <input type="date" id="expired_date" name="expired_date" required
                                     min="{{ date('Y-m-d') }}" value="{{ old('expired_date', $expiryValue ?? '') }}"
                                     x-model="selectedDate" @change="calculateRemaining()"
-                                    class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-4 py-2 text-lg" />
+                                    class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
 
                             </div>
 
                             {{-- PREVIEW SISA WAKTU (Otomatis muncul saat tanggal dipilih) --}}
                             <p class="mt-2 text-xs font-medium text-gray-700">
                                 Status:
-                                <span x-text="remainingText" class="text-button-main font-bold">
+                                <span x-text="remainingText" class="text-black font-bold">
                                     - Pilih tanggal -
                                 </span>
                             </p>
@@ -172,7 +172,7 @@
                         } else if (diffDays === 0) {
                             this.remainingText = 'Kadaluarsa HARI INI';
                         } else {
-                            this.remainingText = `Sisa waktu sekitar ${diffDays} hari lagi`;
+                            this.remainingText = `Sisa waktu ${diffDays} hari lagi`;
                         }
                     }
                 }
