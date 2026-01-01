@@ -7,8 +7,7 @@
         @method('PUT')
 
         <x-slot:leftCol>
-          <x-content.form-input label="Kode Produk" name="id" value="{{ old('id', $product->id) }}" disabled="true"
-            class="bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed" required />
+          <x-content.form-input label="Kode Produk" name="code_id" value="{{ old('id', $product->code_id) }}" required />
 
           <x-content.form-input label="Nama Produk" name="name" value="{{ old('name', $product->name) }}" required />
           <x-content.form-select label="Nama Kategori" name="item_category_id" required>
@@ -29,11 +28,11 @@
 
         <x-slot:actions>
           <x-button.remove-button href="{{ route('product') }}">
-            <span class="font-bold">CANCEL</span>
+            <span class="font-bold">BATAL</span>
           </x-button.remove-button>
 
           <x-button.add-button type="submit">
-            <span class="font-bold">UPDATE CATEGORY</span>
+            <span class="font-bold">SIMPAN PERUBAHAN</span>
           </x-button.add-button>
         </x-slot:actions>
 

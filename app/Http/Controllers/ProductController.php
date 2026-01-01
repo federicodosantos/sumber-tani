@@ -132,6 +132,7 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
+            'code_id' => 'required|string|max:50|unique:products,code_id',
             'name' => 'required|string|max:100',
             'description' => 'nullable|string',
             'item_category_id' => 'required|exists:item_categories,id',
