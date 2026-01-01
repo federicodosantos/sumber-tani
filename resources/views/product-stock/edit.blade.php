@@ -66,10 +66,20 @@
                                 </span>
                             </label>
 
-                            <div class="relative">
-                                <input type="date" id="expired_date" name="expired_date" 
-                                    min="{{ date('Y-m-d') }}" value="{{ old('expired_date', $expiryValue ?? '') }}"
-                                    class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
+                            {{-- WRAPPER FLEX BIAR SEBELAHAN SAMA TOMBOL HAPUS --}}
+                            <div class="flex gap-2">
+                                <div class="relative w-full">
+                                    <input type="date" id="expired_date" name="expired_date"
+                                        min="{{ date('Y-m-d') }}" value="{{ old('expired_date', $expiryValue ?? '') }}"
+                                        class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
+                                </div>
+
+                                {{-- TOMBOL HAPUS --}}
+                                <button type="button" onclick="clearExpiry()"
+                                    class="rounded-lg border-2 border-red-500 px-3 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
+                                    title="Hapus Tanggal">
+                                    Hapus
+                                </button>
                             </div>
 
                             <p id="expiredPreview" class="mt-2 text-xs font-medium text-gray-700">
@@ -127,6 +137,14 @@
                     bubbles: true
                 }));
             }
+        }
+    }
+
+    function clearExpiry() {
+        const dateInput = document.getElementById('expired_date');
+        if (dateInput) {
+            dateInput.value = ''; // Kosongkan value
+            updatePreview(); // Reset tulisan status jadi "- Pilih Tanggal -"
         }
     }
 
