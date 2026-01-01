@@ -67,7 +67,7 @@
                             </label>
 
                             <div class="relative">
-                                <input type="date" id="expired_date" name="expired_date" required
+                                <input type="date" id="expired_date" name="expired_date" 
                                     min="{{ date('Y-m-d') }}" value="{{ old('expired_date', $expiryValue ?? '') }}"
                                     class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
                             </div>

@@ -25,7 +25,7 @@ class StoreProductStockRequest extends FormRequest
             'price_consument'  => 'required|numeric|min:0',
             'price_r1'         => 'required|numeric|min:0',
             'price_r2'         => 'required|numeric|min:0',
-            'expired_date'      => 'required|date|after_or_equal:today',
+            'expired_date'      => 'nullable|date|after_or_equal:today',
         ];
     }
 
