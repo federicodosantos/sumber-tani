@@ -25,8 +25,7 @@ class StoreProductStockRequest extends FormRequest
             'price_consument'  => 'required|numeric|min:0',
             'price_r1'         => 'required|numeric|min:0',
             'price_r2'         => 'required|numeric|min:0',
-            'expiry_date'      => 'required|numeric|min:0',
-            'expiry_unit'      => 'required|in:days,weeks,months,years',
+            'expired_date'      => 'required|date|after_or_equal:today',
         ];
     }
 
@@ -41,7 +40,9 @@ class StoreProductStockRequest extends FormRequest
             'stock_opname.numeric'  => 'Jumlah stok harus berupa angka.',
             'stock_opname.min'      => 'Jumlah stok tidak boleh kurang dari 0.',
 
-            'expiry_unit.in'        => 'Satuan kedaluwarsa tidak valid.',
+            'expired_date.required' => 'Tanggal kedaluwarsa wajib diisi.',
+            'expired_date.date' => 'Tanggal kedaluwarsa tidak valid.',
+            'expired_date.after_or_equal' => 'Tanggal kedaluwarsa tidak boleh sebelum hari ini.',
         ];
     }
 }

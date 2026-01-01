@@ -1,6 +1,5 @@
 @php
-    $expiryValue = old('expiry_date', 0);
-    $expiryUnit  = old('expiry_unit', 'days');
+    $expiryValue = old('expired_date', '');
 @endphp
 
 <x-app-layout>
@@ -88,45 +87,28 @@
                                 placeholder="Masukan Jumlah Stok" required />
                         </div>
 
-                        {{-- Waktu Kadaluarsa dari Hari Ini --}}
-                        <div>
-                            <label class="mb-2 block text-sm font-semibold text-gray-900">
-                                Waktu Kadaluarsa dari Hari Ini <br>
+                        {{-- Waktu Kadaluarsa (Calendar Mode) --}}
+                        <div x-data="expiryHandler()">
+                            <label for="expired_date" class="mb-2 block text-sm font-semibold text-gray-900">
+                                Tanggal Kadaluarsa <br>
                                 <span class="text-xs font-normal text-gray-600">
-                                    {{ \Carbon\Carbon::today()->locale('id')->translatedFormat('l, d F Y') }}
+                                    Hari ini: {{ \Carbon\Carbon::today()->locale('id')->translatedFormat('l, d F Y') }}
                                 </span>
                             </label>
 
-                            <div class="grid grid-cols-2 gap-3">
-                                {{-- JUMLAH --}}
-                                <input type="number" name="expiry_date" min="0" value="{{ $expiryValue }}"
-                                    class="w-full rounded-lg border-2 border-black px-4 text-lg" placeholder="Jumlah" />
+                            <div class="relative">
+                                <input type="date" id="expired_date" name="expired_date" required
+                                    min="{{ date('Y-m-d') }}" value="{{ old('expired_date', $expiryValue ?? '') }}"
+                                    x-model="selectedDate" @change="calculateRemaining()"
+                                    class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-4 py-2 text-lg" />
 
-                                {{-- UNIT --}}
-                                <x-content.form-select name="expiry_unit">
-                                    <option value="days" {{ old('expiry_unit', 'days') == 'days' ? 'selected' : '' }}>
-                                        HARI
-                                    </option>
-                                    <option value="weeks" {{ old('expiry_unit') == 'weeks' ? 'selected' : '' }}>
-                                        MINGGU
-                                    </option>
-                                    <option value="months" {{ old('expiry_unit') == 'months' ? 'selected' : '' }}>
-                                        BULAN
-                                    </option>
-                                    <option value="years" {{ old('expiry_unit') == 'years' ? 'selected' : '' }}>
-                                        TAHUN
-                                    </option>
-                                </x-content.form-select>
-                                
                             </div>
 
-                            <p id="expiredPreview" class="mt-2 text-xs font-medium text-gray-700">
-                                Kadaluarsa pada:
-                                <span class="text-xs font-semibold text-gray-900">
-                                    {{ \Carbon\Carbon::today()
-                                        ->add($expiryUnit, (int) $expiryValue)
-                                        ->locale('id')
-                                        ->translatedFormat('l, d F Y') }}
+                            {{-- PREVIEW SISA WAKTU (Otomatis muncul saat tanggal dipilih) --}}
+                            <p class="mt-2 text-xs font-medium text-gray-700">
+                                Status:
+                                <span x-text="remainingText" class="text-button-main font-bold">
+                                    - Pilih tanggal -
                                 </span>
                             </p>
                         </div>
@@ -151,4 +133,50 @@
             </x-content.form-card>
         </div>
     </div>
+
+    @push('scripts')
+        <script>
+            function expiryHandler() {
+                return {
+                    selectedDate: "{{ old('expired_date', $expiryValue ?? '') }}",
+                    remainingText: '- Pilih tanggal -',
+
+                    init() {
+                        if (this.selectedDate) {
+                            this.calculateRemaining();
+                        }
+                    },
+
+                    calculateRemaining() {
+                        if (!this.selectedDate) {
+                            this.remainingText = '- Pilih tanggal -';
+                            return;
+                        }
+
+                        const today = new Date();
+
+                        today.setHours(0, 0, 0, 0);
+
+                        const parts = this.selectedDate.split('-');
+
+                        const expiry = new Date(parts[0], parts[1] - 1, parts[2]);
+
+                        expiry.setHours(0, 0, 0, 0);
+
+                        const diffTime = expiry - today;
+
+                        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                        if (diffDays < 0) {
+                            this.remainingText = 'SUDAH KADALUARSA ⚠️';
+                        } else if (diffDays === 0) {
+                            this.remainingText = 'Kadaluarsa HARI INI';
+                        } else {
+                            this.remainingText = `Sisa waktu sekitar ${diffDays} hari lagi`;
+                        }
+                    }
+                }
+            }
+        </script>
+    @endpush
 </x-app-layout>

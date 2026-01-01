@@ -29,6 +29,10 @@ class ProductStock extends Model
 
     protected $dates = ['deleted_at'];
 
+    protected $casts = [
+        'expired_date' => 'date',
+    ];
+
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id', 'id');

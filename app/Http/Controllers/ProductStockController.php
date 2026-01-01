@@ -53,6 +53,7 @@ class ProductStockController extends Controller
         return view('product-stock.create', [
             'products' => $products,
             'selectedProductId' => $selectedProductId,
+            'expiryValue' => null,
         ]);
     }
 
@@ -93,14 +94,14 @@ class ProductStockController extends Controller
         // Get all batches for this product
         $batches = $this->stockService->getBatchesForProduct($activeStock->product_id);
 
-        // Calculate expiry value and unit for form
-        $expiry = $this->stockService->calculateExpiryForEdit($activeStock->expired_date);
-
+        $expiryValue = $activeStock->expired_date 
+            ? \Carbon\Carbon::parse($activeStock->expired_date)->format('Y-m-d') 
+            : null;
+        
         return view('product-stock.edit', [
             'activeStock' => $activeStock,
             'batches' => $batches,
-            'expiryValue' => $expiry['expiryValue'],
-            'expiryUnit' => $expiry['expiryUnit'],
+            'expiryValue' => $expiryValue,
         ]);
     }
 

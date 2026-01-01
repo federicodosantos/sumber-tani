@@ -13,19 +13,13 @@ class ProductStockService
      * Create new batch for a product
      * 
      * @param int $productId
-     * @param array $data - ['stock_opname', 'price_consument', 'price_r1', 'price_r2', 'expiry_date', 'expiry_unit']
+     * @param array $data - ['stock_opname', 'price_consument', 'price_r1', 'price_r2', 'expired_date']
      * @return ProductStock
      */
     public function createNewBatch(int $productId, array $data): ProductStock
     {
         // Hitung batch selanjutnya
         $nextBatch = $this->getNextBatchNumber($productId);
-
-        // Hitung expired date
-        $expiredDate = $this->calculateExpiredDate(
-            $data['expiry_date'] ?? null,
-            $data['expiry_unit'] ?? null
-        );
 
         // Create batch baru
         return ProductStock::create([
@@ -35,7 +29,7 @@ class ProductStockService
             'price_consument' => $data['price_consument'],
             'price_r1' => $data['price_r1'],
             'price_r2' => $data['price_r2'],
-            'expired_date' => $expiredDate,
+            'expired_date' => $data["expired_date"],
         ]);
     }
 
@@ -50,17 +44,12 @@ class ProductStockService
     {
         $stock = ProductStock::findOrFail($batchId);
 
-        $expiredDate = $this->calculateExpiredDate(
-            $data['expiry_date'] ?? null,
-            $data['expiry_unit'] ?? null
-        );
-
         $stock->update([
             'stock_opname' => $data['stock_opname'],
             'price_consument' => $data['price_consument'],
             'price_r1' => $data['price_r1'],
             'price_r2' => $data['price_r2'],
-            'expired_date' => $expiredDate,
+            'expired_date' => $data['expired_date'],
         ]);
 
         return $stock->fresh();
@@ -87,20 +76,6 @@ class ProductStockService
     }
 
     /**
-     * Calculate expired date from expiry value and unit
-     */
-    public function calculateExpiredDate(?int $expiryValue, ?string $expiryUnit): ?Carbon
-    {
-        if (empty($expiryValue) || empty($expiryUnit)) {
-            return null;
-        }
-
-        return now()
-            ->add($expiryUnit, $expiryValue)
-            ->startOfDay();
-    }
-
-    /**
      * Get product ID from stock ID
      */
     public function getProductIdFromStock(int $stockId): int
@@ -120,8 +95,7 @@ class ProductStockService
             'price_consument' => $validated['price_consument'],
             'price_r1' => $validated['price_r1'],
             'price_r2' => $validated['price_r2'],
-            'expiry_date' => $validated['expiry_date'] ?? null,
-            'expiry_unit' => $validated['expiry_unit'] ?? null,
+            'expired_date' => $validated['expired_date'] ?? null,
         ];
     }
 
@@ -179,40 +153,7 @@ class ProductStockService
             ->get();
     }
 
-    /**
-     * Calculate expiry value and unit from expired_date
-     * Reverse calculation for edit form
-     */
-    public function calculateExpiryForEdit(?string $expiredDate): array
-    {
-        $expiryValue = 1;
-        $expiryUnit = 'days';
-
-        if (empty($expiredDate)) {
-            return compact('expiryValue', 'expiryUnit');
-        }
-
-        $today = Carbon::today();
-        $expire = Carbon::parse($expiredDate);
-        $daysDiff = $today->diffInDays($expire, false);
-
-        // Prioritas: Years > Months > Weeks > Days
-        if ($daysDiff >= 365 && $daysDiff % 365 === 0) {
-            $expiryValue = $daysDiff / 365;
-            $expiryUnit = 'years';
-        } elseif ($daysDiff >= 30 && $daysDiff % 30 === 0) {
-            $expiryValue = $daysDiff / 30;
-            $expiryUnit = 'months';
-        } elseif ($daysDiff >= 7 && $daysDiff % 7 === 0) {
-            $expiryValue = $daysDiff / 7;
-            $expiryUnit = 'weeks';
-        } else {
-            $expiryValue = max($daysDiff, 0);
-            $expiryUnit = 'days';
-        }
-
-        return compact('expiryValue', 'expiryUnit');
-    }
+    
 
     /**
      * Get dashboard statistics
