@@ -7,6 +7,7 @@ use App\Models\Product;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -132,7 +133,12 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'code_id' => 'required|string|max:50|unique:products,code_id',
+            'code_id' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('products', 'code_id')->ignore($product->id),
+            ],
             'name' => 'required|string|max:100',
             'description' => 'nullable|string',
             'item_category_id' => 'required|exists:item_categories,id',
