@@ -71,51 +71,38 @@
         <div class="flex items-center gap-2">
             <p class="font-bold">Mode Harga: </p>
 
-            <button @click="priceMode = 'consument'" :disabled="cart.length > 0"
+            <button @click="setPriceMode('consument')"
                 :class="[
                     priceMode === 'consument' ?
                     'bg-button-main text-white shadow-md' :
-                    (cart.length > 0 ? 'bg-gray-100 text-gray-300 border-gray-200' : 'bg-white hover:bg-gray-100'),
-                    cart.length > 0 ? 'cursor-not-allowed' : ''
+                    'bg-white hover:bg-gray-100'
                 ]"
                 class="mode-btn border-button-hover rounded-lg border-2 px-3 py-1 text-sm font-medium transition-all duration-200">
                 Konsumen
             </button>
 
-            <button @click="priceMode = 'r1'" :disabled="cart.length > 0"
+            <button @click="setPriceMode('r1')"
                 :class="[
                     priceMode === 'r1' ?
                     'bg-button-main text-white shadow-md' :
-                    (cart.length > 0 ? 'bg-gray-100 text-gray-300 border-gray-200' : 'bg-white hover:bg-gray-100'),
-                    cart.length > 0 ? 'cursor-not-allowed' : ''
+                    'bg-white hover:bg-gray-100'
                 ]"
                 class="mode-btn border-button-hover rounded-lg border-2 px-3 py-1 text-sm font-medium transition-all duration-200">
                 R1
             </button>
 
-            <button @click="priceMode = 'r2'" :disabled="cart.length > 0"
+            <button @click="setPriceMode('r2')"
                 :class="[
                     priceMode === 'r2' ?
                     'bg-button-main text-white shadow-md' :
-                    (cart.length > 0 ? 'bg-gray-100 text-gray-300 border-gray-200' : 'bg-white hover:bg-gray-100'),
-                    cart.length > 0 ? 'cursor-not-allowed' : ''
+                    'bg-white hover:bg-gray-100'
                 ]"
                 class="mode-btn border-button-hover rounded-lg border-2 px-3 py-1 text-sm font-medium transition-all duration-200">
                 R2
             </button>
-
-            <div x-show="cart.length > 0" x-transition
-                class="ml-2 flex items-center rounded border border-orange-100 bg-orange-50 px-2 py-1 text-xs text-orange-500">
-                <svg class="mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <span>Terkunci</span>
-            </div>
         </div>
-
-        <p x-show="cart.length > 0" class="mt-1 pl-24 text-[10px] text-gray-400">
-            *Kosongkan keranjang untuk mengganti mode harga.
+        <p class="mt-1 pl-24 text-[10px] text-gray-500">
+            *Jika mode harga diganti, harga item di keranjang akan otomatis mengikuti harga sistem terbaru.
         </p>
     </div>
 

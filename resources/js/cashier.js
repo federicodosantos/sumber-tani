@@ -5,33 +5,42 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         products: [],
         categories: [],
         cart: Alpine.$persist([]).as('pos-cart'),
-        
+
         search: '',
-        selectedCategory: null, 
+        selectedCategory: null,
         paymentMethod: 'Cash',
         isPaid: false,
         discount: 0,
-        sortType: 'name_az',    
+        sortType: 'name_az',
         priceMode: 'consument',
         isOffline: !navigator.onLine,
         manualTotal: null,
+        cashReceivedInput: '',
+        orderPanelWidth: 320,
+        panelMinWidth: 320,
+        isPanelResizing: false,
+        leftSidebarCollapsed: false,
 
         async init() {
-            window.addEventListener('online', () => { this.isOffline = false; this.syncTransactions(); });
-            window.addEventListener('offline', () => { this.isOffline = true; });
+            window.addEventListener('online', () => {
+                this.isOffline = false;
+                this.syncTransactions();
+            });
+            window.addEventListener('offline', () => {
+                this.isOffline = true;
+            });
 
             setInterval(async () => {
                 if (navigator.onLine) {
                     try {
-                    if (window.db) {    
-                        const pendingCount = await db.offline_transactions.where('is_synced').equals(0).count();
-                        if (pendingCount > 0) {
-                            this.syncTransactions();
+                        if (window.db) {
+                            const pendingCount = await db.offline_transactions.where('is_synced').equals(0).count();
+                            if (pendingCount > 0) {
+                                this.syncTransactions();
+                            }
                         }
-                    }
-                }
-                catch (e) {
-                    console.error('Gagal sinkronisasi otomatis:', e);
+                    } catch (e) {
+                        console.error('Gagal sinkronisasi otomatis:', e);
                     }
                 }
             }, 10000);
@@ -40,16 +49,14 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                 const pendingCount = await db.offline_transactions.where('is_synced').equals(0).count();
 
                 if (initialProducts.length > 0 && pendingCount === 0) {
-                    
-                    console.log("🔄 Data Server bersih & lebih baru. Mengupdate DB Lokal...");
+                    console.log('🔄 Data Server bersih & lebih baru. Mengupdate DB Lokal...');
                     await db.products.clear();
                     await db.products.bulkPut(initialProducts);
-                    
+
                     await db.categories.clear();
                     await db.categories.bulkPut(initialCategories);
-                    
                 } else {
-                    console.log("⚠️ Ada Transaksi Offline. Menggunakan Data Lokal (Agar stok tidak reset).");
+                    console.log('⚠️ Ada Transaksi Offline. Menggunakan Data Lokal (Agar stok tidak reset).');
                 }
             } catch (e) {
                 console.error('Gagal inisialisasi DB:', e);
@@ -57,7 +64,11 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
             this.products = await db.products.toArray();
             this.categories = await db.categories.toArray();
+            this.syncCartPricesToMode();
+            this.orderPanelWidth = Math.max(this.panelMinWidth, Math.min(420, Math.floor(window.innerWidth * 0.28)));
+            this.leftSidebarCollapsed = localStorage.getItem('cashier-left-sidebar-collapsed') === '1';
         },
+
         get filteredProducts() {
             let result = this.products;
 
@@ -91,56 +102,136 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             return Number(p) || 0;
         },
 
+        setPaymentMethod(method) {
+            this.paymentMethod = method;
+            if (method !== 'Cash') {
+                this.cashReceivedInput = '';
+            }
+        },
+
+        toggleLeftSidebar() {
+            this.leftSidebarCollapsed = !this.leftSidebarCollapsed;
+            localStorage.setItem('cashier-left-sidebar-collapsed', this.leftSidebarCollapsed ? '1' : '0');
+        },
+
+        get panelMaxWidth() {
+            return Math.floor(window.innerWidth / 2);
+        },
+
+        startOrderPanelResize(event) {
+            event.preventDefault();
+            this.isPanelResizing = true;
+            document.body.classList.add('select-none');
+
+            const onMove = (moveEvent) => {
+                const nextWidth = window.innerWidth - moveEvent.clientX;
+                const clampedWidth = Math.max(this.panelMinWidth, Math.min(nextWidth, this.panelMaxWidth));
+                this.orderPanelWidth = clampedWidth;
+            };
+
+            const onUp = () => {
+                this.isPanelResizing = false;
+                document.body.classList.remove('select-none');
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+            };
+
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
+        },
+
+        setPriceMode(mode) {
+            if (this.priceMode === mode) return;
+            this.priceMode = mode;
+            this.syncCartPricesToMode();
+        },
+
+        syncCartPricesToMode() {
+            this.cart = this.cart.map(item => {
+                const product = this.products.find(p => p.id === item.id);
+                const basePrice = product ? this.getPrice(product) : Number(item.basePrice ?? item.price ?? 0);
+
+                return {
+                    ...item,
+                    basePrice,
+                    price: basePrice,
+                    isManualPrice: false,
+                };
+            });
+
+            this.manualTotal = null;
+        },
+
         addToCart(product) {
             const activePrice = this.getPrice(product);
             const existingItem = this.cart.find(item => item.id === product.id);
 
             if (existingItem) {
-                if (existingItem.price !== activePrice) {
-                    const oldPrice = this.formatRupiah(existingItem.price);
-                    const newPrice = this.formatRupiah(activePrice);
-
-                    alert(
-                        `⚠️ GAGAL MENAMBAH ITEM!\n\n` +
-                        `Produk ini sudah ada di keranjang dengan harga: ${oldPrice}\n` +
-                        `Sedangkan mode harga Anda saat ini adalah: ${newPrice}\n\n` +
-                        `Solusi: Hapus item dari keranjang terlebih dahulu jika ingin menggunakan harga baru.`
-                    );
-                    return;
-                }
-
                 if (existingItem.qty < product.stock_opname) {
                     existingItem.qty++;
-                    existingItem.price = activePrice; 
                 } else {
                     alert('Stok tidak mencukupi!');
                 }
+                return;
+            }
+
+            if (product.stock_opname > 0) {
+                this.cart.push({
+                    id: product.id,
+                    name: product.name,
+                    basePrice: activePrice,
+                    price: activePrice,
+                    isManualPrice: false,
+                    stock: product.stock_opname,
+                    qty: 1,
+                });
             } else {
-                if (product.stock_opname > 0) {
-                    this.cart.push({
-                        id: product.id,
-                        name: product.name,
-                        price: activePrice,
-                        stock: product.stock_opname,
-                        qty: 1
-                    });
-                } else {
-                    alert('Stok habis!');
-                }
+                alert('Stok habis!');
             }
         },
 
+        parseNumberInput(rawValue) {
+            if (rawValue === null || rawValue === undefined) return 0;
+            const cleaned = rawValue.toString().replace(/[^0-9,.-]/g, '').replace(/,/g, '.');
+            const parsed = Number(cleaned);
+            return Number.isFinite(parsed) ? parsed : 0;
+        },
+
+        setItemManualPrice(id, rawValue) {
+            const item = this.cart.find(cartItem => cartItem.id === id);
+            if (!item) return;
+
+            const parsedValue = this.parseNumberInput(rawValue);
+            if (parsedValue <= 0) {
+                item.price = Number(item.basePrice) || 0;
+                item.isManualPrice = false;
+                return;
+            }
+
+            item.price = parsedValue;
+            item.isManualPrice = parsedValue !== Number(item.basePrice);
+            this.manualTotal = null;
+        },
+
+        resetItemPrice(id) {
+            const item = this.cart.find(cartItem => cartItem.id === id);
+            if (!item) return;
+
+            item.price = Number(item.basePrice) || 0;
+            item.isManualPrice = false;
+        },
+
         async decrementLocalStock(soldItems) {
-            for (let item of soldItems) {
+            for (const item of soldItems) {
                 const product = this.products.find(p => p.id === item.id);
-                
+
                 if (product) {
                     product.stock_opname -= item.qty;
 
                     if (window.db) {
                         try {
                             await db.products.update(product.id, {
-                                stock_opname: product.stock_opname
+                                stock_opname: product.stock_opname,
                             });
                         } catch (e) {
                             console.error('Gagal update stok lokal:', e);
@@ -151,16 +242,16 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         },
 
         updateQty(id, change) {
-            const item = this.cart.find(item => item.id === id);
+            const item = this.cart.find(cartItem => cartItem.id === id);
             if (!item) return;
 
             const newQty = item.qty + change;
-            
+
             if (newQty > item.stock) {
-                alert('Stok tidak mencukupi! Stok tersedia: ' + item.stock);
+                alert(`Stok tidak mencukupi! Stok tersedia: ${item.stock}`);
                 return;
             }
-            
+
             if (newQty <= 0) {
                 this.removeItem(id);
             } else {
@@ -169,28 +260,32 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         },
 
         setQty(id, value) {
-            const item = this.cart.find(item => item.id === id);
+            const item = this.cart.find(cartItem => cartItem.id === id);
             if (!item) return;
-            let newQty = parseInt(value) || 0;
+
+            let newQty = parseInt(value, 10) || 0;
             if (newQty <= 0) newQty = 1;
 
             if (newQty > item.stock) {
                 alert(`Stok tidak mencukupi! Max: ${item.stock}`);
-                item.qty = item.stock; 
+                item.qty = item.stock;
                 return;
             }
+
             item.qty = newQty;
         },
 
         handleQtyBlur(id, event) {
             const value = event.target.value;
-            const item = this.cart.find(item => item.id === id);
+            const item = this.cart.find(cartItem => cartItem.id === id);
             if (!item) return;
-            if (!value || value === '' || parseInt(value) <= 0) {
+
+            if (!value || parseInt(value, 10) <= 0) {
                 event.target.value = item.qty;
                 alert('Jumlah minimal adalah 1');
                 return;
             }
+
             this.setQty(id, value);
         },
 
@@ -202,14 +297,14 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             return new Intl.NumberFormat('id-ID', {
                 style: 'currency',
                 currency: 'IDR',
-                minimumFractionDigits: 0
-            }).format(number);
+                minimumFractionDigits: 0,
+            }).format(Number(number) || 0);
         },
 
         get totalQty() {
             return this.cart.reduce((total, item) => total + item.qty, 0);
         },
-        
+
         get totalPrice() {
             if (this.cart.length === 0) {
                 this.manualTotal = null;
@@ -217,25 +312,50 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             }
 
             if (this.manualTotal !== null) {
-                return this.manualTotal;
+                return Number(this.manualTotal) || 0;
             }
 
-            return this.cart.reduce((total, item) => total + (item.price * item.qty), 0);
+            return this.cart.reduce((total, item) => total + ((Number(item.price) || 0) * item.qty), 0);
+        },
+
+        get systemCartTotal() {
+            return this.cart.reduce((total, item) => total + ((Number(item.basePrice) || 0) * item.qty), 0);
+        },
+
+        get cashReceived() {
+            return this.parseNumberInput(this.cashReceivedInput);
+        },
+
+        get changeAmount() {
+            if (this.paymentMethod !== 'Cash') return 0;
+            const change = this.cashReceived - this.totalPrice;
+            return change > 0 ? change : 0;
         },
 
         async processCheckout() {
             if (this.cart.length === 0) return alert('Keranjang kosong');
+
+            if (this.paymentMethod === 'Cash') {
+                if (this.cashReceived <= 0) {
+                    return alert('Masukkan uang consumer terlebih dahulu.');
+                }
+
+                if (this.cashReceived < this.totalPrice) {
+                    return alert('Uang consumer kurang dari total transaksi.');
+                }
+            }
+
             if (!confirm('Proses Transaksi?')) return;
 
             const cleanCart = JSON.parse(JSON.stringify(this.cart));
             const offlineUuid = self.crypto.randomUUID();
-            const originalTotal = cleanCart.reduce((total, item) => total + (item.price * item.qty), 0);
+            const originalTotal = cleanCart.reduce((total, item) => total + ((Number(item.price) || 0) * item.qty), 0);
             const isPaid = this.paymentMethod === 'Kredit' ? 0 : 1;
 
             let discountValue = 0;
             if (this.manualTotal !== null) {
                 discountValue = originalTotal - parseFloat(this.manualTotal);
-                if (discountValue < 0) discountValue = 0; 
+                if (discountValue < 0) discountValue = 0;
             }
 
             const payload = {
@@ -246,61 +366,67 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                 payment_method: this.paymentMethod,
                 created_at: new Date().toISOString(),
                 offline_uuid: offlineUuid,
-                is_paid: isPaid
+                is_paid: isPaid,
+                cash_received: this.paymentMethod === 'Cash' ? this.cashReceived : null,
+                change_amount: this.paymentMethod === 'Cash' ? this.changeAmount : null,
             };
 
             if (this.isOffline) {
                 try {
                     await db.offline_transactions.add({ ...payload, is_synced: 0 });
-                    
+
                     await this.decrementLocalStock(cleanCart);
-                    
+
                     alert('OFFLINE: Transaksi tersimpan lokal.');
 
                     if (typeof window.printReceipt === 'function') {
-                        window.printReceipt(null, payload); 
+                        window.printReceipt(null, payload);
                     }
+
                     this.cart = [];
                     this.manualTotal = null;
+                    this.cashReceivedInput = '';
                 } catch (e) {
                     console.error(e);
                     alert('Gagal simpan offline');
                 }
             } else {
-                fetch('/checkout', { 
+                fetch('/checkout', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
                 })
-                .then(res => {
-                    if (!res.ok) throw new Error(res.statusText);
-                    return res.json(); 
-                })
-                .then(async response => {
-                    await this.decrementLocalStock(cleanCart);
+                    .then(res => {
+                        if (!res.ok) throw new Error(res.statusText);
+                        return res.json();
+                    })
+                    .then(async response => {
+                        await this.decrementLocalStock(cleanCart);
 
-                    if (response.transaction_id && typeof window.printReceipt === 'function') {
-                        window.printReceipt(response.transaction_id);
-                    }
+                        if (response.transaction_id && typeof window.printReceipt === 'function') {
+                            window.printReceipt(response.transaction_id);
+                        }
 
-                    alert('Transaksi Berhasil!');
-                    this.cart = [];
-                    this.manualTotal = null;
-                })
-                .catch(async error => {
-                    console.error('Network Error, saving offline...', error);
-                    await db.offline_transactions.add({...payload, is_synced: 0});
+                        alert('Transaksi Berhasil!');
+                        this.cart = [];
+                        this.manualTotal = null;
+                        this.cashReceivedInput = '';
+                    })
+                    .catch(async error => {
+                        console.error('Network Error, saving offline...', error);
+                        await db.offline_transactions.add({ ...payload, is_synced: 0 });
 
-                    await this.decrementLocalStock(cleanCart);
-                    
-                    alert('Koneksi terputus. Tersimpan offline.');
-                    this.cart = [];
-                    this.manualTotal = null;
-                });
+                        await this.decrementLocalStock(cleanCart);
+
+                        alert('Koneksi terputus. Tersimpan offline.');
+                        this.cart = [];
+                        this.manualTotal = null;
+                        this.cashReceivedInput = '';
+                    });
             }
         },
 
@@ -323,7 +449,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
             let authError = false;
 
-            for (let trx of unsynced) {
+            for (const trx of unsynced) {
                 if (authError) break;
 
                 const payloadToSend = { ...trx };
@@ -332,14 +458,14 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                 delete payloadToSend.sync_error;
 
                 try {
-                    const response = await fetch('/checkout', { 
+                    const response = await fetch('/checkout', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                         },
-                        body: JSON.stringify(payloadToSend)
+                        body: JSON.stringify(payloadToSend),
                     });
 
                     if (response.ok) {
@@ -347,7 +473,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         await db.offline_transactions.delete(trx.id);
 
                         const toast = document.createElement('div');
-                        toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow';
+                        toast.className = 'fixed bottom-4 right-4 rounded bg-green-500 px-4 py-2 text-white shadow';
                         toast.innerText = `Data offline (ID: ${trx.id}) berhasil disimpan ke server.`;
                         document.body.appendChild(toast);
                         setTimeout(() => toast.remove(), 5000);
@@ -360,7 +486,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         console.error('Validasi gagal untuk ID:', trx.id, errorData);
                         await db.offline_transactions.update(trx.id, {
                             is_synced: -1,
-                            sync_error: JSON.stringify(errorData)
+                            sync_error: JSON.stringify(errorData),
                         });
                         continue;
                     }
@@ -372,14 +498,13 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         window.location.href = '/';
                         return;
                     }
-
                 } catch (e) {
                     console.error('Gagal sync ID:', trx.id);
                     this.isOffline = true;
-                    return; 
+                    return;
                 }
             }
-            
+
             if (!authError) {
                 const sisa = await db.offline_transactions.where('is_synced').equals(0).count();
                 if (sisa === 0) {
@@ -388,6 +513,6 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     alert(`Sinkronisasi selesai. Sisa ${sisa} transaksi gagal (cek error).`);
                 }
             }
-        }
+        },
     };
 }

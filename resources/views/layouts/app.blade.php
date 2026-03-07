@@ -26,13 +26,25 @@
 
 <x-flash-message />
 
-<div class="flex min-h-screen font-mont" x-data="{ sidebarOpen: false }">
+<div class="flex min-h-screen font-mont"
+    x-data="{
+        sidebarOpen: false,
+        sidebarCollapsed: false,
+        init() {
+            this.sidebarCollapsed = localStorage.getItem('app-sidebar-collapsed') === '1';
+        },
+        toggleSidebarCollapse() {
+            this.sidebarCollapsed = !this.sidebarCollapsed;
+            localStorage.setItem('app-sidebar-collapsed', this.sidebarCollapsed ? '1' : '0');
+        }
+    }">
 
     {{-- Sidebar Component --}}
     <x-partials.sidebar />
 
     {{-- Main content --}}
-    <main class="flex-1 transition-all lg:ml-72 overflow-x-hidden">
+    <main class="flex-1 overflow-x-hidden transition-all duration-300"
+        :class="sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'">
 
         {{-- Mobile menu button --}}
         <button @click="sidebarOpen = true"

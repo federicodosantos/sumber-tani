@@ -16,13 +16,30 @@
     {{-- <button onclick="listPrinters()">Cek Printer QZ</button> --}}
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
 </head>
 
 <body class="antialiased font-mont">
     <div class="flex h-screen overflow-hidden bg-gray-50" x-data="cashierHandler({{ Js::from($products) }}, {{ Js::from($categories) }})">
-        <aside class="flex w-64 flex-col border-r border-gray-200 bg-white">
-            <div class="border-b border-gray-200 p-6">
-                <img src="{{ asset('images/logo-kasir.svg') }}" alt="Sumber Tani">
+        <aside class="flex flex-col border-r border-gray-200 bg-white transition-all duration-300"
+            :class="leftSidebarCollapsed ? 'w-16' : 'w-64'">
+            <div class="border-b border-gray-200 p-4">
+                <div class="flex items-center justify-between">
+                    <img x-show="!leftSidebarCollapsed" src="{{ asset('images/logo-kasir.svg') }}" alt="Sumber Tani" class="h-10">
+                    <img x-show="leftSidebarCollapsed" x-cloak src="{{ asset('favicon.svg') }}" alt="Sumber Tani" class="h-8 w-8">
+                    <button type="button" @click="toggleLeftSidebar()"
+                        class="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100"
+                        :title="leftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'">
+                        <svg class="h-4 w-4 transition-transform duration-300" :class="leftSidebarCollapsed ? 'rotate-180' : ''"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                </div>
             </div>
             <div x-data="{
                 count: 0,
@@ -61,28 +78,31 @@
             </div>
 
             <div class="flex-1 overflow-y-auto p-4">
-                <div x-show="isOffline"
+                <div x-show="isOffline && !leftSidebarCollapsed"
                     class="mb-4 rounded border border-red-400 bg-red-100 px-4 py-2 text-center text-xs font-bold text-red-700">
                     MODE OFFLINE
                 </div>
-                <div class="mb-3 flex items-center gap-2">
+                <div class="mb-3 flex items-center gap-2" :class="leftSidebarCollapsed ? 'justify-center' : ''">
                     <img src="{{ asset('images/logo-kategori-kasir.svg') }}" alt="">
-                    <h2 class="font-semibold text-gray-700">KATEGORI</h2>
+                    <h2 x-show="!leftSidebarCollapsed" x-cloak class="font-semibold text-gray-700">KATEGORI</h2>
                 </div>
 
                 <nav class="space-y-1">
                     <button @click="selectedCategory = null"
                         :class="selectedCategory === null ? 'bg-button-main text-white' : 'text-gray-700 hover:bg-gray-100'"
-                        class="block w-full rounded-lg px-4 py-2.5 text-left font-medium transition-colors">
-                        Semua Kategori
+                        class="block w-full rounded-lg px-4 py-2.5 text-left font-medium transition-colors"
+                        :title="leftSidebarCollapsed ? 'Semua Kategori' : ''">
+                        <span x-show="!leftSidebarCollapsed">Semua Kategori</span>
+                        <span x-show="leftSidebarCollapsed" x-cloak>S</span>
                     </button>
 
                     <template x-for="item in categories" :key="item.id">
                         <button @click="selectedCategory = item.id"
                             :class="selectedCategory === item.id ? 'bg-button-main text-white' :
                                 'text-gray-700 hover:bg-gray-100'"
-                            class="block w-full rounded-lg px-4 py-2.5 text-left font-medium transition-colors">
-                            <span x-text="item.name"></span>
+                            class="block w-full rounded-lg px-4 py-2.5 text-left font-medium transition-colors"
+                            :title="leftSidebarCollapsed ? item.name : ''">
+                            <span x-text="leftSidebarCollapsed ? item.name.charAt(0) : item.name"></span>
                         </button>
                     </template>
                 </nav>
@@ -90,6 +110,7 @@
                 @if (request('search'))
                     <div class="mt-4 px-4">
                         <a href="{{ route('cashier') }}"
+                            x-show="!leftSidebarCollapsed"
                             class="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 py-2 text-sm text-red-600 hover:bg-red-100">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -103,12 +124,14 @@
 
             <div class="border-t border-gray-200 bg-white p-4">
                 <a href="{{ route('dashboard') }}"
-                    class="flex items-center gap-3 rounded-lg px-4 py-2.5 text-gray-700 transition-colors hover:bg-gray-100">
+                    class="flex items-center gap-3 rounded-lg px-4 py-2.5 text-gray-700 transition-colors hover:bg-gray-100"
+                    :class="leftSidebarCollapsed ? 'justify-center px-2' : ''"
+                    :title="leftSidebarCollapsed ? 'Dashboard' : ''">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
-                    <span class="font-medium">Dashboard</span>
+                    <span x-show="!leftSidebarCollapsed" x-cloak class="font-medium">Dashboard</span>
                 </a>
             </div>
         </aside>
@@ -117,7 +140,12 @@
             {{ $slot }}
         </main>
 
-        <aside class="flex w-80 flex-col border-l border-gray-200 bg-white">
+        <aside class="relative flex flex-col border-l border-gray-200 bg-white"
+            :style="`width:${orderPanelWidth}px; min-width:${panelMinWidth}px; max-width:50vw;`">
+            <button type="button" @mousedown="startOrderPanelResize($event)"
+                class="absolute -left-1 top-0 z-30 hidden h-full w-2 cursor-col-resize bg-transparent hover:bg-button-main/20 lg:block"
+                title="Resize panel pemesanan">
+            </button>
             <div class="border-b border-gray-200 p-6">
                 <h2 class="text-2xl font-bold text-gray-900">Data Pemesanan</h2>
             </div>
@@ -127,18 +155,45 @@
                     Belum ada produk dipilih
                 </div>
                 <template x-for="item in cart" :key="item.id">
-                    <div class="border-button-main mb-3 rounded-2xl border-2 bg-gray-50 p-4">
+                    <div x-data="{ isEditingPrice: false }" class="border-button-main mb-3 rounded-2xl border-2 bg-gray-50 p-4">
                         <div class="mb-3 flex items-start justify-between">
                             <div class="flex-1">
                                 <h3 class="mb-1 font-bold text-gray-900" x-text="item.name"></h3>
-                                <p class="text-sm text-gray-600" x-text="formatRupiah(item.price)"></p>
+                                <template x-if="!item.isManualPrice">
+                                    <p class="text-sm text-gray-600">
+                                        Harga sistem:
+                                        <span class="font-semibold" x-text="formatRupiah(item.basePrice ?? item.price)"></span>
+                                    </p>
+                                </template>
+                                <template x-if="item.isManualPrice">
+                                    <div>
+                                        <p class="text-sm text-gray-600">
+                                            Harga aktif:
+                                            <span class="font-semibold" x-text="formatRupiah(item.price)"></span>
+                                        </p>
+                                        <p class="text-[11px] text-gray-500">
+                                            Harga sistem:
+                                            <span class="font-semibold" x-text="formatRupiah(item.basePrice ?? item.price)"></span>
+                                        </p>
+                                    </div>
+                                </template>
                             </div>
-                            <button @click="removeItem(item.id)" class="text-red-500 hover:text-red-700">
-                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <button type="button" @click="isEditingPrice = true"
+                                    class="text-gray-500 hover:text-blue-600"
+                                    title="Edit Harga Satuan">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                </button>
+                                <button @click="removeItem(item.id)" class="text-red-500 hover:text-red-700">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="flex items-center gap-3">
@@ -161,6 +216,31 @@
                             <span class="ml-2 text-xs text-gray-500">
                                 / <span x-text="item.stock"></span>
                             </span>
+                        </div>
+
+                        <div x-show="isEditingPrice" class="mt-3 rounded-lg border border-gray-200 bg-white p-2">
+                            <div class="space-y-2">
+                                <label class="block text-[11px] font-semibold text-gray-600">Adjustment Harga Satuan</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" min="0" step="1" :value="item.price"
+                                        @input="setItemManualPrice(item.id, $event.target.value)"
+                                        class="focus:border-button-main focus:ring-button-main h-8 w-full rounded-lg border border-gray-300 px-2 text-right text-sm focus:outline-none focus:ring-2">
+                                    <button type="button" @click="resetItemPrice(item.id); isEditingPrice = false"
+                                        class="rounded-md border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-100 cursor-pointer">
+                                        Reset
+                                    </button>
+                                </div>
+                                <p class="text-[11px] text-blue-600">
+                                    Harga sistem:
+                                    <span class="font-semibold" x-text="formatRupiah(item.basePrice ?? item.price)"></span>
+                                </p>
+                            </div>
+                        </div>
+
+                        {{-- Total per produk --}}
+                        <div class="mt-3 flex items-center justify-between border-t border-gray-200 pt-2">
+                            <span class="text-xs text-gray-500" x-text="item.qty + ' × ' + formatRupiah(item.price)"></span>
+                            <span class="text-sm font-bold text-gray-900" x-text="formatRupiah(item.price * item.qty)"></span>
                         </div>
                     </div>
                 </template>
@@ -230,19 +310,19 @@
                         <p class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Pilih Metode
                         </p>
 
-                        <button @click="paymentMethod = 'Cash'; open = false"
+                        <button @click="setPaymentMethod('Cash'); open = false"
                             class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 flex items-center gap-3"
                             :class="paymentMethod === 'Cash' ? 'text-green-600 bg-green-50' : 'text-gray-700'">
                             <span>💵</span> CASH
                         </button>
 
-                        <button @click="paymentMethod = 'QRIS'; open = false"
+                        <button @click="setPaymentMethod('QRIS'); open = false"
                             class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 flex items-center gap-3"
                             :class="paymentMethod === 'QRIS' ? 'text-gray-900 bg-gray-100' : 'text-gray-700'">
                             <span>📱</span> QRIS
                         </button>
 
-                        <button @click="paymentMethod = 'Transfer'; open = false"
+                        <button @click="setPaymentMethod('Transfer'); open = false"
                             class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 flex items-center gap-3"
                             :class="paymentMethod === 'Transfer' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'">
                             <span>💳</span> TRANSFER
@@ -250,11 +330,26 @@
 
                         <div class="border-t border-gray-100 my-1"></div>
 
-                        <button @click="paymentMethod = 'Kredit'; open = false"
+                        <button @click="setPaymentMethod('Kredit'); open = false"
                             class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-red-50 flex items-center gap-3"
                             :class="paymentMethod === 'Kredit' ? 'text-red-600 bg-red-50' : 'text-gray-700'">
                             <span>📝</span> KREDIT / BON
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="paymentMethod === 'Cash'" class="px-6 pb-4" style="display: none;">
+                <div class="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <div class="mb-2">
+                        <label class="mb-1 block text-xs font-semibold text-gray-600">Uang Consumer</label>
+                        <input type="number" min="0" step="1" x-model="cashReceivedInput"
+                            class="focus:border-button-main focus:ring-button-main h-9 w-full rounded-lg border border-gray-300 px-3 text-right text-sm font-semibold focus:outline-none focus:ring-2"
+                            placeholder="0">
+                    </div>
+                    <div class="flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm">
+                        <span class="font-semibold text-gray-600">Kembalian</span>
+                        <span class="font-bold text-gray-900" x-text="formatRupiah(changeAmount)"></span>
                     </div>
                 </div>
             </div>
@@ -318,7 +413,7 @@
 
                             <template x-if="manualTotal !== null && cart.length > 0">
                                 <p class="text-xs text-gray-900 mt-0.5 " title="Harga Asli Sebelum Edit">Harga Sistem:
-                                    <span x-text="formatRupiah(cart.reduce((t, i) => t + (i.price * i.qty), 0))"
+                                    <span x-text="formatRupiah(systemCartTotal)"
                                         class="font-bold"></span>
                                 </p>
                             </template>
@@ -326,6 +421,8 @@
                         </div>
                     </div>
                     <button @click="processCheckout()"
+                        :disabled="cart.length === 0 || (paymentMethod === 'Cash' && cashReceived < totalPrice)"
+                        :class="(cart.length === 0 || (paymentMethod === 'Cash' && cashReceived < totalPrice)) ? 'opacity-50 cursor-not-allowed' : ''"
                         class="text-button-main flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-3.5 font-bold shadow-sm transition-all hover:bg-gray-50 hover:shadow-md active:scale-95">
                         <span>BAYAR</span>
                     </button>

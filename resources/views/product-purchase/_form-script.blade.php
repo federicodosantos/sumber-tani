@@ -4,6 +4,49 @@
     let isManualPriceActive = false;
 
     /* =========================
+       DISCOUNT TYPE TOGGLE
+    ========================= */
+    const discountTypeInput = document.getElementById('discountTypeInput');
+    const discountUnitLabel = document.getElementById('discountUnitLabel');
+    const toggleBtn = document.getElementById('toggleDiscountType');
+    const ppnTypeInput = document.getElementById('ppnTypeInput');
+    const ppnUnitLabel = document.getElementById('ppnUnitLabel');
+    const togglePpnBtn = document.getElementById('togglePpnType');
+
+    toggleBtn?.addEventListener('click', function () {
+        const current = discountTypeInput.value;
+        if (current === 'percent') {
+            discountTypeInput.value = 'nominal';
+            discountUnitLabel.textContent = 'Rp';
+            toggleBtn.textContent = 'Rp';
+            // Reset max constraint
+            document.getElementById('globalDiscount')?.removeAttribute('max');
+        } else {
+            discountTypeInput.value = 'percent';
+            discountUnitLabel.textContent = '%';
+            toggleBtn.textContent = '%';
+            document.getElementById('globalDiscount')?.setAttribute('max', '100');
+        }
+        calculateGrandTotal();
+    });
+
+    togglePpnBtn?.addEventListener('click', function () {
+        const current = ppnTypeInput.value;
+        if (current === 'percent') {
+            ppnTypeInput.value = 'nominal';
+            ppnUnitLabel.textContent = 'Rp';
+            togglePpnBtn.textContent = 'Rp';
+            document.getElementById('ppnInput')?.removeAttribute('max');
+        } else {
+            ppnTypeInput.value = 'percent';
+            ppnUnitLabel.textContent = '%';
+            togglePpnBtn.textContent = '%';
+            document.getElementById('ppnInput')?.setAttribute('max', '100');
+        }
+        calculateGrandTotal();
+    });
+
+    /* =========================
        UTIL
     ========================= */
     function formatCurrency(num) {
@@ -41,14 +84,23 @@
             total += parseCurrency(row.querySelector('.subtotal-input').value);
         });
 
-        const discountPercent =
+        const discountType = discountTypeInput?.value || 'percent';
+        const discountInput =
             parseFloat(document.getElementById('globalDiscount')?.value) || 0;
-        const ppnPercent =
-            parseFloat(document.getElementById('ppnInput')?.value) || 0;
+        const ppnInput = parseFloat(document.getElementById('ppnInput')?.value) || 0;
+        const ppnType = ppnTypeInput?.value || 'percent';
 
-        const discountValue = total * (discountPercent / 100);
+        let discountValue = 0;
+        if (discountType === 'percent') {
+            discountValue = total * (discountInput / 100);
+        } else {
+            discountValue = discountInput;
+        }
+
         const afterDiscount = total - discountValue;
-        const ppnValue = afterDiscount * (ppnPercent / 100);
+        const ppnValue = ppnType === 'percent'
+            ? afterDiscount * (ppnInput / 100)
+            : ppnInput;
         const grandTotal = afterDiscount + ppnValue;
 
         // Simpan harga sistem
@@ -100,42 +152,36 @@
         const grandDisplay = document.getElementById('grandTotalDisplay');
         const manualValueHidden = document.getElementById('manualGrandTotalValue');
 
-        // Event listener untuk manual grand total
         manualInput?.addEventListener('input', function(e) {
             let value = e.target.value;
-            
-            // Hanya ambil angka untuk parsing
             const numericValue = parseCurrency(value);
-            
+
             if (numericValue > 0) {
-                // Format display dengan currency
                 e.target.value = formatCurrency(numericValue);
-                
+
                 isManualPriceActive = true;
                 resetBtn.disabled = false;
                 systemInfo?.classList.remove('hidden');
                 systemValue.textContent = 'Rp ' + formatCurrency(systemCalculatedPrice);
-                
-                // Update display dan hidden input dengan nilai numeric (tidak diformat)
+
                 grandDisplay.textContent = 'Rp ' + formatCurrency(numericValue);
-                manualValueHidden.value = numericValue; // Simpan angka murni
+                manualValueHidden.value = numericValue;
             } else {
                 isManualPriceActive = false;
                 resetBtn.disabled = true;
                 systemInfo?.classList.add('hidden');
                 grandDisplay.textContent = 'Rp ' + formatCurrency(systemCalculatedPrice);
-                manualValueHidden.value = ''; // Kosongkan jika tidak ada nilai
+                manualValueHidden.value = '';
             }
         });
 
-        // Reset manual price
         resetBtn?.addEventListener('click', function() {
             manualInput.value = '';
             isManualPriceActive = false;
             this.disabled = true;
             systemInfo?.classList.add('hidden');
             grandDisplay.textContent = 'Rp ' + formatCurrency(systemCalculatedPrice);
-            manualValueHidden.value = ''; // Pastikan hidden input juga dikosongkan
+            manualValueHidden.value = '';
         });
     }
 
@@ -146,6 +192,7 @@
         const priceInput = row.querySelector('.price-input');
         const quantityInput = row.querySelector('.quantity-input');
         const removeBtn = row.querySelector('.remove-row');
+        const comboboxHidden = row.querySelector('.combobox-hidden');
 
         priceInput.addEventListener('input', function (e) {
             const value = parseCurrency(e.target.value);
@@ -155,6 +202,18 @@
 
         quantityInput.addEventListener('input', function () {
             calculateSubtotal(row);
+        });
+
+        // Searchable Combobox Listener
+        comboboxHidden?.addEventListener('combobox-change', function(e) {
+            const data = e.detail.selected;
+            if (data) {
+                // Auto-fill unit if available (optional enhancement)
+                // const unitInput = row.querySelector('input[name*="[unit]"]');
+                // if (unitInput && !unitInput.value) unitInput.value = data.unit || 'PCS';
+                
+                calculateSubtotal(row);
+            }
         });
 
         if (removeBtn) {
@@ -182,23 +241,31 @@
         const firstRow = container.querySelector('.product-row');
         const newRow = firstRow.cloneNode(true);
 
-        newRow.querySelectorAll('input').forEach(input => {
-            const name = input.getAttribute('name');
+        newRow.querySelectorAll('input, select').forEach(el => {
+            const name = el.getAttribute('name');
             if (name) {
-                input.setAttribute(
+                el.setAttribute(
                     'name',
                     name.replace(/\[\d+]/, `[${rowIndex}]`)
                 );
             }
 
-            if (!input.classList.contains('subtotal-input')) {
-                input.value = '';
+            if (el.tagName === 'SELECT') {
+                el.selectedIndex = 0;
+            } else if (!el.classList.contains('subtotal-input')) {
+                el.value = '';
             } else {
-                input.value = '0';
+                el.value = '0';
             }
         });
 
         container.appendChild(newRow);
+        
+        // Re-initialize Alpine for the new row (crucial for searchable combobox)
+        if (window.Alpine) {
+            window.Alpine.initTree(newRow);
+        }
+
         addRowListeners(newRow);
         updateRemoveButtons();
         calculateGrandTotal();
@@ -239,6 +306,14 @@
     document.querySelectorAll('.product-row').forEach(row => {
         addRowListeners(row);
     });
+
+    // Set initial discount type max constraint
+    if (discountTypeInput?.value === 'percent') {
+        document.getElementById('globalDiscount')?.setAttribute('max', '100');
+    }
+    if (ppnTypeInput?.value === 'percent') {
+        document.getElementById('ppnInput')?.setAttribute('max', '100');
+    }
 
     updateRemoveButtons();
     syncPaymentStatus();

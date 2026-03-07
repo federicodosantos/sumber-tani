@@ -201,6 +201,9 @@ async function printReceipt(saleId, offlineData = null) {
                     datetime: dateStr,
                     total: offlineData.totalAmount, // Ambil dari payload
                     discount: offlineData.discount,
+                    payment_method: offlineData.payment_method || "Cash",
+                    cash_received: offlineData.cash_received ?? null,
+                    change_amount: offlineData.change_amount ?? null,
                 },
                 // Mapping items dari cart ke format struk
                 items: offlineData.items.map(item => ({
@@ -255,12 +258,22 @@ async function printReceipt(saleId, offlineData = null) {
         const totalStr = totalVal.toLocaleString("id-ID");
         const discountVal = Number(data.transaction.discount || 0);
         const discountStr = discountVal.toLocaleString("id-ID");
+        const paymentMethod = data.transaction.payment_method || "-";
+        const cashReceived = data.transaction.cash_received !== null && data.transaction.cash_received !== undefined
+            ? Number(data.transaction.cash_received).toLocaleString("id-ID")
+            : null;
+        const changeAmount = data.transaction.change_amount !== null && data.transaction.change_amount !== undefined
+            ? Number(data.transaction.change_amount).toLocaleString("id-ID")
+            : null;
 
         cmds.push(
             separator(LINE_CHARS),
             // Right align total manually using spaces
+            formatRightLine("METODE", paymentMethod) + "\n",
             formatRightLine("DISKON", discountStr) + "\n",
             "TOTAL : ".padStart(LINE_CHARS - totalStr.length - 1) + totalStr + "\n",
+            ...(cashReceived ? [formatRightLine("TUNAI", cashReceived) + "\n"] : []),
+            ...(changeAmount ? [formatRightLine("KEMBALIAN", changeAmount) + "\n"] : []),
             separator(LINE_CHARS),
             "\n",
             

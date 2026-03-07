@@ -21,33 +21,50 @@
                                     required>
                             </div>
 
-                            {{-- PPN Input Manual --}}
+                            {{-- PPN --}}
                             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                                 <label for="ppnInput" class="text-sm font-semibold text-gray-700">PPN:</label>
-                                <div class="relative rounded-md shadow-sm">
-                                    <input type="number"
-                                        name="ppn"
-                                        id="ppnInput"
-                                        value="{{ rtrim(rtrim($purchase->ppn_percent, '0'), '.') }}"
-                                        min="0"
-                                        step="0.1">
-                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                                        <span class="text-gray-500 sm:text-sm">%</span>
+                                <div class="flex items-center gap-1">
+                                    <div class="relative rounded-md shadow-sm">
+                                        <input type="number"
+                                            name="ppn"
+                                            id="ppnInput"
+                                            value="{{ ($purchase->ppn_type ?? 'percent') === 'nominal' ? rtrim(rtrim($purchase->ppn_value, '0'), '.') : rtrim(rtrim($purchase->ppn_percent, '0'), '.') }}"
+                                            min="0"
+                                            step="0.01"
+                                            class="block w-full sm:w-28 rounded-md border-gray-300 pl-3 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                            <span id="ppnUnitLabel" class="text-gray-500 sm:text-sm">{{ ($purchase->ppn_type ?? 'percent') === 'nominal' ? 'Rp' : '%' }}</span>
+                                        </div>
                                     </div>
+                                    <input type="hidden" name="ppn_type" id="ppnTypeInput" value="{{ $purchase->ppn_type ?? 'percent' }}">
+                                    <button type="button" id="togglePpnType"
+                                        class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors whitespace-nowrap"
+                                        title="Klik untuk ganti tipe PPN">
+                                        {{ ($purchase->ppn_type ?? 'percent') === 'nominal' ? 'Rp' : '%' }}
+                                    </button>
                                 </div>
                             </div>
 
-                            {{-- Diskon Input Manual --}}
+                            {{-- Diskon dengan toggle persen / nominal --}}
                             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                                 <label for="globalDiscount" class="text-sm font-semibold text-gray-700">Diskon:</label>
-                                <div class="relative rounded-md shadow-sm">
-                                    <input type="number" name="discount" id="globalDiscount"
-                                        value="{{ rtrim(rtrim($purchase->discount_percent, '0'), '.') }}"
-                                        class="block w-full sm:w-24 rounded-md border-gray-300 pl-3 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                        placeholder="0" min="0" max="100" step="0.01">
-                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                                        <span class="text-gray-500 sm:text-sm">%</span>
+                                <div class="flex items-center gap-1">
+                                    <div class="relative rounded-md shadow-sm">
+                                        <input type="number" name="discount" id="globalDiscount"
+                                            value="{{ $purchase->discount_type === 'nominal' ? rtrim(rtrim($purchase->discount_value, '0'), '.') : rtrim(rtrim($purchase->discount_percent, '0'), '.') }}"
+                                            class="block w-full sm:w-28 rounded-md border-gray-300 pl-3 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                            placeholder="0" min="0" step="0.01">
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                            <span id="discountUnitLabel" class="text-gray-500 sm:text-sm">{{ $purchase->discount_type === 'nominal' ? 'Rp' : '%' }}</span>
+                                        </div>
                                     </div>
+                                    <input type="hidden" name="discount_type" id="discountTypeInput" value="{{ $purchase->discount_type ?? 'percent' }}">
+                                    <button type="button" id="toggleDiscountType"
+                                        class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors whitespace-nowrap"
+                                        title="Klik untuk ganti tipe diskon">
+                                        {{ $purchase->discount_type === 'nominal' ? 'Rp' : '%' }}
+                                    </button>
                                 </div>
                             </div>
 
@@ -70,80 +87,78 @@
                     </div>
 
                     {{-- ITEMS --}}
+                    @php
+                        $productOptions = $products->map(fn($p) => [
+                            'id' => $p->id,
+                            'label' => $p->code_id . ' - ' . $p->name,
+                            'code' => $p->code_id,
+                            'name' => $p->name
+                        ]);
+                    @endphp
+
                     <div id="rowsContainer">
+                        {{-- Header Row --}}
                         <div class="mb-3 hidden lg:grid lg:grid-cols-12 gap-3 px-3 text-sm font-semibold text-gray-700">
-                            <div class="col-span-1">Kode</div>
-                            <div class="col-span-3">Item</div>
-                            <div class="col-span-2">Harga</div>
-                            <div class="col-span-2">Qty</div>
+                            <div class="col-span-4">Produk</div>
+                            <div class="col-span-2">Harga Beli</div>
+                            <div class="col-span-2">Jumlah</div>
                             <div class="col-span-1">Satuan</div>
                             <div class="col-span-2">Sub Total</div>
                             <div class="col-span-1"></div>
                         </div>
 
-                        @foreach ($purchase->details as $i => $detail)
+                        {{-- Existing Rows --}}
+                        @foreach ($purchase->details as $index => $detail)
                             <div class="product-row mb-3 rounded-lg border border-gray-200 p-3 sm:p-4">
                                 <div class="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-start lg:gap-3">
-
-                                    <div class="lg:col-span-1">
-                                        <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Kode</label>
-                                        <input type="text" name="products[{{ $i }}][code]"
-                                            value="{{ $detail->product_code }}"
-                                            class="w-full rounded-md border border-gray-300 px-3 py-2 uppercase shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
-                                            required>
-                                    </div>
-
-                                    <div class="lg:col-span-3">
-                                        <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Item</label>
-                                        <input type="text" name="products[{{ $i }}][item]"
-                                            value="{{ $detail->product_name }}"
-                                            class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
-                                            required>
+                                    <div class="lg:col-span-4">
+                                        <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Produk</label>
+                                        <x-content.combobox 
+                                            name="products[{{ $index }}][product_id]"
+                                            :value="$detail->product_id"
+                                            :options="$productOptions"
+                                            placeholder="Pilih atau cari produk..."
+                                            class="product-select"
+                                            required />
                                     </div>
 
                                     <div class="grid grid-cols-2 gap-3 lg:col-span-5 lg:contents">
                                         <div class="lg:col-span-2">
-                                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Harga</label>
-                                            <input type="text" name="products[{{ $i }}][price]"
-                                                value="{{ number_format($detail->price, 0, ',', '.') }}"
+                                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Harga Beli</label>
+                                            <input type="text" name="products[{{ $index }}][price]"
                                                 class="price-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
-                                                required>
+                                                value="{{ number_format($detail->price, 0, ',', '.') }}" required>
                                         </div>
 
                                         <div class="lg:col-span-2">
-                                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Qty</label>
-                                            <input type="number" name="products[{{ $i }}][quantity]"
-                                                value="{{ $detail->quantity }}"
+                                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Jumlah</label>
+                                            <input type="number" name="products[{{ $index }}][quantity]"
                                                 class="quantity-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
-                                                required min="1">
+                                                value="{{ $detail->quantity }}" required min="1">
                                         </div>
                                     </div>
 
                                     <div class="lg:col-span-1">
                                         <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Satuan</label>
-                                        <input type="text" name="products[{{ $i }}][unit]"
-                                            value="{{ $detail->unit }}"
+                                        <input type="text" name="products[{{ $index }}][unit]"
                                             class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
-                                            required>
+                                            value="{{ $detail->unit ?? 'PCS' }}" required>
                                     </div>
 
                                     <div class="lg:col-span-2">
                                         <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Sub Total</label>
-                                        <input type="text" name="products[{{ $i }}][subtotal]"
-                                            value="{{ number_format($detail->subtotal, 0, ',', '.') }}"
-                                            class="subtotal-input w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-lg"
-                                            readonly>
+                                        <input type="text" name="products[{{ $index }}][subtotal]"
+                                            class="subtotal-input w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
+                                            value="{{ number_format($detail->price * $detail->quantity, 0, ',', '.') }}" readonly>
                                     </div>
 
                                     <div class="flex items-center justify-center lg:col-span-1">
                                         <button type="button"
                                             class="remove-row w-full lg:w-auto rounded-md bg-red-50 px-4 py-2 text-red-600 hover:bg-red-100 hover:text-red-800 disabled:opacity-50 lg:bg-transparent lg:p-0"
-                                            disabled>
+                                            {{ count($purchase->details) === 1 ? 'disabled' : '' }}>
                                             <span class="lg:hidden">Hapus Baris</span>
-                                            <svg class="hidden h-5 w-5 lg:inline" fill="none" stroke="currentColor"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            <svg class="hidden h-5 w-5 lg:inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                             </svg>
                                         </button>
                                     </div>

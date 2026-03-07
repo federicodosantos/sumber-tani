@@ -153,6 +153,32 @@ class ProductStockService
             ->get();
     }
 
+    /**
+     * Get latest batch selling prices for a product.
+     * Returns zero pricing when no batch exists yet.
+     */
+    public function getLatestBatchPrices(int $productId): array
+    {
+        $latestBatch = ProductStock::where('product_id', $productId)
+            ->whereNull('deleted_at')
+            ->orderByDesc('batch')
+            ->first();
+
+        if (!$latestBatch) {
+            return [
+                'price_consument' => 0,
+                'price_r1' => 0,
+                'price_r2' => 0,
+            ];
+        }
+
+        return [
+            'price_consument' => (float) $latestBatch->price_consument,
+            'price_r1' => (float) $latestBatch->price_r1,
+            'price_r2' => (float) $latestBatch->price_r2,
+        ];
+    }
+
     
 
     /**

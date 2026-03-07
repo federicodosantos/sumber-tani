@@ -13,19 +13,101 @@ use Illuminate\Support\Facades\DB;
 
 class FinanceReportController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Resolve start & end dates from the range_filter parameter.
+     *
+     * @return array{0: Carbon, 1: Carbon, 2: string}  [startDate, endDate, rangeKey]
+     */
+    private function resolveDateRange(Request $request): array
     {
-        $transactionFilter = $request->get('transaction_filter', 'daily'); // daily, weekly, monthly, yearly
+        $now = Carbon::now();
+        $rangeKey = $request->get('range_filter', 'this_month');
 
-        $stats = $this->getStats($transactionFilter);
-        $chartData = $this->getChartData($transactionFilter);
-        $financeReports = $this->getFinanceReports();
-        $products = $this->getAllProduct();
-        $categories = $this->getAllCategories();
+        switch ($rangeKey) {
+            case 'this_week':
+                $start = $now->copy()->startOfWeek();
+                $end   = $now->copy()->endOfWeek();
+                break;
 
-        return view('finance.index', compact('stats', 'chartData', 'financeReports', 'transactionFilter', 'products', 'categories'));
+            case 'last_month':
+                $start = $now->copy()->subMonth()->startOfMonth();
+                $end   = $now->copy()->subMonth()->endOfMonth();
+                break;
+
+            case 'this_quarter':
+                $start = $now->copy()->firstOfQuarter();
+                $end   = $now->copy()->lastOfQuarter()->endOfDay();
+                break;
+
+            case 'custom':
+                $start = $request->filled('start_date')
+                    ? Carbon::parse($request->get('start_date'))->startOfDay()
+                    : $now->copy()->startOfMonth();
+                $end = $request->filled('end_date')
+                    ? Carbon::parse($request->get('end_date'))->endOfDay()
+                    : $now->copy()->endOfMonth();
+                break;
+
+            case 'this_month':
+            default:
+                $rangeKey = 'this_month';
+                $start = $now->copy()->startOfMonth();
+                $end   = $now->copy()->endOfMonth();
+                break;
+        }
+
+        return [$start, $end, $rangeKey];
     }
 
+    /**
+     * Human-readable label for the chosen range.
+     */
+    private function getRangeLabel(string $key, Carbon $start, Carbon $end): string
+    {
+        return match ($key) {
+            'this_week'    => 'Minggu Ini',
+            'this_month'   => 'Bulan Ini',
+            'last_month'   => 'Bulan Lalu',
+            'this_quarter' => 'Kuartal Ini',
+            'custom'       => $start->format('d M Y') . ' - ' . $end->format('d M Y'),
+            default        => 'Bulan Ini',
+        };
+    }
+
+    /* ================================================================
+       INDEX
+    ================================================================ */
+    public function index(Request $request)
+    {
+        [$startDate, $endDate, $rangeKey] = $this->resolveDateRange($request);
+
+        $transactionFilter = $request->get('transaction_filter', 'daily');
+
+        $stats         = $this->getStats($startDate, $endDate);
+        $chartData     = $this->getChartData($startDate, $endDate);
+        $financeReports = $this->getFinanceReports($startDate, $endDate);
+        $products      = $this->getAllProduct();
+        $categories    = $this->getAllCategories();
+
+        $rangeLabel = $this->getRangeLabel($rangeKey, $startDate, $endDate);
+
+        return view('finance.index', compact(
+            'stats',
+            'chartData',
+            'financeReports',
+            'transactionFilter',
+            'products',
+            'categories',
+            'rangeKey',
+            'rangeLabel',
+            'startDate',
+            'endDate',
+        ));
+    }
+
+    /* ================================================================
+       HELPERS
+    ================================================================ */
     public function getAllProduct()
     {
         return Product::select('id', 'name')->get();
@@ -36,131 +118,87 @@ class FinanceReportController extends Controller
         return ItemCategory::select('id', 'name')->get();
     }
 
-    private function getStats($transactionFilter)
+    /* ================================================================
+       STATS  — filtered by date range
+    ================================================================ */
+    private function getStats(Carbon $start, Carbon $end): array
     {
         $now = Carbon::now();
 
-        // Daily Sales (today) - Selalu tetap
-        $dailySales = Transaction::whereDate('created_at', $now->toDateString())->sum('total_price');
+        // Total penjualan dalam range
+        $rangeSales = Transaction::whereBetween('created_at', [$start, $end])->sum('total_price');
 
-        // Daily Sales Yesterday (for comparison)
+        // Periode sebelumnya (same duration, shifted back)
+        $diff = $start->diffInDays($end) + 1;
+        $prevStart = $start->copy()->subDays($diff);
+        $prevEnd   = $start->copy()->subDay()->endOfDay();
+        $prevSales = Transaction::whereBetween('created_at', [$prevStart, $prevEnd])->sum('total_price');
+
+        $salesPercentage = $prevSales > 0
+            ? round((($rangeSales - $prevSales) / $prevSales) * 100, 1)
+            : 0;
+
+        // Penjualan hari ini (selalu tetap)
+        $dailySales     = Transaction::whereDate('created_at', $now->toDateString())->sum('total_price');
         $yesterdaySales = Transaction::whereDate('created_at', $now->copy()->subDay()->toDateString())->sum('total_price');
+        $dailyPercentage = $yesterdaySales > 0
+            ? round((($dailySales - $yesterdaySales) / $yesterdaySales) * 100, 1)
+            : 0;
 
-        $dailyPercentage = $yesterdaySales > 0 ? round((($dailySales - $yesterdaySales) / $yesterdaySales) * 100, 1) : 0;
-
-        // Monthly Sales (current month) - Selalu tetap
-        $monthlySales = Transaction::whereYear('created_at', $now->year)->whereMonth('created_at', $now->month)->sum('total_price');
-
-        // Last Month Sales (for comparison)
-        $lastMonthSales = Transaction::whereYear('created_at', $now->copy()->subMonth()->year)
-            ->whereMonth('created_at', $now->copy()->subMonth()->month)
-            ->sum('total_price');
-
-        $monthlyPercentage = $lastMonthSales > 0 ? round((($monthlySales - $lastMonthSales) / $lastMonthSales) * 100, 1) : 0;
-
-        // Total Transactions - BERDASARKAN FILTER
-        switch ($transactionFilter) {
-            case 'weekly':
-                $totalTransactions = Transaction::whereBetween('created_at', [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()])->count();
-
-                $lastPeriodTransactions = Transaction::whereBetween('created_at', [$now->copy()->subWeek()->startOfWeek(), $now->copy()->subWeek()->endOfWeek()])->count();
-                break;
-
-            case 'monthly':
-                $totalTransactions = Transaction::whereYear('created_at', $now->year)->whereMonth('created_at', $now->month)->count();
-
-                $lastPeriodTransactions = Transaction::whereYear('created_at', $now->copy()->subMonth()->year)
-                    ->whereMonth('created_at', $now->copy()->subMonth()->month)
-                    ->count();
-                break;
-
-            case 'yearly':
-                $totalTransactions = Transaction::whereYear('created_at', $now->year)->count();
-
-                $lastPeriodTransactions = Transaction::whereYear('created_at', $now->year - 1)->count();
-                break;
-
-            default:
-                // daily
-                $totalTransactions = Transaction::whereDate('created_at', $now->toDateString())->count();
-
-                $lastPeriodTransactions = Transaction::whereDate('created_at', $now->copy()->subDay()->toDateString())->count();
-        }
-
-        $transactionPercentage = $lastPeriodTransactions > 0 ? round((($totalTransactions - $lastPeriodTransactions) / $lastPeriodTransactions) * 100, 1) : 0;
+        // Total transaksi dalam range
+        $totalTransactions = Transaction::whereBetween('created_at', [$start, $end])->count();
+        $prevTransactions  = Transaction::whereBetween('created_at', [$prevStart, $prevEnd])->count();
+        $transactionPercentage = $prevTransactions > 0
+            ? round((($totalTransactions - $prevTransactions) / $prevTransactions) * 100, 1)
+            : 0;
 
         return [
-            'daily_sales' => $dailySales,
-            'daily_percentage' => abs($dailyPercentage),
-            'daily_trend' => $dailyPercentage >= 0 ? 'up' : 'down',
+            'range_sales'              => $rangeSales,
+            'range_sales_percentage'   => abs($salesPercentage),
+            'range_sales_trend'        => $salesPercentage >= 0 ? 'up' : 'down',
 
-            'monthly_sales' => $monthlySales,
-            'monthly_percentage' => abs($monthlyPercentage),
-            'monthly_trend' => $monthlyPercentage >= 0 ? 'up' : 'down',
+            'daily_sales'              => $dailySales,
+            'daily_percentage'         => abs($dailyPercentage),
+            'daily_trend'              => $dailyPercentage >= 0 ? 'up' : 'down',
 
-            'total_transactions' => $totalTransactions,
-            'transaction_percentage' => abs($transactionPercentage),
-            'transaction_trend' => $transactionPercentage >= 0 ? 'up' : 'down',
-            'transaction_filter_label' => $this->getFilterLabel($transactionFilter),
+            'total_transactions'       => $totalTransactions,
+            'transaction_percentage'   => abs($transactionPercentage),
+            'transaction_trend'        => $transactionPercentage >= 0 ? 'up' : 'down',
         ];
     }
 
-    private function getChartData($filter)
+    /* ================================================================
+       CHART DATA — auto-selects daily / monthly granularity
+    ================================================================ */
+    private function getChartData(Carbon $start, Carbon $end): array
     {
-        $now = Carbon::now();
+        $diffDays = $start->diffInDays($end);
 
-        switch ($filter) {
-            case 'weekly':
-                // Last 7 days
-                $dates = collect();
-                for ($i = 6; $i >= 0; $i--) {
-                    $date = $now->copy()->subDays($i);
-                    $dates->push($date);
-                }
-
-                $data = $dates->map(function ($date) {
-                    $total = Transaction::whereDate('created_at', $date->toDateString())->sum('total_price');
-
-                    return [
-                        'label' => $date->format('D'),
-                        'value' => $total,
-                    ];
-                });
-                break;
-
-            case 'monthly':
-                // Days in current month
-                $daysInMonth = $now->daysInMonth;
-                $data = collect();
-
-                for ($day = 1; $day <= $daysInMonth; $day++) {
-                    $date = Carbon::create($now->year, $now->month, $day);
-                    $total = Transaction::whereDate('created_at', $date->toDateString())->sum('total_price');
-
-                    $data->push([
-                        'label' => (string) $day,
-                        'value' => $total,
-                    ]);
-                }
-                break;
-
-            case 'yearly':
-                // 12 months
-                $data = collect();
-
-                for ($month = 1; $month <= 12; $month++) {
-                    $total = Transaction::whereYear('created_at', $now->year)->whereMonth('created_at', $month)->sum('total_price');
-
-                    $data->push([
-                        'label' => Carbon::create($now->year, $month, 1)->format('M'),
-                        'value' => $total,
-                    ]);
-                }
-                break;
-
-            default:
-                // Default ke weekly jika tidak ada yang match
-                return $this->getChartData('weekly');
+        // If range <= 31 days → daily labels.  Otherwise → monthly.
+        if ($diffDays <= 31) {
+            $data = collect();
+            $cursor = $start->copy();
+            while ($cursor->lte($end)) {
+                $total = Transaction::whereDate('created_at', $cursor->toDateString())->sum('total_price');
+                $data->push([
+                    'label' => $cursor->format('d'),
+                    'value' => $total,
+                ]);
+                $cursor->addDay();
+            }
+        } else {
+            $data = collect();
+            $cursor = $start->copy()->startOfMonth();
+            while ($cursor->lte($end)) {
+                $total = Transaction::whereYear('created_at', $cursor->year)
+                    ->whereMonth('created_at', $cursor->month)
+                    ->sum('total_price');
+                $data->push([
+                    'label' => $cursor->format('M'),
+                    'value' => $total,
+                ]);
+                $cursor->addMonth();
+            }
         }
 
         return [
@@ -169,105 +207,87 @@ class FinanceReportController extends Controller
         ];
     }
 
-    private function getFinanceReports()
+    /* ================================================================
+       FINANCE REPORTS TABLE — filtered by date range
+    ================================================================ */
+    private function getFinanceReports(Carbon $start, Carbon $end)
     {
         $sort = request('sort', 'date_new');
 
         switch ($sort) {
-            case 'trx_id_asc':
-                $orderBy = ['id', 'asc'];
-                break;
-
-            case 'trx_id_desc':
-                $orderBy = ['id', 'desc'];
-                break;
-
-            case 'income_in_asc':
-                $orderBy = ['total_price', 'asc'];
-                break;
-
-            case 'income_in_desc':
-                $orderBy = ['total_price', 'desc'];
-                break;
-
-            case 'date_old':
-                $orderBy = ['created_at', 'asc'];
-                break;
-
+            case 'trx_id_asc':    $orderBy = ['id', 'asc']; break;
+            case 'trx_id_desc':   $orderBy = ['id', 'desc']; break;
+            case 'income_in_asc': $orderBy = ['total_price', 'asc']; break;
+            case 'income_in_desc':$orderBy = ['total_price', 'desc']; break;
+            case 'date_old':      $orderBy = ['created_at', 'asc']; break;
             case 'date_new':
-            default:
-                $orderBy = ['created_at', 'desc'];
-                break;
+            default:              $orderBy = ['created_at', 'desc']; break;
         }
 
-        $query = Transaction::orderBy($orderBy[0], $orderBy[1]);
+        $query = Transaction::whereBetween('created_at', [$start, $end])
+            ->orderBy($orderBy[0], $orderBy[1]);
 
-        return $query->paginate(25)->through(function ($t) {
+        return $query->paginate(25)->withQueryString()->through(function ($t) {
             return (object) [
-                'id' => $t->id,
-                'date' => $t->created_at,
-                'payment_method' => $t->payment_method,
-                'discount' => $t->discount,
-                'is_paid' => $t->is_paid,
-                'total_items_sold' => $t->total_quantity,
-                'total_income' => $t->total_price,
+                'id'              => $t->id,
+                'date'            => $t->created_at,
+                'payment_method'  => $t->payment_method,
+                'discount'        => $t->discount,
+                'is_paid'         => $t->is_paid,
+                'total_items_sold'=> $t->total_quantity,
+                'total_income'    => $t->total_price,
             ];
         });
     }
 
-    private function getFilterLabel($filter)
-    {
-        return match ($filter) {
-            'daily' => 'Harian',
-            'weekly' => 'Mingguan',
-            'monthly' => 'Bulanan',
-            'yearly' => 'Tahunan',
-            default => 'Harian',
-        };
-    }
-
+    /* ================================================================
+       SHOW
+    ================================================================ */
     public function show(Transaction $transaction)
     {
         $transactionDetails = TransactionDetail::where('transaction_id', $transaction->id)->with('product')->get();
         return view('finance.show', compact('transaction', 'transactionDetails'));
     }
 
+    /* ================================================================
+       DOWNLOAD PDF
+    ================================================================ */
     public function download(Request $request)
     {
         $request->validate([
-            'range_type' => 'required|string',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-            'format_time' => 'required|in:harian,bulanan,tahunan',
-            'download_by' => 'required|in:category,product',
-            'product_ids' => 'nullable|array',
+            'range_type'    => 'required|string',
+            'start_date'    => 'nullable|date',
+            'end_date'      => 'nullable|date|after_or_equal:start_date',
+            'format_time'   => 'required|in:harian,bulanan,tahunan',
+            'download_by'   => 'required|in:category,product',
+            'product_ids'   => 'nullable|array',
             'product_ids.*' => 'exists:products,id',
-            'category_ids' => 'nullable|array',
-            'category_ids.*' => 'exists:item_categories,id',
+            'category_ids'  => 'nullable|array',
+            'category_ids.*'=> 'exists:item_categories,id',
         ]);
 
         Carbon::setLocale('id');
 
-        $endDate = Carbon::now();
+        $endDate   = Carbon::now();
         $startDate = null;
 
         $rangeMap = [
-            '7days' => fn() => Carbon::now()->subDays(7),
-            '1month' => fn() => Carbon::now()->subMonth(),
+            '7days'   => fn() => Carbon::now()->subDays(7),
+            '1month'  => fn() => Carbon::now()->subMonth(),
             '3months' => fn() => Carbon::now()->subMonths(3),
             '6months' => fn() => Carbon::now()->subMonths(6),
-            '1year' => fn() => Carbon::now()->subYear(),
+            '1year'   => fn() => Carbon::now()->subYear(),
         ];
 
         if ($request->range_type === 'custom') {
             $startDate = Carbon::parse($request->start_date);
-            $endDate = Carbon::parse($request->end_date);
+            $endDate   = Carbon::parse($request->end_date);
         } else {
             $startDate = $rangeMap[$request->range_type]();
         }
 
         $periodSelect = match ($request->format_time) {
-            'harian' => DB::raw('DATE(transactions.created_at) as period'),
+            'harian'  => DB::raw('DATE(transactions.created_at) as period'),
             'bulanan' => DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m") as period'),
             'tahunan' => DB::raw('YEAR(transactions.created_at) as period'),
         };
@@ -302,21 +322,22 @@ class FinanceReportController extends Controller
             return $row;
         });
 
-        $columnCount = $request->download_by === 'product' ? $data->pluck('product_id')->unique()->count() : $data->pluck('category_id')->unique()->count();
+        $columnCount = $request->download_by === 'product'
+            ? $data->pluck('product_id')->unique()->count()
+            : $data->pluck('category_id')->unique()->count();
 
         $isLandscape = $columnCount <= 10;
 
         if ($isLandscape) {
-            // kolom (produk / kategori)
-            $columns = $request->download_by === 'product' ? $data->pluck('product_name', 'product_id')->unique() : $data->pluck('category_name', 'category_id')->unique();
+            $columns = $request->download_by === 'product'
+                ? $data->pluck('product_name', 'product_id')->unique()
+                : $data->pluck('category_name', 'category_id')->unique();
 
-            // TOTAL QTY (AKUMULASI SEMUA BULAN)
             $totalQty = [];
             foreach ($columns as $id => $name) {
                 $totalQty[$id] = $data->filter(fn($r) => $request->download_by === 'product' ? $r->product_id == $id : $r->category_id == $id)->sum('total_qty');
             }
 
-            // TOTAL SALES PER BULAN (FOCUS KE PENDAPATAN)
             $pivot = $data->groupBy('period')->map(function ($rows) use ($columns, $request) {
                 $out = [];
                 foreach ($columns as $id => $name) {
@@ -325,40 +346,34 @@ class FinanceReportController extends Controller
                 return $out;
             });
         } else {
-            $columns = [];
-            $pivot = [];
+            $columns  = [];
+            $pivot    = [];
             $totalQty = [];
         }
-        
+
         $totalSales = [];
         foreach ($columns as $id => $name) {
             $totalSales[$id] = $data
-                ->filter(fn ($r) =>
-                    $request->download_by === 'product'
-                        ? $r->product_id == $id
-                        : $r->category_id == $id
-                )
+                ->filter(fn($r) => $request->download_by === 'product' ? $r->product_id == $id : $r->category_id == $id)
                 ->sum('total_sales');
         }
 
         $grandTotalQty   = array_sum($totalQty);
         $grandTotalSales = array_sum($totalSales);
-        $data = $data
-        ->sortBy('period')
-        ->groupBy('period');
+        $data = $data->sortBy('period')->groupBy('period');
 
         $pdf = Pdf::loadView('finance.report', [
-            'data' => $data,
-            'pivot' => $pivot,
-            'columns' => $columns,
-            'totalSales'  => $totalSales,
-            'grandTotalQty'     => $grandTotalQty,     
-            'grandTotalSales'   => $grandTotalSales,   
-            'totalQty' => $totalQty,
-            'isLandscape' => $isLandscape,
-            'downloadBy' => $request->download_by,
-            'startDate' => $startDate->translatedFormat('d F Y'),
-            'endDate' => $endDate->translatedFormat('d F Y'),
+            'data'            => $data,
+            'pivot'           => $pivot,
+            'columns'         => $columns,
+            'totalSales'      => $totalSales,
+            'grandTotalQty'   => $grandTotalQty,
+            'grandTotalSales' => $grandTotalSales,
+            'totalQty'        => $totalQty,
+            'isLandscape'     => $isLandscape,
+            'downloadBy'      => $request->download_by,
+            'startDate'       => $startDate->translatedFormat('d F Y'),
+            'endDate'         => $endDate->translatedFormat('d F Y'),
         ]);
 
         if ($isLandscape) {

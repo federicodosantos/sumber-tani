@@ -41,6 +41,8 @@ class TransactionController extends Controller
             'discount' => 'nullable|numeric|min:0',
             'payment_method' => 'required|string|in:Cash,Kredit,QRIS,Transfer',
             'is_paid' => 'required|boolean',
+            'cash_received' => 'nullable|numeric|min:0',
+            'change_amount' => 'nullable|numeric',
         ]);
 
         if ($request->filled('offline_uuid')) {
@@ -56,7 +58,6 @@ class TransactionController extends Controller
 
         if ($request->filled('created_at')) {
             $date = Carbon::parse($request->created_at);
-
             $transactionDate = $date->setTimezone(config('app.timezone'));
         } else {
             $transactionDate = Carbon::now();
@@ -66,7 +67,19 @@ class TransactionController extends Controller
         $totalQty = $request->totalQty;
         $totalAmount = $request->totalAmount;
         $discount = $request->discount ?? 0;
-        $transactionDate = $request->created_at ?? Carbon::now('Asia/Jakarta');
+        $cashReceived = null;
+        $changeAmount = null;
+        if ($request->payment_method === 'Cash') {
+            $cashReceived = $request->filled('cash_received') ? (float) $request->cash_received : null;
+            $changeAmount = $request->filled('change_amount') ? (float) $request->change_amount : null;
+
+            if ($request->is_paid && $cashReceived !== null && $cashReceived < $totalAmount) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Uang diterima kurang dari total transaksi.',
+                ], 422);
+            }
+        }
 
         try {
             DB::beginTransaction();
@@ -80,6 +93,8 @@ class TransactionController extends Controller
                 'created_at' => $transactionDate,
                 'updated_at' => $transactionDate,
                 'offline_uuid' => $request->offline_uuid,
+                'cash_received' => $cashReceived,
+                'change_amount' => $changeAmount,
             ]);
 
             foreach ($items as $item) {
@@ -150,6 +165,9 @@ class TransactionController extends Controller
                 'total_qty' => (int) $transaction->total_quantity,
                 'discount' => (float) $transaction->discount,
                 'total' => (float) $transaction->total_price,
+                'payment_method' => $transaction->payment_method,
+                'cash_received' => $transaction->cash_received !== null ? (float) $transaction->cash_received : null,
+                'change_amount' => $transaction->change_amount !== null ? (float) $transaction->change_amount : null,
             ],
 
             'items' => $items,

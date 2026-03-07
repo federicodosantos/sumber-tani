@@ -6,7 +6,7 @@
                 @csrf
 
                 <x-slot:dynamicRows>
-                    {{-- PPN & Diskon Controls - Responsive dengan rata kiri untuk mobile --}}
+                    {{-- PPN & Diskon Controls - Responsive --}}
                     <div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4">
                         <div
                             class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-4">
@@ -21,25 +21,42 @@
 
                             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                                 <label for="ppnInput" class="text-sm font-semibold text-gray-700">PPN:</label>
-                                <div class="relative rounded-md shadow-sm">
-                                    <input type="number" name="ppn" id="ppnInput"
-                                        class="block w-full sm:w-24 rounded-md border-gray-300 pl-3 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                        placeholder="0" min="0" step="0.1">
-                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                                        <span class="text-gray-500 sm:text-sm">%</span>
+                                <div class="flex items-center gap-1">
+                                    <div class="relative rounded-md shadow-sm">
+                                        <input type="number" name="ppn" id="ppnInput"
+                                            class="block w-full sm:w-28 rounded-md border-gray-300 pl-3 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                            placeholder="0" min="0" step="0.01">
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                            <span id="ppnUnitLabel" class="text-gray-500 sm:text-sm">%</span>
+                                        </div>
                                     </div>
+                                    <input type="hidden" name="ppn_type" id="ppnTypeInput" value="percent">
+                                    <button type="button" id="togglePpnType"
+                                        class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors whitespace-nowrap"
+                                        title="Klik untuk ganti tipe PPN">
+                                        %
+                                    </button>
                                 </div>
                             </div>
 
+                            {{-- Diskon dengan toggle persen / nominal --}}
                             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                                 <label for="globalDiscount" class="text-sm font-semibold text-gray-700">Diskon:</label>
-                                <div class="relative rounded-md shadow-sm">
-                                    <input type="number" name="discount" id="globalDiscount"
-                                        class="block w-full sm:w-24 rounded-md border-gray-300 pl-3 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                        placeholder="0" min="0" max="100" step="0.01">
-                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                                        <span class="text-gray-500 sm:text-sm">%</span>
+                                <div class="flex items-center gap-1">
+                                    <div class="relative rounded-md shadow-sm">
+                                        <input type="number" name="discount" id="globalDiscount"
+                                            class="block w-full sm:w-28 rounded-md border-gray-300 pl-3 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                            placeholder="0" min="0" step="0.01">
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                            <span id="discountUnitLabel" class="text-gray-500 sm:text-sm">%</span>
+                                        </div>
                                     </div>
+                                    <input type="hidden" name="discount_type" id="discountTypeInput" value="percent">
+                                    <button type="button" id="toggleDiscountType"
+                                        class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors whitespace-nowrap"
+                                        title="Klik untuk ganti tipe diskon">
+                                        %
+                                    </button>
                                 </div>
                             </div>
 
@@ -64,40 +81,44 @@
                         </div>
                     </div>
 
+                    @php
+                        $productOptions = $products->map(fn($p) => [
+                            'id' => $p->id,
+                            'label' => $p->code_id . ' - ' . $p->name,
+                            'code' => $p->code_id,
+                            'name' => $p->name
+                        ]);
+                    @endphp
+
                     <div id="rowsContainer">
                         {{-- Header Row - Hidden on Mobile --}}
                         <div class="mb-3 hidden lg:grid lg:grid-cols-12 gap-3 px-3 text-sm font-semibold text-gray-700">
-                            <div class="col-span-1">Kode</div>
-                            <div class="col-span-3">Item</div>
-                            <div class="col-span-2">Harga Satuan</div>
+                            <div class="col-span-4">Produk</div>
+                            <div class="col-span-2">Harga Beli</div>
                             <div class="col-span-2">Jumlah</div>
                             <div class="col-span-1">Satuan</div>
                             <div class="col-span-2">Sub Total</div>
                             <div class="col-span-1"></div>
                         </div>
 
-                        {{-- Dynamic Row Template - Responsive --}}
+                        {{-- Dynamic Row Template --}}
                         <div class="product-row mb-3 rounded-lg border border-gray-200 p-3 sm:p-4">
                             <div class="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-start lg:gap-3">
-                                {{-- Mobile/Tablet Layout --}}
-                                <div class="lg:col-span-1">
-                                    <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Kode</label>
-                                    <input type="text" name="products[0][code]"
-                                        class="w-full rounded-md border border-gray-300 px-3 py-2 uppercase shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
-                                        placeholder="1234" required>
-                                </div>
-
-                                <div class="lg:col-span-3">
-                                    <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Item</label>
-                                    <input type="text" name="products[0][item]"
-                                        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
-                                        placeholder="Pupuk" required>
+                                {{-- Product Selector --}}
+                                <div class="lg:col-span-4">
+                                    <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Produk</label>
+                                    <x-content.combobox 
+                                        name="products[0][product_id]"
+                                        :options="$productOptions"
+                                        placeholder="Pilih atau cari produk..."
+                                        class="product-select"
+                                        required />
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-3 lg:col-span-5 lg:contents">
                                     <div class="lg:col-span-2">
                                         <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Harga
-                                            Satuan</label>
+                                            Beli</label>
                                         <input type="text" name="products[0][price]"
                                             class="price-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
                                             placeholder="12.000" required>
@@ -117,7 +138,7 @@
                                         class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Satuan</label>
                                     <input type="text" name="products[0][unit]"
                                         class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
-                                        placeholder="ROLL" required>
+                                        placeholder="PCS" required>
                                 </div>
 
                                 <div class="lg:col-span-2">
@@ -144,9 +165,9 @@
                         </div>
                     </div>
 
-                    {{-- Add Row Button & Total Summary - Stack pada mobile --}}
+                    {{-- Add Row Button & Total Summary --}}
                     <div class="mt-4 space-y-4 flex flex-col lg:flex-row lg:justify-between">
-                        {{-- Button Tambah Baris - Full width pada mobile --}}
+                        {{-- Button Tambah Baris --}}
                         <button type="button" id="addRow"
                             class="border-button-hover text-button-hover lg:h-12 inline-flex w-full items-center justify-center rounded-lg border bg-white px-4 py-3 text-sm font-semibold hover:bg-indigo-50 sm:w-auto sm:py-2">
                             <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -156,7 +177,7 @@
                             TAMBAH BARIS
                         </button>
 
-                        {{-- Total Summary - Stack pada mobile, horizontal pada desktop --}}
+                        {{-- Total Summary --}}
                         <div class="rounded-lg border border-gray-300 bg-white p-4">
                             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
                                 <div class="flex justify-between lg:block lg:text-right">
@@ -183,7 +204,7 @@
                                 </div>
                             </div>
 
-                            {{-- Manual Price Edit Section - Hanya tampil jika grand total > 0 --}}
+                            {{-- Manual Price Edit Section --}}
                             <div id="manualPriceSection" class="mt-4 border-t border-gray-200 pt-4 hidden">
                                 <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                                     <div class="flex-1">

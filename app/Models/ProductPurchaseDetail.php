@@ -10,6 +10,7 @@ class ProductPurchaseDetail extends Model
     protected $table = 'product_purchase_details';
 
     protected $fillable = [
+        'product_id',
         'product_code',
         'product_name',
         'unit',
@@ -26,5 +27,10 @@ class ProductPurchaseDetail extends Model
     public function purchase(): BelongsTo
     {
         return $this->belongsTo(ProductPurchase::class, 'product_purchase_id');
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'product_id');
     }
 }
