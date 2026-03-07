@@ -51,7 +51,7 @@
             </template>
             
             <input x-show="open" x-ref="searchInput" x-model="search" type="text"
-                   class="w-full border-none p-0 text-sm focus:ring-0 bg-transparent"
+                   class="w-full border-none p-0 text-sm bg-transparent outline-none focus:outline-none focus-visible:outline-none focus:ring-0"
                    placeholder="Cari..."
                    @keydown.arrow-down.prevent="selectedIndex = (selectedIndex + 1) % filteredOptions.length"
                    @keydown.arrow-up.prevent="selectedIndex = (selectedIndex - 1 + filteredOptions.length) % filteredOptions.length"

@@ -122,12 +122,12 @@
                 @endif
             </div>
 
-            <div class="border-t border-gray-200 bg-white p-4">
+            <div class="border-t border-gray-200 bg-white p-4" :class="leftSidebarCollapsed ? 'p-2' : 'p-4'">
                 <a href="{{ route('dashboard') }}"
                     class="flex items-center gap-3 rounded-lg px-4 py-2.5 text-gray-700 transition-colors hover:bg-gray-100"
-                    :class="leftSidebarCollapsed ? 'justify-center px-2' : ''"
+                    :class="leftSidebarCollapsed ? 'justify-center gap-0 px-0 py-2' : ''"
                     :title="leftSidebarCollapsed ? 'Dashboard' : ''">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="h-5 w-5 shrink-0" :class="leftSidebarCollapsed ? 'h-6 w-6' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>

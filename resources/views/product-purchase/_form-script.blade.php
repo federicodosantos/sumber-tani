@@ -14,35 +14,39 @@
     const togglePpnBtn = document.getElementById('togglePpnType');
 
     toggleBtn?.addEventListener('click', function () {
+        const discountInput = document.getElementById('globalDiscount');
         const current = discountTypeInput.value;
         if (current === 'percent') {
             discountTypeInput.value = 'nominal';
             discountUnitLabel.textContent = 'Rp';
             toggleBtn.textContent = 'Rp';
             // Reset max constraint
-            document.getElementById('globalDiscount')?.removeAttribute('max');
+            discountInput?.removeAttribute('max');
         } else {
             discountTypeInput.value = 'percent';
             discountUnitLabel.textContent = '%';
             toggleBtn.textContent = '%';
-            document.getElementById('globalDiscount')?.setAttribute('max', '100');
+            discountInput?.setAttribute('max', '100');
         }
+        if (discountInput) discountInput.value = 0;
         calculateGrandTotal();
     });
 
     togglePpnBtn?.addEventListener('click', function () {
+        const ppnInput = document.getElementById('ppnInput');
         const current = ppnTypeInput.value;
         if (current === 'percent') {
             ppnTypeInput.value = 'nominal';
             ppnUnitLabel.textContent = 'Rp';
             togglePpnBtn.textContent = 'Rp';
-            document.getElementById('ppnInput')?.removeAttribute('max');
+            ppnInput?.removeAttribute('max');
         } else {
             ppnTypeInput.value = 'percent';
             ppnUnitLabel.textContent = '%';
             togglePpnBtn.textContent = '%';
-            document.getElementById('ppnInput')?.setAttribute('max', '100');
+            ppnInput?.setAttribute('max', '100');
         }
+        if (ppnInput) ppnInput.value = 0;
         calculateGrandTotal();
     });
 

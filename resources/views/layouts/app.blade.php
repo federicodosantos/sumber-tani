@@ -30,8 +30,15 @@
     x-data="{
         sidebarOpen: false,
         sidebarCollapsed: false,
+        isDesktop: window.innerWidth >= 1024,
+        get effectiveSidebarCollapsed() {
+            return this.isDesktop && this.sidebarCollapsed;
+        },
         init() {
             this.sidebarCollapsed = localStorage.getItem('app-sidebar-collapsed') === '1';
+            window.addEventListener('resize', () => {
+                this.isDesktop = window.innerWidth >= 1024;
+            });
         },
         toggleSidebarCollapse() {
             this.sidebarCollapsed = !this.sidebarCollapsed;
@@ -43,8 +50,8 @@
     <x-partials.sidebar />
 
     {{-- Main content --}}
-    <main class="flex-1 overflow-x-hidden transition-all duration-300"
-        :class="sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'">
+    <main class="flex-1 overflow-x-hidden"
+        :class="effectiveSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'">
 
         {{-- Mobile menu button --}}
         <button @click="sidebarOpen = true"

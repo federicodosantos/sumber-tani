@@ -7,76 +7,71 @@
 
                 <x-slot:dynamicRows>
                     {{-- PPN & Diskon Controls - Responsive --}}
-                    <div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4">
-                        <div
-                            class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-4">
-                            <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                                <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">
-                                    Tanggal Pembelian:
-                                </label>
-                                <input type="date" name="purchase_date"
-                                    class="w-full sm:w-auto rounded-md border border-gray-300 px-3 py-1 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    value="{{ now()->toDateString() }}" required>
-                            </div>
+                    <div class="mb-8 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+                        <div class="border-b border-gray-50 bg-gray-50/50 px-4 py-2">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500">Informasi Transaksi</h3>
+                        </div>
 
-                            <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                                <label for="ppnInput" class="text-sm font-semibold text-gray-700">PPN:</label>
-                                <div class="flex items-center gap-1">
-                                    <div class="relative rounded-md shadow-sm">
+                        <div class="p-4 sm:p-6">
+                            <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                                
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-xs font-bold text-gray-600">Tanggal Pembelian</label>
+                                    <div class="relative">
+                                        <input type="date" name="purchase_date"
+                                            class="w-full rounded-lg border-gray-200 bg-gray-50 py-2.5 pl-3 pr-3 text-sm transition-all focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200"
+                                            value="{{ now()->toDateString() }}" required>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col gap-1.5">
+                                    <label for="ppnInput" class="text-xs font-bold text-gray-600">PPN</label>
+                                    <div class="flex gap-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200">
                                         <input type="number" name="ppn" id="ppnInput"
-                                            class="block w-full sm:w-28 rounded-md border-gray-300 pl-3 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                            class="w-full border-none bg-transparent py-2.5 pl-3 text-sm focus:ring-0"
                                             placeholder="0" min="0" step="0.01">
-                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                                            <span id="ppnUnitLabel" class="text-gray-500 sm:text-sm">%</span>
-                                        </div>
+                                        <button type="button" id="togglePpnType"
+                                            class="flex items-center justify-center border-l border-gray-200 bg-white px-3 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+                                            title="Klik untuk ganti tipe PPN">
+                                            <span id="ppnUnitLabel">%</span>
+                                        </button>
                                     </div>
                                     <input type="hidden" name="ppn_type" id="ppnTypeInput" value="percent">
-                                    <button type="button" id="togglePpnType"
-                                        class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors whitespace-nowrap"
-                                        title="Klik untuk ganti tipe PPN">
-                                        %
-                                    </button>
                                 </div>
-                            </div>
 
-                            {{-- Diskon dengan toggle persen / nominal --}}
-                            <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                                <label for="globalDiscount" class="text-sm font-semibold text-gray-700">Diskon:</label>
-                                <div class="flex items-center gap-1">
-                                    <div class="relative rounded-md shadow-sm">
+                                <div class="flex flex-col gap-1.5">
+                                    <label for="globalDiscount" class="text-xs font-bold text-gray-600">Diskon Global</label>
+                                    <div class="flex gap-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200">
                                         <input type="number" name="discount" id="globalDiscount"
-                                            class="block w-full sm:w-28 rounded-md border-gray-300 pl-3 pr-8 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                            class="w-full border-none bg-transparent py-2.5 pl-3 text-sm focus:ring-0"
                                             placeholder="0" min="0" step="0.01">
-                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                                            <span id="discountUnitLabel" class="text-gray-500 sm:text-sm">%</span>
-                                        </div>
+                                        <button type="button" id="toggleDiscountType"
+                                            class="flex items-center justify-center border-l border-gray-200 bg-white px-3 text-sm font-bold text-button-hover cursor-pointer hover:bg-green-50 transition-colors"
+                                            title="Klik untuk ganti tipe diskon">
+                                            <span id="discountUnitLabel">%</span>
+                                        </button>
                                     </div>
                                     <input type="hidden" name="discount_type" id="discountTypeInput" value="percent">
-                                    <button type="button" id="toggleDiscountType"
-                                        class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors whitespace-nowrap"
-                                        title="Klik untuk ganti tipe diskon">
-                                        %
-                                    </button>
                                 </div>
-                            </div>
 
-                            <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                                <label for="method"
-                                    class="text-sm font-semibold text-gray-700 whitespace-nowrap">Metode
-                                    Pembayaran:</label>
-                                <select name="method" id="method"
-                                    class="w-full sm:w-auto rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                    <option value="0">Cash</option>
-                                    <option value="12">Kredit</option>
-                                </select>
-                            </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <label for="method" class="text-xs font-bold text-gray-600">Metode Bayar</label>
+                                    <select name="method" id="method"
+                                        class="w-full rounded-lg border-gray-200 bg-gray-50 py-2.5 text-sm transition-all focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-200">
+                                        <option value="0">Tunai / Cash</option>
+                                        <option value="12">Kredit / Piutang</option>
+                                    </select>
+                                </div>
 
-                            <div class="flex items-center gap-2">
-                                <label for="isPaid" class="text-sm font-semibold text-gray-700">
-                                    Lunas:
-                                </label>
-                                <input type="checkbox" name="isPaid" id="isPaid"
-                                    class="accent-button-main focus:ring-button-main h-4 w-4">
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-xs font-bold text-gray-600">Status</label>
+                                    <label for="isPaid" class="flex cursor-pointer items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 transition-all hover:bg-gray-100">
+                                        <span class="text-sm font-medium text-gray-700">Sudah Lunas?</span>
+                                        <input type="checkbox" name="isPaid" id="isPaid"
+                                            class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shadow-sm transition-all">
+                                    </label>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -93,10 +88,10 @@
                     <div id="rowsContainer">
                         {{-- Header Row - Hidden on Mobile --}}
                         <div class="mb-3 hidden lg:grid lg:grid-cols-12 gap-3 px-3 text-sm font-semibold text-gray-700">
-                            <div class="col-span-4">Produk</div>
+                            <div class="col-span-3">Produk</div>
                             <div class="col-span-2">Harga Beli</div>
                             <div class="col-span-2">Jumlah</div>
-                            <div class="col-span-1">Satuan</div>
+                            <div class="col-span-2">Satuan</div>
                             <div class="col-span-2">Sub Total</div>
                             <div class="col-span-1"></div>
                         </div>
@@ -105,7 +100,7 @@
                         <div class="product-row mb-3 rounded-lg border border-gray-200 p-3 sm:p-4">
                             <div class="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-start lg:gap-3">
                                 {{-- Product Selector --}}
-                                <div class="lg:col-span-4">
+                                <div class="lg:col-span-3">
                                     <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Produk</label>
                                     <x-content.combobox 
                                         name="products[0][product_id]"
@@ -115,7 +110,7 @@
                                         required />
                                 </div>
 
-                                <div class="grid grid-cols-2 gap-3 lg:col-span-5 lg:contents">
+                                <div class="grid grid-cols-2 gap-3 lg:col-span-4 lg:contents">
                                     <div class="lg:col-span-2">
                                         <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Harga
                                             Beli</label>
@@ -133,7 +128,7 @@
                                     </div>
                                 </div>
 
-                                <div class="lg:col-span-1">
+                                <div class="lg:col-span-2">
                                     <label
                                         class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Satuan</label>
                                     <input type="text" name="products[0][unit]"
