@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FinanceReportController;
 use App\Http\Controllers\ProductPurchaseController;
 use App\Http\Controllers\QzSecurityController;
+use App\Http\Controllers\CustomerR2Controller;
 
 Route::get('/refresh-csrf', function () {
     return csrf_token();
@@ -81,6 +82,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/checkout', [TransactionController::class, 'store'])->name('trx.store');
     Route::put('/transactions/{id}/update-status', [TransactionController::class, 'updateStatus'])
         ->name('transactions.updateStatus');
+
+    // PELANGGAN R-2 ROUTES
+    Route::get('/pelanggan-r2', [CustomerR2Controller::class, 'index'])->name('pelanggan-r2.index');
+    Route::get('/pelanggan-r2/create', [CustomerR2Controller::class, 'create'])->name('pelanggan-r2.create');
+    Route::post('/pelanggan-r2', [CustomerR2Controller::class, 'store'])->name('pelanggan-r2.store');
+    Route::get('/pelanggan-r2/{customer}', [CustomerR2Controller::class, 'show'])->name('pelanggan-r2.show');
+    Route::get('/pelanggan-r2/{customer}/pay', [CustomerR2Controller::class, 'payDebt'])->name('pelanggan-r2.pay');
+    Route::post('/pelanggan-r2/{customer}/pay', [CustomerR2Controller::class, 'processPayment'])->name('pelanggan-r2.process');
+
 });
 
 Route::middleware('auth')->group(function () {

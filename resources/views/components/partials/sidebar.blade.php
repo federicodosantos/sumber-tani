@@ -7,7 +7,8 @@
 </div>
 
 {{-- Sidebar --}}
-<aside :class="[
+<aside
+    :class="[
         sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         effectiveSidebarCollapsed ? 'is-collapsed lg:w-20 lg:pr-2' : 'lg:w-72 lg:pr-6'
     ]"
@@ -21,21 +22,24 @@
         </svg>
     </button>
 
-    <div>
-        <div class="mb-8 flex items-center justify-center relative">
+    <div class="flex flex-col flex-1 min-h-0">
+        <div class="mb-8 flex items-center justify-center relative shrink-0">
             <button @click="toggleSidebarCollapse()"
                 class="hidden lg:flex absolute -right-1 top-0 h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100"
                 :title="effectiveSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'">
-                <svg class="h-4 w-4 transition-transform duration-300" :class="effectiveSidebarCollapsed ? 'rotate-180' : ''"
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="h-4 w-4 transition-transform duration-300"
+                    :class="effectiveSidebarCollapsed ? 'rotate-180' : ''" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
             </button>
-            <img x-show="!effectiveSidebarCollapsed" src="{{ asset('images/logo-horizontal.svg') }}" alt="Sumber Tani" class="h-10">
-            <img x-show="effectiveSidebarCollapsed" x-cloak src="{{ asset('favicon.svg') }}" alt="Sumber Tani" class="h-8 w-8">
+            <img x-show="!effectiveSidebarCollapsed" src="{{ asset('images/logo-horizontal.svg') }}" alt="Sumber Tani"
+                class="h-10">
+            <img x-show="effectiveSidebarCollapsed" x-cloak src="{{ asset('favicon.svg') }}" alt="Sumber Tani"
+                class="h-8 w-8">
         </div>
 
-        <nav>
+        <nav class="flex-1 overflow-y-auto overflow-x-hidden pb-4">
             <ul class="space-y-2">
 
                 {{-- Dashboard --}}
@@ -89,8 +93,8 @@
                         <div class="bg-white w-3"></div>
                         <div
                             class="{{ request()->is('purchase*') ? 'bg-button-main text-white tracking-wide font-bold' : 'bg-transparent' }} flex items-center w-full px-4 py-3 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke-width="1.5" viewBox="0 0 64 64"
-                                stroke="currentColor" class="w-6 h-6">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke-width="1.5"
+                                viewBox="0 0 64 64" stroke="currentColor" class="w-6 h-6">
                                 <path
                                     d="M29.38,9.97H9.81a2.006,2.006,0,0,0-2,2v4.47a2.006,2.006,0,0,0,2,2H29.38a2,2,0,0,0,2-2V11.97A2,2,0,0,0,29.38,9.97Zm0,6.47H9.81V11.97H29.38Z M10.97,21.83a3.16,3.16,0,1,0,3.16,3.16A3.167,3.167,0,0,0,10.97,21.83Zm0,4.32a1.16,1.16,0,1,1,1.16-1.16A1.161,1.161,0,0,1,10.97,26.15Z M19.6,21.83a3.16,3.16,0,1,0,3.15,3.16A3.167,3.167,0,0,0,19.6,21.83Zm0,4.32a1.16,1.16,0,1,1,1.15-1.16A1.161,1.161,0,0,1,19.6,26.15Z
                                         M28.23,21.83a3.16,3.16,0,1,0,3.15,3.16A3.16,3.16,0,0,0,28.23,21.83Zm0,4.32a1.16,1.16,0,1,1,1.15-1.16A1.161,1.161,0,0,1,28.23,26.15Z
@@ -163,7 +167,8 @@
                             <div
                                 class="{{ request()->is('laporan-keuangan*') ? 'bg-button-main text-white tracking-wide font-bold' : 'bg-transparent' }} flex items-center w-full px-4 py-3 rounded-lg">
                                 <img src="/icon/finance.svg" alt="finance icon" class="w-6 h-6">
-                                <span x-show="!effectiveSidebarCollapsed" x-cloak class="ml-3">Laporan Keuangan</span>
+                                <span x-show="!effectiveSidebarCollapsed" x-cloak class="ml-3">Laporan
+                                    Keuangan</span>
                             </div>
                         </a>
                     </li>
@@ -188,11 +193,29 @@
                         </div>
                     </a>
                 </li>
+
+                <li>
+                    <a href="{{ url('pelanggan-r2') }}"
+                        class="flex items-stretch flex-row transition-colors duration-200 rounded-lg
+                            {{ request()->is('pelanggan-r2*') ? 'text-white font-semibold' : 'text-gray-600 hover:bg-gray-100' }}">
+                        <div
+                            class="{{ request()->is('pelanggan-r2*') ? 'bg-button-main rounded-r-lg' : 'bg-transparent' }} w-2 rounded-l-lg">
+                        </div>
+                        <div class="bg-white w-3"></div>
+                        <div
+                            class="{{ request()->is('pelanggan-r2*') ? 'bg-button-main text-white tracking-wide font-bold' : 'bg-transparent' }} flex items-center w-full px-4 py-3 rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                            </svg>
+                            <span x-show="!effectiveSidebarCollapsed" x-cloak class="ml-3">Pelanggan R2</span>
+                        </div>
+                    </a>
+                </li>
             </ul>
         </nav>
     </div>
-
-
 
     {{-- Bottom menu --}}
     <div>
@@ -224,12 +247,12 @@
                             <div class="bg-transparent w-2 rounded-l-lg"></div>
                             <div class="bg-white w-3"></div>
                             <div class="flex items-center w-full px-4 py-3 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
-                            </svg>
-                            <span x-show="!effectiveSidebarCollapsed" x-cloak class="ml-3">Logout</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                                </svg>
+                                <span x-show="!effectiveSidebarCollapsed" x-cloak class="ml-3">Logout</span>
                             </div>
                         </a>
                     </form>
