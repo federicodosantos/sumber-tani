@@ -119,10 +119,12 @@ class TransactionController extends Controller
 
             // If R2 customer is attached, create invoice automatically
             if ($request->filled('customer_id')) {
+                $debtAmount = $request->payment_method === 'Cash' ? 0 : $totalAmount;
+
                 Invoice::create([
                     'customer_id' => $request->customer_id,
                     'transaction_id' => $transaction->id,
-                    'debts' => $totalAmount,
+                    'debts' => $debtAmount,
                 ]);
             }
 

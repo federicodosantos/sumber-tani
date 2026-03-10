@@ -112,13 +112,25 @@
                                 </div>
                             </div>
 
-                            <div class="text-right">
-                                <p class="text-sm font-bold {{ $invoice->debts > 0 ? 'text-red-600' : 'text-green-600' }}">
-                                    Rp {{ number_format($invoice->debts, 0, ',', '.') }}
-                                </p>
-                                <p class="mt-0.5 text-xs {{ $invoice->debts > 0 ? 'text-red-400' : 'text-green-400' }}">
-                                    {{ $invoice->debts > 0 ? 'Belum Lunas' : 'Lunas' }}
-                                </p>
+                            <div class="text-right flex flex-col items-end gap-2">
+                                <div>
+                                    <p class="text-sm font-bold {{ $invoice->debts > 0 ? 'text-red-600' : 'text-green-600' }}">
+                                        Rp {{ number_format($invoice->debts, 0, ',', '.') }}
+                                    </p>
+                                    <p class="mt-0.5 text-xs {{ $invoice->debts > 0 ? 'text-red-400' : 'text-green-400' }}">
+                                        {{ $invoice->debts > 0 ? 'Belum Lunas' : 'Lunas' }}
+                                    </p>
+                                </div>
+                                <a href="{{ route('pelanggan-r2.invoice.pdf', $invoice->id) }}"
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:border-gray-400"
+                                    target="_blank">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="1.5" stroke="currentColor" class="h-3.5 w-3.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                    </svg>
+                                    Cetak PDF
+                                </a>
                             </div>
                         </div>
                     </div>

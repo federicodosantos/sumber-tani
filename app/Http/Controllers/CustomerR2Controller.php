@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\Invoice;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -176,5 +177,25 @@ class CustomerR2Controller extends Controller
         $customers = $query->orderBy('name', 'asc')->limit(20)->get(['id', 'name', 'phone_number', 'address']);
 
         return response()->json($customers);
+    }
+
+    /**
+     * Download invoice as PDF.
+     */
+    public function downloadInvoicePdf(Invoice $invoice)
+    {
+        $invoice->load(['customer', 'transaction.transactionDetails.product']);
+
+        $customer = $invoice->customer;
+        $transaction = $invoice->transaction;
+        $details = $transaction ? $transaction->transactionDetails : collect();
+
+        $pdf = Pdf::loadView('pelanggan-r2.invoice-pdf', compact('invoice', 'customer', 'transaction', 'details'));
+
+        $pdf->setPaper('A5', 'portrait');
+
+        $filename = 'Nota_' . $invoice->id . '_' . $customer->name . '.pdf';
+
+        return $pdf->download($filename);
     }
 }

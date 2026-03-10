@@ -346,7 +346,8 @@
                 <div class="rounded-xl border border-gray-200 bg-gray-50 p-3">
                     <div class="mb-2">
                         <label class="mb-1 block text-xs font-semibold text-gray-600">Uang Consumer</label>
-                        <input type="number" min="0" step="1" x-model="cashReceivedInput"
+                        <input type="text" inputmode="numeric" x-model="cashReceivedInput"
+                            @input="cashReceivedInput = formatNumberInput(cashReceivedInput)"
                             class="focus:border-button-main focus:ring-button-main h-9 w-full rounded-lg border border-gray-300 px-3 text-right text-sm font-semibold focus:outline-none focus:ring-2"
                             placeholder="0">
                     </div>

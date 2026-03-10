@@ -246,9 +246,19 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
         parseNumberInput(rawValue) {
             if (rawValue === null || rawValue === undefined) return 0;
-            const cleaned = rawValue.toString().replace(/[^0-9,.-]/g, '').replace(/,/g, '.');
+            // Remove dot separators first, then handle comma as decimal
+            const cleaned = rawValue.toString().replace(/\./g, '').replace(/,/g, '.');
             const parsed = Number(cleaned);
             return Number.isFinite(parsed) ? parsed : 0;
+        },
+
+        formatNumberInput(value) {
+            if (value === null || value === undefined) return '';
+            // Strip non-digit characters
+            const digits = value.toString().replace(/[^0-9]/g, '');
+            if (digits === '') return '';
+            // Add dot thousand separators
+            return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         },
 
         setItemManualPrice(id, rawValue) {

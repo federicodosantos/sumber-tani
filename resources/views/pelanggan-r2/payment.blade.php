@@ -38,13 +38,25 @@
                 <form action="{{ route('pelanggan-r2.process', $customer->id) }}" method="POST">
                     @csrf
 
-                    <div class="mb-6">
-                        <label for="amount" class="mb-1.5 block text-sm font-semibold text-black">
+                    <div class="mb-6" x-data="{
+                        displayAmount: '{{ old('amount') ? number_format(old('amount'), 0, '', '.') : '' }}',
+                        rawAmount: '{{ old('amount') }}',
+                        formatNumber(value) {
+                            let digits = value.toString().replace(/[^0-9]/g, '');
+                            this.rawAmount = digits;
+                            if (!digits) return '';
+                            return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                        }
+                    }">
+                        <label for="amount_display" class="mb-1.5 block text-sm font-semibold text-black">
                             Nominal Pembayaran
                         </label>
-                        <input type="number" id="amount" name="amount" value="{{ old('amount') }}"
+                        {{-- Hidden input for form submission --}}
+                        <input type="hidden" name="amount" x-model="rawAmount">
+                        {{-- Visible formatted input --}}
+                        <input type="text" id="amount_display" x-model="displayAmount" inputmode="numeric"
+                            @input="displayAmount = formatNumber($event.target.value)"
                             placeholder="Masukkan nominal setoran"
-                            min="1" max="{{ $totalDebt }}" step="1"
                             class="block w-full rounded-lg border-1 lg:border-2 focus:border-button-hover focus:outline-none px-4 py-3 text-sm transition-all duration-100"
                             required>
                         @error('amount')
