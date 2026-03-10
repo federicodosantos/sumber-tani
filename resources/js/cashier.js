@@ -21,6 +21,14 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         isPanelResizing: false,
         leftSidebarCollapsed: false,
 
+        // R2 Customer
+        selectedCustomer: null,
+        showR2Modal: false,
+        r2SearchQuery: '',
+        r2SearchResults: [],
+        isSearchingR2: false,
+        r2SearchTimeout: null,
+
         async init() {
             window.addEventListener('online', () => {
                 this.isOffline = false;
@@ -67,6 +75,52 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             this.syncCartPricesToMode();
             this.orderPanelWidth = Math.max(this.panelMinWidth, Math.min(420, Math.floor(window.innerWidth * 0.28)));
             this.leftSidebarCollapsed = localStorage.getItem('cashier-left-sidebar-collapsed') === '1';
+        },
+
+        openR2Modal() {
+            this.showR2Modal = true;
+            this.r2SearchQuery = '';
+            this.r2SearchResults = [];
+            this.fetchR2Customers();
+        },
+
+        closeR2Modal() {
+            this.showR2Modal = false;
+        },
+
+        searchR2Customers() {
+            clearTimeout(this.r2SearchTimeout);
+            this.r2SearchTimeout = setTimeout(() => {
+                this.fetchR2Customers();
+            }, 300);
+        },
+
+        async fetchR2Customers() {
+            this.isSearchingR2 = true;
+            try {
+                const params = new URLSearchParams();
+                if (this.r2SearchQuery) params.set('q', this.r2SearchQuery);
+                const res = await fetch(`/api/pelanggan-r2/search?${params.toString()}`, {
+                    headers: { 'Accept': 'application/json' },
+                });
+                if (res.ok) {
+                    this.r2SearchResults = await res.json();
+                }
+            } catch (e) {
+                console.error('Gagal mencari pelanggan R2:', e);
+            } finally {
+                this.isSearchingR2 = false;
+            }
+        },
+
+        selectR2Customer(customer) {
+            this.selectedCustomer = customer;
+            this.showR2Modal = false;
+            this.setPriceMode('r2');
+        },
+
+        removeR2Customer() {
+            this.selectedCustomer = null;
         },
 
         get filteredProducts() {
@@ -369,6 +423,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                 is_paid: isPaid,
                 cash_received: this.paymentMethod === 'Cash' ? this.cashReceived : null,
                 change_amount: this.paymentMethod === 'Cash' ? this.changeAmount : null,
+                customer_id: this.selectedCustomer ? this.selectedCustomer.id : null,
             };
 
             if (this.isOffline) {
@@ -386,6 +441,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     this.cart = [];
                     this.manualTotal = null;
                     this.cashReceivedInput = '';
+                    this.selectedCustomer = null;
                 } catch (e) {
                     console.error(e);
                     alert('Gagal simpan offline');
@@ -415,6 +471,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         this.cart = [];
                         this.manualTotal = null;
                         this.cashReceivedInput = '';
+                        this.selectedCustomer = null;
                     })
                     .catch(async error => {
                         console.error('Network Error, saving offline...', error);
@@ -426,6 +483,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         this.cart = [];
                         this.manualTotal = null;
                         this.cashReceivedInput = '';
+                        this.selectedCustomer = null;
                     });
             }
         },

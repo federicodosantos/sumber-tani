@@ -90,6 +90,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/pelanggan-r2/{customer}', [CustomerR2Controller::class, 'show'])->name('pelanggan-r2.show');
     Route::get('/pelanggan-r2/{customer}/pay', [CustomerR2Controller::class, 'payDebt'])->name('pelanggan-r2.pay');
     Route::post('/pelanggan-r2/{customer}/pay', [CustomerR2Controller::class, 'processPayment'])->name('pelanggan-r2.process');
+    Route::get('/api/pelanggan-r2/search', [CustomerR2Controller::class, 'search'])->name('pelanggan-r2.search');
 
 });
 

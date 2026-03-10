@@ -156,4 +156,25 @@ class CustomerR2Controller extends Controller
                 ->withErrors(['general' => 'Terjadi kesalahan saat memproses pembayaran.']);
         }
     }
+
+    /**
+     * Search R-2 customers (JSON API for cashier modal).
+     */
+    public function search(Request $request)
+    {
+        $query = Customer::query();
+
+        if ($request->filled('q')) {
+            $search = $request->input('q');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone_number', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%");
+            });
+        }
+
+        $customers = $query->orderBy('name', 'asc')->limit(20)->get(['id', 'name', 'phone_number', 'address']);
+
+        return response()->json($customers);
+    }
 }

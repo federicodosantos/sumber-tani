@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
 use App\Models\ProductStock;
 use App\Models\Transaction;
 use Carbon\Carbon;
@@ -43,6 +44,7 @@ class TransactionController extends Controller
             'is_paid' => 'required|boolean',
             'cash_received' => 'nullable|numeric|min:0',
             'change_amount' => 'nullable|numeric',
+            'customer_id' => 'nullable|integer|exists:customers,id',
         ]);
 
         if ($request->filled('offline_uuid')) {
@@ -113,6 +115,15 @@ class TransactionController extends Controller
                 if ($productStock) {
                     $productStock->decrement('stock_opname', $item['qty']);
                 }
+            }
+
+            // If R2 customer is attached, create invoice automatically
+            if ($request->filled('customer_id')) {
+                Invoice::create([
+                    'customer_id' => $request->customer_id,
+                    'transaction_id' => $transaction->id,
+                    'debts' => $totalAmount,
+                ]);
             }
 
             DB::commit();

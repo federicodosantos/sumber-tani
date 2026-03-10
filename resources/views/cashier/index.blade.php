@@ -91,7 +91,7 @@
                 R1
             </button>
 
-            <button @click="setPriceMode('r2')"
+            <button @click="openR2Modal()"
                 :class="[
                     priceMode === 'r2' ?
                     'bg-button-main text-white shadow-md' :
@@ -100,6 +100,24 @@
                 class="mode-btn border-button-hover rounded-lg border-2 px-3 py-1 text-sm font-medium transition-all duration-200">
                 R2
             </button>
+
+            {{-- Selected R2 Customer Badge --}}
+            <template x-if="selectedCustomer">
+                <div class="flex items-center gap-2 ml-2 rounded-lg border-2 border-blue-300 bg-blue-50 px-3 py-1">
+                    <svg class="h-4 w-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span class="text-sm font-semibold text-blue-800" x-text="'R2 — ' + selectedCustomer.name"></span>
+                    <button @click="removeR2Customer()" type="button"
+                        class="text-blue-400 hover:text-red-500 transition-colors" title="Hapus Pelanggan R2">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </template>
         </div>
         <p class="mt-1 pl-24 text-[10px] text-gray-500">
             *Jika mode harga diganti, harga item di keranjang akan otomatis mengikuti harga sistem terbaru.

@@ -148,6 +148,9 @@
             </button>
             <div class="border-b border-gray-200 p-6">
                 <h2 class="text-2xl font-bold text-gray-900">Data Pemesanan</h2>
+                <template x-if="selectedCustomer">
+                    <p class="mt-1 text-sm font-semibold text-blue-700" x-text="selectedCustomer.name"></p>
+                </template>
             </div>
 
             <div class="flex-1 space-y-3 overflow-y-auto p-6">
@@ -429,6 +432,93 @@
                 </div>
             </div>
         </aside>
+
+        {{-- R2 Customer Selection Modal --}}
+        <div x-show="showR2Modal" x-cloak
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @click.self="closeR2Modal()">
+
+            <div class="w-full max-w-2xl rounded-2xl bg-white shadow-2xl"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+                x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                x-transition:leave-end="opacity-0 scale-95 translate-y-4">
+
+                {{-- Modal Header --}}
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <h3 class="text-lg font-bold text-gray-900">Cari Pelanggan R2</h3>
+                    <button @click="closeR2Modal()" type="button"
+                        class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                {{-- Search Input --}}
+                <div class="px-6 py-4">
+                    <div class="relative">
+                        <svg class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" x-model="r2SearchQuery" @input="searchR2Customers()"
+                            placeholder="Cari nama, nomor HP, atau alamat..."
+                            class="w-full rounded-lg border-2 border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-button-main focus:outline-none focus:ring-2 focus:ring-button-main/20"
+                            x-ref="r2SearchInput"
+                            x-init="$watch('showR2Modal', val => { if(val) $nextTick(() => $refs.r2SearchInput.focus()) })">
+                    </div>
+                </div>
+
+                {{-- Results Table --}}
+                <div class="max-h-72 overflow-y-auto px-6 pb-6">
+                    <div x-show="isSearchingR2" class="py-8 text-center text-gray-400">
+                        <svg class="mx-auto h-6 w-6 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="mt-2 text-sm">Mencari...</p>
+                    </div>
+
+                    <div x-show="!isSearchingR2 && r2SearchResults.length === 0" class="py-8 text-center text-gray-400">
+                        <p class="text-sm">Pelanggan tidak ditemukan</p>
+                    </div>
+
+                    <table x-show="!isSearchingR2 && r2SearchResults.length > 0" class="w-full text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2.5 text-left font-semibold text-gray-600">Nama</th>
+                                <th class="px-4 py-2.5 text-left font-semibold text-gray-600">Kontak</th>
+                                <th class="px-4 py-2.5 text-left font-semibold text-gray-600">Alamat</th>
+                                <th class="px-4 py-2.5 text-center font-semibold text-gray-600">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="cust in r2SearchResults" :key="cust.id">
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                    <td class="px-4 py-3 font-medium text-gray-900" x-text="cust.name"></td>
+                                    <td class="px-4 py-3 text-gray-600" x-text="cust.phone_number"></td>
+                                    <td class="px-4 py-3 text-gray-600" x-text="cust.address"></td>
+                                    <td class="px-4 py-3 text-center">
+                                        <button @click="selectR2Customer(cust)" type="button"
+                                            class="rounded-lg bg-button-main px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-button-hover transition-colors active:scale-95">
+                                            Pilih
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
 </body>
