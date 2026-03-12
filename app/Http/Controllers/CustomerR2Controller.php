@@ -151,6 +151,11 @@ class CustomerR2Controller extends Controller
                         $paymentForThisInvoice = $invoice->debts;
                         $amount -= $invoice->debts;
                         $invoice->update(['debts' => 0]);
+
+                        // Automatically update related transaction status to is_paid = true
+                        if ($invoice->transaction) {
+                            $invoice->transaction->update(['is_paid' => true]);
+                        }
                     } else {
                         // Partial payment
                         $paymentForThisInvoice = $amount;

@@ -210,6 +210,11 @@ class TransactionController extends Controller
             'is_paid' => $request->is_paid,
         ]);
 
+        // If transaction is marked as paid, also clear any related invoice debts
+        if ($request->is_paid) {
+            DB::table('invoices')->where('transaction_id', $transaction->id)->update(['debts' => 0]);
+        }
+
         return redirect()->back()->with('success', 'Status pembayaran berhasil diperbarui');
     }
 
