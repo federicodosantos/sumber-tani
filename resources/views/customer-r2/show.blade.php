@@ -4,7 +4,7 @@
 
             {{-- Back Button --}}
             <div>
-                <a href="{{ route('pelanggan-r2.index') }}"
+                <a href="{{ route('customer-r2.index') }}"
                     class="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
                         stroke="currentColor" class="h-4 w-4">
@@ -20,8 +20,8 @@
                     <div class="flex items-start gap-4">
                         {{-- Avatar --}}
                         <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-100">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                                stroke="currentColor" class="h-7 w-7 text-blue-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke-width="1.5" stroke="currentColor" class="h-7 w-7 text-blue-600">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                             </svg>
@@ -61,8 +61,8 @@
                         </p>
                         <p class="mt-1 text-xs text-gray-400">{{ $customer->invoices->count() }} invoice</p>
 
-                        @if($totalDebt > 0)
-                            <a href="{{ route('pelanggan-r2.pay', $customer->id) }}"
+                        @if ($totalDebt > 0)
+                            <a href="{{ route('customer-r2.pay', $customer->id) }}"
                                 class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-blue-700">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                     stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
@@ -80,13 +80,14 @@
             <div>
                 <h3 class="mb-4 text-lg font-bold text-gray-900">Daftar Invoice</h3>
 
-                @forelse($customer->invoices as $invoice)
+                @forelse($invoices as $invoice)
                     <div class="mb-3 rounded-xl bg-white p-5 shadow-sm transition-all hover:shadow-md"
                         style="border: 1px solid #e5e7eb;">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div class="flex items-start gap-3">
                                 {{-- Invoice Icon --}}
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg {{ $invoice->debts > 0 ? 'bg-red-50' : 'bg-green-50' }}">
+                                <div
+                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg {{ $invoice->debts > 0 ? 'bg-red-50' : 'bg-green-50' }}">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                         stroke-width="1.5" stroke="currentColor"
                                         class="h-5 w-5 {{ $invoice->debts > 0 ? 'text-red-500' : 'text-green-500' }}">
@@ -99,7 +100,7 @@
                                     <p class="text-sm font-semibold text-gray-900">
                                         Invoice #{{ $invoice->id }}
                                     </p>
-                                    @if($invoice->transaction)
+                                    @if ($invoice->transaction)
                                         <p class="mt-0.5 text-xs text-gray-500">
                                             Transaksi #{{ $invoice->transaction->id }}
                                             • {{ $invoice->created_at->translatedFormat('d M Y, H:i') }}
@@ -114,22 +115,26 @@
 
                             <div class="text-right flex flex-col items-end gap-2">
                                 <div>
-                                    <p class="text-sm font-bold {{ $invoice->debts > 0 ? 'text-red-600' : 'text-green-600' }}">
+                                    <p
+                                        class="text-sm font-bold {{ $invoice->debts > 0 ? 'text-red-600' : 'text-green-600' }}">
                                         Rp {{ number_format($invoice->debts, 0, ',', '.') }}
                                     </p>
-                                    <p class="mt-0.5 text-xs {{ $invoice->debts > 0 ? 'text-red-400' : 'text-green-400' }}">
+                                    <p
+                                        class="mt-0.5 text-xs {{ $invoice->debts > 0 ? 'text-red-400' : 'text-green-400' }}">
                                         {{ $invoice->debts > 0 ? 'Belum Lunas' : 'Lunas' }}
                                     </p>
                                 </div>
-                                <a href="{{ route('pelanggan-r2.invoice.pdf', $invoice->id) }}"
+                                <a href="{{ route('customer-r2.invoice.preview', $invoice->id) }}"
                                     class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:border-gray-400"
                                     target="_blank">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                         stroke-width="1.5" stroke="currentColor" class="h-3.5 w-3.5">
                                         <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                            d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                     </svg>
-                                    Cetak PDF
+                                    View
                                 </a>
                             </div>
                         </div>
@@ -144,8 +149,85 @@
                         <p class="mt-3 text-sm text-gray-500 italic">Belum ada invoice untuk pelanggan ini.</p>
                     </div>
                 @endforelse
+
+                <div class="mt-4 flex justify-end">
+                    {{ $invoices->withQueryString()->links() }}
+                </div>
+            </div>
+
+            {{-- Payment History (Audit Trail) --}}
+            <div>
+                <h3 class="mb-4 text-lg font-bold text-gray-900">Riwayat Pembayaran</h3>
+
+                @if ($debtPayments->count() > 0)
+                    <div class="rounded-2xl bg-white shadow-sm overflow-hidden" style="border: 1px solid #e5e7eb;">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="bg-gray-50 border-b border-gray-200">
+                                        <th
+                                            class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                            No</th>
+                                        <th
+                                            class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                            No. Invoice</th>
+                                        <th
+                                            class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                            Tanggal Pembayaran</th>
+                                        <th
+                                            class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 text-right">
+                                            Jumlah Bayar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($debtPayments as $index => $payment)
+                                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                            <td class="px-5 py-3.5 text-sm text-gray-500">{{ $index + 1 }}</td>
+                                            <td class="px-5 py-3.5 text-sm text-gray-500">{{ $payment->invoice_id }}
+                                            </td>
+                                            <td class="px-5 py-3.5">
+                                                <div class="flex items-center">
+
+                                                    <div>
+                                                        <p class="text-sm font-medium text-gray-900">
+                                                            {{ $payment->payment_date->translatedFormat('d M Y') }}
+                                                        </p>
+                                                        <p class="text-xs text-gray-400">
+                                                            {{ $payment->payment_date->translatedFormat('H:i') }}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-5 py-3.5 text-right">
+                                                <span class="text-sm font-bold text-green-600">
+                                                    Rp {{ number_format($payment->amount, 0, ',', '.') }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex justify-end">
+                        {{ $debtPayments->withQueryString()->links() }}
+                    </div>
+                @else
+                    <div class="rounded-xl bg-white p-8 text-center shadow-sm" style="border: 1px solid #e5e7eb;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            stroke-width="1.5" stroke="currentColor" class="mx-auto h-12 w-12 text-gray-300">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        <p class="mt-3 text-sm text-gray-500 italic">Belum ada riwayat pembayaran untuk pelanggan ini.
+                        </p>
+                    </div>
+                @endif
             </div>
 
         </div>
     </div>
+
 </x-app-layout>

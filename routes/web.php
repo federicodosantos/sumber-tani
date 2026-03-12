@@ -83,15 +83,15 @@ Route::middleware('auth')->group(function () {
     Route::put('/transactions/{id}/update-status', [TransactionController::class, 'updateStatus'])
         ->name('transactions.updateStatus');
 
-    // PELANGGAN R-2 ROUTES
-    Route::get('/pelanggan-r2', [CustomerR2Controller::class, 'index'])->name('pelanggan-r2.index');
-    Route::get('/pelanggan-r2/create', [CustomerR2Controller::class, 'create'])->name('pelanggan-r2.create');
-    Route::post('/pelanggan-r2', [CustomerR2Controller::class, 'store'])->name('pelanggan-r2.store');
-    Route::get('/pelanggan-r2/{customer}', [CustomerR2Controller::class, 'show'])->name('pelanggan-r2.show');
-    Route::get('/pelanggan-r2/{customer}/pay', [CustomerR2Controller::class, 'payDebt'])->name('pelanggan-r2.pay');
-    Route::post('/pelanggan-r2/{customer}/pay', [CustomerR2Controller::class, 'processPayment'])->name('pelanggan-r2.process');
-    Route::get('/api/pelanggan-r2/search', [CustomerR2Controller::class, 'search'])->name('pelanggan-r2.search');
-    Route::get('/pelanggan-r2/invoice/{invoice}/pdf', [CustomerR2Controller::class, 'downloadInvoicePdf'])->name('pelanggan-r2.invoice.pdf');
+    // CUSTOMER R-2 ROUTES
+    Route::get('/customer-r2', [CustomerR2Controller::class, 'index'])->name('customer-r2.index');
+    Route::get('/customer-r2/create', [CustomerR2Controller::class, 'create'])->name('customer-r2.create');
+    Route::post('/customer-r2', [CustomerR2Controller::class, 'store'])->name('customer-r2.store');
+    Route::get('/customer-r2/{customer}', [CustomerR2Controller::class, 'show'])->name('customer-r2.show');
+    Route::get('/customer-r2/{customer}/pay', [CustomerR2Controller::class, 'payDebt'])->name('customer-r2.pay');
+    Route::post('/customer-r2/{customer}/pay', [CustomerR2Controller::class, 'processPayment'])->name('customer-r2.process');
+    Route::get('/api/customer-r2/search', [CustomerR2Controller::class, 'search'])->name('customer-r2.search');
+    Route::get('/customer-r2/invoice/{invoice}/preview', [CustomerR2Controller::class, 'previewInvoice'])->name('customer-r2.invoice.preview');
 
 });
 

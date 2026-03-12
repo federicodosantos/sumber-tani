@@ -4,7 +4,7 @@
 
             {{-- Back Button --}}
             <div>
-                <a href="{{ route('pelanggan-r2.show', $customer->id) }}"
+                <a href="{{ route('customer-r2.show', $customer->id) }}"
                     class="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
                         stroke="currentColor" class="h-4 w-4">
@@ -35,43 +35,16 @@
                 </div>
 
                 {{-- Payment Form --}}
-                <form action="{{ route('pelanggan-r2.process', $customer->id) }}" method="POST">
+                <form action="{{ route('customer-r2.process', $customer->id) }}" method="POST">
                     @csrf
 
-                    <div class="mb-6" x-data="{
-                        displayAmount: '{{ old('amount') ? number_format(old('amount'), 0, '', '.') : '' }}',
-                        rawAmount: '{{ old('amount') }}',
-                        formatNumber(value) {
-                            let digits = value.toString().replace(/[^0-9]/g, '');
-                            this.rawAmount = digits;
-                            if (!digits) return '';
-                            return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                        }
-                    }">
-                        <label for="amount_display" class="mb-1.5 block text-sm font-semibold text-black">
-                            Nominal Pembayaran
-                        </label>
-                        {{-- Hidden input for form submission --}}
-                        <input type="hidden" name="amount" x-model="rawAmount">
-                        {{-- Visible formatted input --}}
-                        <input type="text" id="amount_display" x-model="displayAmount" inputmode="numeric"
-                            @input="displayAmount = formatNumber($event.target.value)"
-                            placeholder="Masukkan nominal setoran"
-                            class="block w-full rounded-lg border-1 lg:border-2 focus:border-button-hover focus:outline-none px-4 py-3 text-sm transition-all duration-100"
-                            required>
-                        @error('amount')
-                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
-                        @error('general')
-                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    <x-input-rupiah name="amount" label="Nominal Pembayaran" placeholder="0" />
 
                     {{-- Info Box --}}
                     <div class="mb-6 rounded-lg bg-blue-50 border border-blue-200 p-4">
                         <div class="flex items-start gap-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                                stroke="currentColor" class="h-5 w-5 text-blue-500 shrink-0 mt-0.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-blue-500 shrink-0 mt-0.5">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
                             </svg>
@@ -84,7 +57,7 @@
 
                     {{-- Actions --}}
                     <div class="flex items-center justify-between border-t border-gray-200 pt-6">
-                        <x-button.remove-button href="{{ route('pelanggan-r2.show', $customer->id) }}">
+                        <x-button.remove-button href="{{ route('customer-r2.show', $customer->id) }}">
                             <span class="font-bold">BATAL</span>
                         </x-button.remove-button>
 

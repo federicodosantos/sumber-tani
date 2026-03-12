@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\DebtPayment;
 use App\Models\Invoice;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +47,7 @@ class CustomerR2Controller extends Controller
 
         $customers = $query->paginate(10)->withQueryString();
 
-        return view('pelanggan-r2.index', compact('customers'));
+        return view('customer-r2.index', compact('customers'));
     }
 
     /**
@@ -55,7 +55,7 @@ class CustomerR2Controller extends Controller
      */
     public function create()
     {
-        return view('pelanggan-r2.create');
+        return view('customer-r2.create');
     }
 
     /**
@@ -72,7 +72,7 @@ class CustomerR2Controller extends Controller
         try {
             Customer::create($validated);
 
-            return redirect()->route('pelanggan-r2.index')->with('success', 'Pelanggan R2 berhasil ditambahkan.');
+            return redirect()->route('customer-r2.index')->with('success', 'Pelanggan R2 berhasil ditambahkan.');
         } catch (Exception $e) {
             return redirect()
                 ->back()
@@ -82,15 +82,22 @@ class CustomerR2Controller extends Controller
     }
 
     /**
-     * Display R-2 customer detail with debt info and invoices.
+     * Display R-2 customer detail with debt info, invoices, and payment history.
      */
     public function show(Customer $customer)
     {
-        $customer->load(['invoices.transaction']);
+        $totalDebt = $customer->invoices()->sum('debts');
 
-        $totalDebt = $customer->invoices->sum('debts');
+        $invoices = $customer->invoices()
+            ->with('transaction')
+            ->orderBy('created_at', 'desc')
+            ->paginate(5, ['*'], 'invoices_page');
 
-        return view('pelanggan-r2.show', compact('customer', 'totalDebt'));
+        $debtPayments = $customer->debtPayments()
+            ->orderBy('payment_date', 'desc')
+            ->paginate(5, ['*'], 'payments_page');
+
+        return view('customer-r2.show', compact('customer', 'totalDebt', 'invoices', 'debtPayments'));
     }
 
     /**
@@ -100,11 +107,11 @@ class CustomerR2Controller extends Controller
     {
         $totalDebt = $customer->invoices()->where('debts', '>', 0)->sum('debts');
 
-        return view('pelanggan-r2.payment', compact('customer', 'totalDebt'));
+        return view('customer-r2.payment', compact('customer', 'totalDebt'));
     }
 
     /**
-     * Process debt payment using FIFO logic.
+     * Process debt payment using FIFO logic and record audit trail.
      */
     public function processPayment(Request $request, Customer $customer)
     {
@@ -126,6 +133,8 @@ class CustomerR2Controller extends Controller
 
         try {
             DB::transaction(function () use ($customer, &$amount) {
+                $originalAmount = $amount;
+
                 // FIFO: get unpaid invoices ordered by oldest first
                 $invoices = $customer->invoices()
                     ->where('debts', '>', 0)
@@ -135,20 +144,33 @@ class CustomerR2Controller extends Controller
                 foreach ($invoices as $invoice) {
                     if ($amount <= 0) break;
 
+                    $paymentForThisInvoice = 0;
+
                     if ($amount >= $invoice->debts) {
                         // Payment covers this invoice fully
+                        $paymentForThisInvoice = $invoice->debts;
                         $amount -= $invoice->debts;
                         $invoice->update(['debts' => 0]);
                     } else {
                         // Partial payment
+                        $paymentForThisInvoice = $amount;
                         $invoice->update(['debts' => $invoice->debts - $amount]);
                         $amount = 0;
+                    }
+
+                    // Record audit trail for this specific invoice
+                    if ($paymentForThisInvoice > 0) {
+                        DebtPayment::create([
+                            'invoice_id' => $invoice->id,
+                            'amount' => $paymentForThisInvoice,
+                            'payment_date' => now(),
+                        ]);
                     }
                 }
             });
 
             return redirect()
-                ->route('pelanggan-r2.show', $customer->id)
+                ->route('customer-r2.show', $customer->id)
                 ->with('success', 'Pembayaran hutang berhasil diproses.');
         } catch (Exception $e) {
             return redirect()
@@ -180,9 +202,9 @@ class CustomerR2Controller extends Controller
     }
 
     /**
-     * Download invoice as PDF.
+     * Preview invoice as HTML (replaces PDF download).
      */
-    public function downloadInvoicePdf(Invoice $invoice)
+    public function previewInvoice(Invoice $invoice)
     {
         $invoice->load(['customer', 'transaction.transactionDetails.product']);
 
@@ -190,12 +212,6 @@ class CustomerR2Controller extends Controller
         $transaction = $invoice->transaction;
         $details = $transaction ? $transaction->transactionDetails : collect();
 
-        $pdf = Pdf::loadView('pelanggan-r2.invoice-pdf', compact('invoice', 'customer', 'transaction', 'details'));
-
-        $pdf->setPaper('A5', 'portrait');
-
-        $filename = 'Nota_' . $invoice->id . '_' . $customer->name . '.pdf';
-
-        return $pdf->download($filename);
+        return view('customer-r2.invoice-preview', compact('invoice', 'customer', 'transaction', 'details'));
     }
 }

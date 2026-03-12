@@ -20,6 +20,11 @@ class Customer extends Model
         return $this->hasMany(Invoice::class, 'customer_id', 'id');
     }
 
+    public function debtPayments()
+    {
+        return $this->hasManyThrough(DebtPayment::class, Invoice::class, 'customer_id', 'invoice_id', 'id', 'id');
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

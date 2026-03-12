@@ -100,7 +100,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             try {
                 const params = new URLSearchParams();
                 if (this.r2SearchQuery) params.set('q', this.r2SearchQuery);
-                const res = await fetch(`/api/pelanggan-r2/search?${params.toString()}`, {
+                const res = await fetch(`/api/customer-r2/search?${params.toString()}`, {
                     headers: { 'Accept': 'application/json' },
                 });
                 if (res.ok) {
@@ -121,6 +121,8 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
         removeR2Customer() {
             this.selectedCustomer = null;
+            this.setPriceMode('consument');
+            this.openR2Modal();
         },
 
         get filteredProducts() {
@@ -196,6 +198,11 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
         setPriceMode(mode) {
             if (this.priceMode === mode) return;
+
+            if (mode !== 'r2') {
+                this.selectedCustomer = null;
+            }
+
             this.priceMode = mode;
             this.syncCartPricesToMode();
         },
