@@ -125,8 +125,7 @@
                                     </p>
                                 </div>
                                 <a href="{{ route('customer-r2.invoice.preview', $invoice->id) }}"
-                                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:border-gray-400"
-                                    target="_blank">
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 hover:border-gray-400">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                         stroke-width="1.5" stroke="currentColor" class="h-3.5 w-3.5">
                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -134,7 +133,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round"
                                             d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                     </svg>
-                                    View
+                                    Lihat
                                 </a>
                             </div>
                         </div>
