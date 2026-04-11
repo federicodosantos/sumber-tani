@@ -382,6 +382,9 @@
                 <h3>Detail Invoice</h3>
                 <p>Tanggal: {{ $invoice->created_at->translatedFormat('d F Y') }}</p>
                 <p>Waktu: {{ $invoice->created_at->translatedFormat('H:i') }}</p>
+                @if ($transaction)
+                    <p>Metode Pembayaran: <strong>{{ $transaction->payment_method }}</strong></p>
+                @endif
             </div>
         </div>
 

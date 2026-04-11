@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CustomerProductPrice;
 use App\Models\Invoice;
 use App\Models\ProductStock;
 use App\Models\Transaction;
@@ -119,13 +120,32 @@ class TransactionController extends Controller
 
             // If R2 customer is attached, create invoice automatically
             if ($request->filled('customer_id')) {
-                $debtAmount = $request->payment_method === 'Cash' ? 0 : $totalAmount;
+                $debtAmount = $request->payment_method === 'Kredit' ? $totalAmount : 0;
 
                 Invoice::create([
                     'customer_id' => $request->customer_id,
                     'transaction_id' => $transaction->id,
                     'debts' => $debtAmount,
                 ]);
+
+                // Save custom prices for each item where the price was manually changed
+                foreach ($items as $item) {
+                    $basePrice = $item['basePrice'] ?? null;
+                    $manualPrice = $item['price'] ?? null;
+
+                    // Only save if price was manually set and differs from base system price
+                    if ($basePrice !== null && $manualPrice !== null && (float)$manualPrice !== (float)$basePrice) {
+                        CustomerProductPrice::updateOrCreate(
+                            [
+                                'customer_id' => $request->customer_id,
+                                'product_id'  => $item['id'],
+                            ],
+                            [
+                                'custom_price' => (float)$manualPrice,
+                            ]
+                        );
+                    }
+                }
             }
 
             DB::commit();

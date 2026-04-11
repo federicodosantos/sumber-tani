@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\DebtPayment;
+use App\Models\CustomerProductPrice;
 use App\Models\Invoice;
 use Exception;
 use Illuminate\Http\Request;
@@ -218,5 +219,16 @@ class CustomerR2Controller extends Controller
         $details = $transaction ? $transaction->transactionDetails : collect();
 
         return view('customer-r2.invoice-preview', compact('invoice', 'customer', 'transaction', 'details'));
+    }
+    /**
+     * Get all custom product prices for a given customer (JSON API).
+     */
+    public function getCustomPrices(Customer $customer)
+    {
+        $prices = $customer->customProductPrices()
+            ->get(['product_id', 'custom_price'])
+            ->pluck('custom_price', 'product_id');
+
+        return response()->json($prices);
     }
 }

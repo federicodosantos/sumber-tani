@@ -28,6 +28,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         r2SearchResults: [],
         isSearchingR2: false,
         r2SearchTimeout: null,
+        customerCustomPrices: {}, // map: product_id -> custom_price for the selected R2 customer
 
         async init() {
             window.addEventListener('online', () => {
@@ -116,13 +117,32 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         selectR2Customer(customer) {
             this.selectedCustomer = customer;
             this.showR2Modal = false;
+            this.customerCustomPrices = {}; // clear while loading
             this.setPriceMode('r2');
+            this.fetchCustomPricesForCustomer(customer.id);
         },
 
         removeR2Customer() {
             this.selectedCustomer = null;
             this.setPriceMode('consument');
             this.openR2Modal();
+            this.customerCustomPrices = {};
+        },
+
+        async fetchCustomPricesForCustomer(customerId) {
+            try {
+                const res = await fetch(`/api/customer-r2/${customerId}/custom-prices`, {
+                    headers: { 'Accept': 'application/json' },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.customerCustomPrices = data; // { product_id: custom_price, ... }
+                    // Re-apply prices to cart items that may already be in the cart
+                    this.syncCartPricesToMode();
+                }
+            } catch (e) {
+                console.error('Gagal memuat harga khusus pelanggan:', e);
+            }
         },
 
         get filteredProducts() {
@@ -151,9 +171,15 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
         getPrice(product) {
             let p = 0;
-            if (this.priceMode === 'r1') p = product.price_r1;
-            else if (this.priceMode === 'r2') p = product.price_r2;
-            else p = product.price_consument;
+            if (this.priceMode === 'r1') {
+                p = product.price_r1;
+            } else if (this.priceMode === 'r2') {
+                // Use the customer-specific price if available, otherwise fall back to system r2 price
+                const customPrice = this.customerCustomPrices[product.id];
+                p = (customPrice !== undefined && customPrice !== null) ? customPrice : product.price_r2;
+            } else {
+                p = product.price_consument;
+            }
 
             return Number(p) || 0;
         },
