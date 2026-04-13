@@ -24,61 +24,59 @@
 </head>
 
 <body class="antialiased font-mont">
-    <div class="flex h-screen overflow-hidden bg-gray-50" x-data="cashierHandler({{ Js::from($products) }}, {{ Js::from($categories) }})">
-        <aside class="flex flex-col border-r border-gray-200 bg-white transition-all duration-300"
-            :class="leftSidebarCollapsed ? 'w-16' : 'w-64'">
-            <div class="border-b border-gray-200 p-4">
-                <div class="flex items-center justify-between">
-                    <img x-show="!leftSidebarCollapsed" src="{{ asset('images/logo-kasir.svg') }}" alt="Sumber Tani"
-                        class="h-10">
-                    <img x-show="leftSidebarCollapsed" x-cloak src="{{ asset('favicon.svg') }}" alt="Sumber Tani"
-                        class="h-8 w-8">
-                    <button type="button" @click="toggleLeftSidebar()"
-                        class="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100"
-                        :title="leftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'">
-                        <svg class="h-4 w-4 transition-transform duration-300"
-                            :class="leftSidebarCollapsed ? 'rotate-180' : ''" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            <div x-data="{
+    <div class="flex h-screen flex-col overflow-hidden bg-gray-50" x-data="cashierHandler({{ Js::from($products) }}, {{ Js::from($categories) }})">
+        <!-- WARNING BANNER OFFLINE -->
+        <div x-data="{
                 count: 0,
                 async checkDB() {
                     try {
-                        // Cek apakah global db sudah siap
                         if (window.db) {
-                            // Update variable count (gunakan 'this' untuk akses data sendiri)
                             this.count = await window.db.offline_transactions
                                 .where('is_synced').equals(0)
                                 .count();
                         }
                     } catch (e) {
-                        // Silent error, mungkin db belum load, biarkan saja
                     }
                 }
-            }" x-init="// Panggil sekali saat load
-            checkDB();
-            
-            // Panggil ulang setiap 2 detik
-            setInterval(() => checkDB(), 2000);" x-show="count > 0" style="display: none;"
-                class="fixed left-0 top-0 z-50 w-full animate-pulse bg-yellow-500 py-2 text-center font-bold text-white shadow-md">
+            }" x-init="checkDB(); setInterval(() => checkDB(), 2000);" x-show="count > 0" style="display: none;"
+            class="z-50 shrink-0 w-full animate-pulse bg-yellow-500 py-2 text-center font-bold text-white shadow-md">
 
-                <div class="flex items-center justify-center gap-2">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <span>
-                        ⚠️ PERHATIAN: Ada <span x-text="count"
-                            class="mx-1 rounded-full bg-white px-2 text-yellow-600"></span> Transaksi Belum Tersimpan!
-                    </span>
-                </div>
-                <span class="mt-1 block text-sm font-normal text-yellow-100 sm:inline">Jangan tutup browser atau hapus
-                    cache.</span>
+            <div class="flex items-center justify-center gap-2">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>
+                    ⚠️ PERHATIAN: Ada <span x-text="count"
+                        class="mx-1 rounded-full bg-white px-2 text-yellow-600"></span> Transaksi Belum Tersimpan!
+                </span>
             </div>
+            <span class="mt-1 block text-sm font-normal text-yellow-100 sm:inline">Jangan tutup browser atau hapus
+                cache.</span>
+        </div>
+        
+        <!-- MAIN APP WRAPPER -->
+        <div class="flex flex-1 overflow-hidden">
+            <aside class="flex flex-col border-r border-gray-200 bg-white transition-all duration-300"
+                :class="leftSidebarCollapsed ? 'w-16' : 'w-64'">
+                <div class="border-b border-gray-200 p-4">
+                    <div class="flex items-center justify-between">
+                        <img x-show="!leftSidebarCollapsed" src="{{ asset('images/logo-kasir.svg') }}" alt="Sumber Tani"
+                            class="h-10">
+                        <img x-show="leftSidebarCollapsed" x-cloak src="{{ asset('favicon.svg') }}" alt="Sumber Tani"
+                            class="h-8 w-8">
+                        <button type="button" @click="toggleLeftSidebar()"
+                            class="hidden lg:flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100"
+                            :title="leftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'">
+                            <svg class="h-4 w-4 transition-transform duration-300"
+                                :class="leftSidebarCollapsed ? 'rotate-180' : ''" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
 
             <div class="flex-1 overflow-y-auto p-4">
                 <div x-show="isOffline && !leftSidebarCollapsed"
@@ -149,18 +147,53 @@
                 class="absolute -left-1 top-0 z-30 hidden h-full w-2 cursor-col-resize bg-transparent hover:bg-button-main/20 lg:block"
                 title="Resize panel pemesanan">
             </button>
-            <div class="border-b border-gray-200 p-6">
-                <h2 class="text-2xl font-bold text-gray-900">Data Pemesanan</h2>
-                <template x-if="selectedCustomer">
-                    <div
-                        class="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-button-main/30 bg-button-main/10 px-2.5 py-1 text-xs font-bold text-button-hover shadow-sm transition-all duration-200">
-                        <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <span x-text="selectedCustomer.name"></span>
+            <div class="border-b border-gray-200 bg-white">
+                <div class="flex overflow-x-auto p-3 gap-2 border-b border-gray-100 scrollbar-hide">
+                    <template x-for="(tab, index) in tabs" :key="tab.id">
+                        <div class="relative group flex items-center shrink-0 min-w-[100px]">
+                            <button @click="switchTab(tab.id)" 
+                                :class="activeTabId === tab.id ? 'bg-button-main text-white shadow-md' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 border'"
+                                class="flex-1 rounded-lg px-3 py-2 text-sm text-left relative transition-all pr-8">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="font-bold whitespace-nowrap" x-text="'Transaksi ' + (index + 1)"></span>
+                                    <template x-if="tab.pendingSync">
+                                        <span class="text-xs" :class="activeTabId === tab.id ? 'text-white' : 'text-yellow-600'" title="Pending Sync">⏳</span>
+                                    </template>
+                                </div>
+                            </button>
+                            <button @click.stop="closeTab(tab.id)" title="Tutup Transaksi"
+                                class="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors opacity-70 hover:opacity-100 focus:opacity-100"
+                                :class="activeTabId === tab.id ? 'text-white hover:bg-white/20' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </template>
+                    <button x-show="tabs.filter(t => !t.pendingSync).length < 5" @click="openNewTab()" 
+                        class="shrink-0 flex items-center justify-center w-[100px] h-10 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-button-main hover:text-button-main transition-colors bg-gray-50 cursor-pointer">
+                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span class="text-xs font-bold uppercase">Baru</span>
+                    </button>
+                </div>
+                
+                <div class="p-6 pb-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900 line-clamp-1">Data Pemesanan</h2>
+                            <template x-if="selectedCustomer">
+                                <div
+                                    class="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-button-main/30 bg-button-main/10 px-2.5 py-1 text-xs font-bold text-button-hover shadow-sm transition-all duration-200">
+                                    <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                    <span x-text="selectedCustomer.name"></span>
+                                </div>
+                            </template>
+                        </div>
                     </div>
-                </template>
+                </div>
             </div>
 
             <div class="flex-1 space-y-3 overflow-y-auto p-6">
@@ -538,6 +571,7 @@
                     </table>
                 </div>
             </div>
+        </div>
         </div>
     </div>
 

@@ -133,7 +133,7 @@
 
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
             <template x-for="product in filteredProducts" :key="product.id">
-                <button @click="addToCart(product)" :disabled="product.stock_opname <= 0"
+                <button @click="addToCart(product)" :disabled="getVisualStock(product) <= 0"
                     :class="cart.some(item => item.id === product.id) ?
                         'border-button-hover bg-button-main/20 scale-[1.02] shadow-md' :
                         'border-gray-200 bg-white hover:shadow-lg hover:scale-[1.01]'"
@@ -157,10 +157,10 @@
                         </div>
 
                         <div class="text-right text-xs text-gray-900">
-                            <template x-if="product.stock_opname > 0">
-                                <span>Sisa Stok: <span class="font-bold" x-text="product.stock_opname"></span></span>
+                            <template x-if="getVisualStock(product) > 0">
+                                <span>Sisa Stok: <span class="font-bold" x-text="getVisualStock(product)"></span></span>
                             </template>
-                            <template x-if="product.stock_opname <= 0">
+                            <template x-if="getVisualStock(product) <= 0">
                                 <span class="font-bold text-red-500">STOK HABIS</span>
                             </template>
                         </div>

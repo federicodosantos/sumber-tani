@@ -4,33 +4,132 @@ export default function cashierHandler(initialProducts = [], initialCategories =
     return {
         products: [],
         categories: [],
-        cart: Alpine.$persist([]).as('pos-cart'),
+        tabs: Alpine.$persist([]).as('pos-tabs'),
+        activeTabId: Alpine.$persist(null).as('pos-active-tab'),
 
         search: '',
         selectedCategory: null,
-        paymentMethod: 'Cash',
-        isPaid: false,
-        discount: 0,
         sortType: 'name_az',
-        priceMode: 'consument',
         isOffline: !navigator.onLine,
-        manualTotal: null,
-        cashReceivedInput: '',
         orderPanelWidth: 320,
         panelMinWidth: 320,
         isPanelResizing: false,
         leftSidebarCollapsed: false,
 
-        // R2 Customer
-        selectedCustomer: null,
+        // R2 Modal state (not per tab)
         showR2Modal: false,
         r2SearchQuery: '',
         r2SearchResults: [],
         isSearchingR2: false,
         r2SearchTimeout: null,
-        customerCustomPrices: {}, // map: product_id -> custom_price for the selected R2 customer
+
+        // --- Reactive Proxies to activeTab ---
+        get activeTab() { return this.tabs.find(t => t.id === this.activeTabId) || null; },
+        get cart() { return this.activeTab?.cart || []; },
+        set cart(val) { if (this.activeTab) this.activeTab.cart = val; },
+
+        get paymentMethod() { return this.activeTab?.paymentMethod || 'Cash'; },
+        set paymentMethod(val) { if (this.activeTab) this.activeTab.paymentMethod = val; },
+
+        get isPaid() { return this.activeTab?.isPaid || false; },
+        set isPaid(val) { if (this.activeTab) this.activeTab.isPaid = val; },
+
+        get discount() { return this.activeTab?.discount || 0; },
+        set discount(val) { if (this.activeTab) this.activeTab.discount = val; },
+
+        get priceMode() { return this.activeTab?.priceMode || 'consument'; },
+        set priceMode(val) { if (this.activeTab) this.activeTab.priceMode = val; },
+
+        get manualTotal() { return this.activeTab?.manualTotal ?? null; },
+        set manualTotal(val) { if (this.activeTab) this.activeTab.manualTotal = val; },
+
+        get cashReceivedInput() { return this.activeTab?.cashReceivedInput || ''; },
+        set cashReceivedInput(val) { if (this.activeTab) this.activeTab.cashReceivedInput = val; },
+
+        get selectedCustomer() { return this.activeTab?.selectedCustomer || null; },
+        set selectedCustomer(val) { if (this.activeTab) this.activeTab.selectedCustomer = val; },
+
+        get customerCustomPrices() { return this.activeTab?.customerCustomPrices || {}; },
+        set customerCustomPrices(val) { if (this.activeTab) this.activeTab.customerCustomPrices = val; },
+
+        // --- Tab Management ---
+        createNewTab(initialCart = []) {
+            let uuid = Math.random().toString(36).substring(2, 10);
+            try { uuid = self.crypto.randomUUID(); } catch(e) {}
+            return {
+                id: uuid,
+                cart: initialCart,
+                paymentMethod: 'Cash',
+                isPaid: false,
+                discount: 0,
+                priceMode: 'consument',
+                manualTotal: null,
+                cashReceivedInput: '',
+                selectedCustomer: null,
+                customerCustomPrices: {},
+                pendingSync: false,
+                offlineUuid: null,
+            };
+        },
+        openNewTab() {
+            if (this.tabs.length >= 5) {
+                alert('Maksimal 5 tab!');
+                return;
+            }
+            const newTab = this.createNewTab();
+            this.tabs.push(newTab);
+            this.activeTabId = newTab.id;
+        },
+        switchTab(id) {
+            this.activeTabId = id;
+        },
+        closeTab(id) {
+            const tab = this.tabs.find(t => t.id === id);
+            if (!tab) return;
+            if (tab.pendingSync) {
+                alert('Tab ini sedang menunggu sinkronisasi online dan tidak dapat ditutup. Tunggu hingga online.');
+                return;
+            }
+            if (tab.cart.length > 0) {
+                if (!confirm('Batalkan transaksi ini? Keranjang akan dikosongkan.')) return;
+            }
+            this.forceCloseTab(id);
+        },
+        forceCloseTab(id) {
+            this.tabs = this.tabs.filter(t => t.id !== id);
+            if (this.tabs.length === 0) {
+                this.openNewTab();
+            } else if (this.activeTabId === id) {
+                this.activeTabId = this.tabs[this.tabs.length - 1].id;
+            }
+        },
+        // --- Visual Stock ---
+        getVisualStock(product) {
+            if (!product) return 0;
+            const qtyInAllTabs = this.tabs.reduce((sum, tab) => {
+                const item = tab.cart.find(i => i.id === product.id);
+                return sum + (item ? item.qty : 0);
+            }, 0);
+            return product.stock_opname - qtyInAllTabs;
+        },
 
         async init() {
+            if (this.tabs.length === 0) {
+                let initialCart = [];
+                try {
+                    const oldStr = localStorage.getItem('pos-cart');
+                    if (oldStr && oldStr.startsWith('[')) {
+                        const parsed = JSON.parse(oldStr);
+                        if (Array.isArray(parsed) && parsed.length > 0) initialCart = parsed;
+                    }
+                } catch(e) {}
+                const newTab = this.createNewTab(initialCart);
+                this.tabs.push(newTab);
+                this.activeTabId = newTab.id;
+            } else if (!this.tabs.some(t => t.id === this.activeTabId)) {
+                this.activeTabId = this.tabs.length > 0 ? this.tabs[0].id : null;
+            }
+
             window.addEventListener('online', () => {
                 this.isOffline = false;
                 this.syncTransactions();
@@ -250,31 +349,28 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         },
 
         addToCart(product) {
+            if (this.getVisualStock(product) <= 0) {
+                alert('Stok habis!');
+                return;
+            }
+
             const activePrice = this.getPrice(product);
             const existingItem = this.cart.find(item => item.id === product.id);
 
             if (existingItem) {
-                if (existingItem.qty < product.stock_opname) {
-                    existingItem.qty++;
-                } else {
-                    alert('Stok tidak mencukupi!');
-                }
+                existingItem.qty++;
                 return;
             }
 
-            if (product.stock_opname > 0) {
-                this.cart.push({
-                    id: product.id,
-                    name: product.name,
-                    basePrice: activePrice,
-                    price: activePrice,
-                    isManualPrice: false,
-                    stock: product.stock_opname,
-                    qty: 1,
-                });
-            } else {
-                alert('Stok habis!');
-            }
+            this.cart.push({
+                id: product.id,
+                name: product.name,
+                basePrice: activePrice,
+                price: activePrice,
+                isManualPrice: false,
+                stock: product.stock_opname,
+                qty: 1,
+            });
         },
 
         parseNumberInput(rawValue) {
@@ -341,11 +437,14 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         updateQty(id, change) {
             const item = this.cart.find(cartItem => cartItem.id === id);
             if (!item) return;
+            const product = this.products.find(p => p.id === id);
+            if (!product) return;
 
+            const maxAllowed = this.getVisualStock(product) + item.qty;
             const newQty = item.qty + change;
 
-            if (newQty > item.stock) {
-                alert(`Stok tidak mencukupi! Stok tersedia: ${item.stock}`);
+            if (newQty > maxAllowed) {
+                alert(`Stok tidak mencukupi! Stok tersedia: ${maxAllowed}`);
                 return;
             }
 
@@ -359,13 +458,16 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         setQty(id, value) {
             const item = this.cart.find(cartItem => cartItem.id === id);
             if (!item) return;
+            const product = this.products.find(p => p.id === id);
+            if (!product) return;
 
+            const maxAllowed = this.getVisualStock(product) + item.qty;
             let newQty = parseInt(value, 10) || 0;
             if (newQty <= 0) newQty = 1;
 
-            if (newQty > item.stock) {
-                alert(`Stok tidak mencukupi! Max: ${item.stock}`);
-                item.qty = item.stock;
+            if (newQty > maxAllowed) {
+                alert(`Stok tidak mencukupi! Max: ${maxAllowed}`);
+                item.qty = maxAllowed;
                 return;
             }
 
@@ -475,16 +577,22 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
                     await this.decrementLocalStock(cleanCart);
 
-                    alert('OFFLINE: Transaksi tersimpan lokal.');
+                    alert('OFFLINE: Transaksi tersimpan lokal. Tab ditunda hingga sinkronisasi.');
 
                     if (typeof window.printReceipt === 'function') {
                         window.printReceipt(null, payload);
                     }
 
-                    this.cart = [];
-                    this.manualTotal = null;
-                    this.cashReceivedInput = '';
-                    this.selectedCustomer = null;
+                    if (this.activeTab) {
+                        this.activeTab.pendingSync = true;
+                        this.activeTab.offlineUuid = offlineUuid;
+                    }
+                    if (this.tabs.length < 5) {
+                        this.openNewTab();
+                    } else {
+                        const nextTab = this.tabs.find(t => t.id !== this.activeTabId && !t.pendingSync);
+                        if (nextTab) this.activeTabId = nextTab.id;
+                    }
                 } catch (e) {
                     console.error(e);
                     alert('Gagal simpan offline');
@@ -511,10 +619,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         }
 
                         alert('Transaksi Berhasil!');
-                        this.cart = [];
-                        this.manualTotal = null;
-                        this.cashReceivedInput = '';
-                        this.selectedCustomer = null;
+                        this.forceCloseTab(this.activeTabId);
                     })
                     .catch(async error => {
                         console.error('Network Error, saving offline...', error);
@@ -523,10 +628,15 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         await this.decrementLocalStock(cleanCart);
 
                         alert('Koneksi terputus. Tersimpan offline.');
-                        this.cart = [];
-                        this.manualTotal = null;
-                        this.cashReceivedInput = '';
-                        this.selectedCustomer = null;
+                        if (this.activeTab) {
+                            this.activeTab.pendingSync = true;
+                            this.activeTab.offlineUuid = offlineUuid;
+                        }
+                        if (this.tabs.length < 5) this.openNewTab();
+                        else {
+                            const nextTab = this.tabs.find(t => t.id !== this.activeTabId && !t.pendingSync);
+                            if (nextTab) this.activeTabId = nextTab.id;
+                        }
                     });
             }
         },
@@ -573,9 +683,14 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         console.log('Sinkronisasi berhasil untuk ID:', trx.id);
                         await db.offline_transactions.delete(trx.id);
 
+                        const tabToClose = this.tabs.find(t => t.offlineUuid === trx.offline_uuid);
+                        if (tabToClose) {
+                            this.forceCloseTab(tabToClose.id);
+                        }
+
                         const toast = document.createElement('div');
-                        toast.className = 'fixed bottom-4 right-4 rounded bg-green-500 px-4 py-2 text-white shadow';
-                        toast.innerText = `Data offline (ID: ${trx.id}) berhasil disimpan ke server.`;
+                        toast.className = 'fixed bottom-4 right-4 rounded bg-green-500 px-4 py-2 text-white z-[9999]';
+                        toast.innerText = `Data offline (ID: ${trx.id}) berhasil disinkronisasi.`;
                         document.body.appendChild(toast);
                         setTimeout(() => toast.remove(), 5000);
 
