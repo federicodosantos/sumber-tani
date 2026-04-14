@@ -1,4 +1,4 @@
-@props(['categories', 'products' => []])
+@props(['categories', 'products' => [], 'customers_r2' => [], 'r2_custom_prices' => []])
 
 <!DOCTYPE html>
 <html lang="id">
@@ -24,7 +24,7 @@
 </head>
 
 <body class="antialiased font-mont">
-    <div class="flex h-screen flex-col overflow-hidden bg-gray-50" x-data="cashierHandler({{ Js::from($products) }}, {{ Js::from($categories) }})">
+    <div class="flex h-screen flex-col overflow-hidden bg-gray-50" x-data="cashierHandler({{ Js::from($products) }}, {{ Js::from($categories) }}, {{ Js::from($customers_r2) }}, {{ Js::from($r2_custom_prices) }})">
         <!-- WARNING BANNER OFFLINE -->
         <div x-data="{
                 count: 0,
@@ -170,7 +170,7 @@
                             </button>
                         </div>
                     </template>
-                    <button x-show="tabs.filter(t => !t.pendingSync).length < 5" @click="openNewTab()" 
+                    <button @click="openNewTab()" 
                         class="shrink-0 flex items-center justify-center w-[100px] h-10 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-button-main hover:text-button-main transition-colors bg-gray-50 cursor-pointer">
                         <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                         <span class="text-xs font-bold uppercase">Baru</span>

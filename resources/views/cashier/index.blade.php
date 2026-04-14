@@ -1,4 +1,4 @@
-<x-cashier-layout :categories="$categories" :products="$products">
+<x-cashier-layout :categories="$categories" :products="$products" :customers_r2="$customers_r2" :r2_custom_prices="$r2_custom_prices">
 
     <div class="flex items-center justify-end gap-4 px-8 py-4">
 

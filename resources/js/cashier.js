@@ -1,6 +1,6 @@
 import { db } from './db';
 
-export default function cashierHandler(initialProducts = [], initialCategories = []) {
+export default function cashierHandler(initialProducts = [], initialCategories = [], initialCustomers = [], initialCustomPrices = []) {
     return {
         products: [],
         categories: [],
@@ -72,10 +72,6 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             };
         },
         openNewTab() {
-            if (this.tabs.length >= 5) {
-                alert('Maksimal 5 tab!');
-                return;
-            }
             const newTab = this.createNewTab();
             this.tabs.push(newTab);
             this.activeTabId = newTab.id;
@@ -86,10 +82,6 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         closeTab(id) {
             const tab = this.tabs.find(t => t.id === id);
             if (!tab) return;
-            if (tab.pendingSync) {
-                alert('Tab ini sedang menunggu sinkronisasi online dan tidak dapat ditutup. Tunggu hingga online.');
-                return;
-            }
             if (tab.cart.length > 0) {
                 if (!confirm('Batalkan transaksi ini? Keranjang akan dikosongkan.')) return;
             }
@@ -163,6 +155,12 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
                     await db.categories.clear();
                     await db.categories.bulkPut(initialCategories);
+
+                    await db.customers_r2.clear();
+                    await db.customers_r2.bulkPut(initialCustomers);
+
+                    await db.r2_custom_prices.clear();
+                    await db.r2_custom_prices.bulkPut(initialCustomPrices);
                 } else {
                     console.log('⚠️ Ada Transaksi Offline. Menggunakan Data Lokal (Agar stok tidak reset).');
                 }
@@ -198,16 +196,45 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         async fetchR2Customers() {
             this.isSearchingR2 = true;
             try {
-                const params = new URLSearchParams();
-                if (this.r2SearchQuery) params.set('q', this.r2SearchQuery);
-                const res = await fetch(`/api/customer-r2/search?${params.toString()}`, {
-                    headers: { 'Accept': 'application/json' },
-                });
-                if (res.ok) {
-                    this.r2SearchResults = await res.json();
+                if (this.isOffline) {
+                    let results = await db.customers_r2.toArray();
+                    if (this.r2SearchQuery) {
+                        const q = this.r2SearchQuery.toLowerCase();
+                        results = results.filter(c => 
+                            c.name.toLowerCase().includes(q) ||
+                            (c.phone_number && c.phone_number.includes(q)) ||
+                            (c.address && c.address.toLowerCase().includes(q))
+                        );
+                    }
+                    results.sort((a, b) => a.name.localeCompare(b.name));
+                    this.r2SearchResults = results.slice(0, 20);
+                } else {
+                    const params = new URLSearchParams();
+                    if (this.r2SearchQuery) params.set('q', this.r2SearchQuery);
+                    const res = await fetch(`/api/customer-r2/search?${params.toString()}`, {
+                        headers: { 'Accept': 'application/json' },
+                    });
+                    if (res.ok) {
+                        this.r2SearchResults = await res.json();
+                    }
                 }
             } catch (e) {
                 console.error('Gagal mencari pelanggan R2:', e);
+                try {
+                    let results = await db.customers_r2.toArray();
+                    if (this.r2SearchQuery) {
+                        const q = this.r2SearchQuery.toLowerCase();
+                        results = results.filter(c => 
+                            c.name.toLowerCase().includes(q) ||
+                            (c.phone_number && c.phone_number.includes(q)) ||
+                            (c.address && c.address.toLowerCase().includes(q))
+                        );
+                    }
+                    results.sort((a, b) => a.name.localeCompare(b.name));
+                    this.r2SearchResults = results.slice(0, 20);
+                } catch (err) {
+                    console.error('Fallback lokal gagal:', err);
+                }
             } finally {
                 this.isSearchingR2 = false;
             }
@@ -230,17 +257,38 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
         async fetchCustomPricesForCustomer(customerId) {
             try {
-                const res = await fetch(`/api/customer-r2/${customerId}/custom-prices`, {
-                    headers: { 'Accept': 'application/json' },
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    this.customerCustomPrices = data; // { product_id: custom_price, ... }
-                    // Re-apply prices to cart items that may already be in the cart
+                if (this.isOffline) {
+                    const prices = await db.r2_custom_prices.where('customer_id').equals(customerId).toArray();
+                    const priceMap = {};
+                    prices.forEach(p => {
+                        priceMap[p.product_id] = p.custom_price;
+                    });
+                    this.customerCustomPrices = priceMap;
                     this.syncCartPricesToMode();
+                } else {
+                    const res = await fetch(`/api/customer-r2/${customerId}/custom-prices`, {
+                        headers: { 'Accept': 'application/json' },
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.customerCustomPrices = data; // { product_id: custom_price, ... }
+                        // Re-apply prices to cart items that may already be in the cart
+                        this.syncCartPricesToMode();
+                    }
                 }
             } catch (e) {
                 console.error('Gagal memuat harga khusus pelanggan:', e);
+                try {
+                    const prices = await db.r2_custom_prices.where('customer_id').equals(customerId).toArray();
+                    const priceMap = {};
+                    prices.forEach(p => {
+                        priceMap[p.product_id] = p.custom_price;
+                    });
+                    this.customerCustomPrices = priceMap;
+                    this.syncCartPricesToMode();
+                } catch (err) {
+                    console.error('Fallback lokal gagal:', err);
+                }
             }
         },
 
@@ -571,28 +619,56 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                 customer_id: this.selectedCustomer ? this.selectedCustomer.id : null,
             };
 
+            // Simpan perubahan harga ke local cache (IndexedDB) jika pelanggan R2 dipilih
+            if (this.selectedCustomer) {
+                try {
+                    for (const item of cleanCart) {
+                        const basePrice = item.basePrice ?? null;
+                        const manualPrice = item.price ?? null;
+                        
+                        if (basePrice !== null && manualPrice !== null && Number(manualPrice) !== Number(basePrice)) {
+                            // 1. Update memory cache langsung
+                            this.customerCustomPrices[item.id] = Number(manualPrice);
+                            
+                            // 2. Update Dexie local storage
+                            if (window.db) {
+                                const exist = await db.r2_custom_prices.where({
+                                    customer_id: this.selectedCustomer.id,
+                                    product_id: item.id
+                                }).first();
+
+                                if (exist) {
+                                    await db.r2_custom_prices.update(exist.id, { custom_price: Number(manualPrice) });
+                                } else {
+                                    const tempId = Math.floor(Math.random() * 1000000); // Temporary ID for local reference
+                                    await db.r2_custom_prices.put({
+                                        id: tempId,
+                                        customer_id: this.selectedCustomer.id,
+                                        product_id: item.id,
+                                        custom_price: Number(manualPrice)
+                                    });
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Gagal update cache harga lokal:', e);
+                }
+            }
+
             if (this.isOffline) {
                 try {
                     await db.offline_transactions.add({ ...payload, is_synced: 0 });
 
                     await this.decrementLocalStock(cleanCart);
 
-                    alert('OFFLINE: Transaksi tersimpan lokal. Tab ditunda hingga sinkronisasi.');
+                    alert('OFFLINE: Transaksi berhasil tersimpan lokal ke dalam antrean sinkronisasi.');
 
                     if (typeof window.printReceipt === 'function') {
                         window.printReceipt(null, payload);
                     }
 
-                    if (this.activeTab) {
-                        this.activeTab.pendingSync = true;
-                        this.activeTab.offlineUuid = offlineUuid;
-                    }
-                    if (this.tabs.length < 5) {
-                        this.openNewTab();
-                    } else {
-                        const nextTab = this.tabs.find(t => t.id !== this.activeTabId && !t.pendingSync);
-                        if (nextTab) this.activeTabId = nextTab.id;
-                    }
+                    this.forceCloseTab(this.activeTabId);
                 } catch (e) {
                     console.error(e);
                     alert('Gagal simpan offline');
@@ -679,14 +755,9 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         body: JSON.stringify(payloadToSend),
                     });
 
-                    if (response.ok) {
-                        console.log('Sinkronisasi berhasil untuk ID:', trx.id);
-                        await db.offline_transactions.delete(trx.id);
-
-                        const tabToClose = this.tabs.find(t => t.offlineUuid === trx.offline_uuid);
-                        if (tabToClose) {
-                            this.forceCloseTab(tabToClose.id);
-                        }
+                        if (response.ok) {
+                            console.log('Sinkronisasi berhasil untuk ID:', trx.id);
+                            await db.offline_transactions.delete(trx.id);
 
                         const toast = document.createElement('div');
                         toast.className = 'fixed bottom-4 right-4 rounded bg-green-500 px-4 py-2 text-white z-[9999]';

@@ -94,6 +94,14 @@ class CashierController extends Controller
             // )
             ->get();
 
-        return view('cashier.index', ['categories'=> $categories, 'products' => $products]);
+        $customers_r2 = \App\Models\Customer::all();
+        $r2_custom_prices = \App\Models\CustomerProductPrice::all();
+
+        return view('cashier.index', [
+            'categories' => $categories, 
+            'products' => $products,
+            'customers_r2' => $customers_r2,
+            'r2_custom_prices' => $r2_custom_prices
+        ]);
     }
 }
