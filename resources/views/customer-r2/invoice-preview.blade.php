@@ -362,111 +362,12 @@
 
     {{-- Invoice Card --}}
     <div class="invoice-card">
-
-        {{-- Header --}}
-        <div class="invoice-header">
-            <h1>Toko Sumbertani</h1>
-            <p>Jl. Trans Sulawesi, Motolohu, Kec. Randangan, Kab. Pohuwato, Gorontalo 96469</p>
-            <p>Telp: <strong>+62 813-5674-5129</strong> | Email: sumbertani0209@gmail.com</p>
-        </div>
-
-        {{-- Customer & Date Info --}}
-        <div class="invoice-info">
-            <div class="info-block">
-                <h3>Pelanggan</h3>
-                <p class="name">{{ $customer->name }}</p>
-                <p>{{ $customer->address }}</p>
-                <p>{{ $customer->phone_number }}</p>
-            </div>
-            <div class="info-block" style="text-align: right;">
-                <h3>Detail Invoice</h3>
-                <p>Tanggal: {{ $invoice->created_at->translatedFormat('d F Y') }}</p>
-                <p>Waktu: {{ $invoice->created_at->translatedFormat('H:i') }}</p>
-                @if ($transaction)
-                    <p>Metode Pembayaran: <strong>{{ $transaction->payment_method }}</strong></p>
-                @endif
-            </div>
-        </div>
-
-        {{-- Nota Number --}}
-        <div class="nota-box">
-            <span class="nota-title">NOTA PENJUALAN</span>
-            @if ($transaction)
-                <span class="nota-meta">ID Transaksi: {{ $transaction->id }}</span>
-            @endif
-        </div>
-
-        {{-- Items Table --}}
-        <div class="invoice-body">
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th style="width: 45%;">Nama</th>
-                        <th style="width: 25%; text-align: left;">Harga</th>
-                        <th class="text-center" style="width: 5%;">Jumlah</th>
-                        <th style="width: 25%; text-align: right;">Sub Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($details as $detail)
-                        <tr>
-                            <td>{{ $detail->product->name ?? 'Produk tidak diketahui' }}</td>
-                            <td class="text-left">Rp {{ number_format($detail->product_price, 0, ',', '.') }}</td>
-                            <td class="text-center">{{ $detail->quantity }}</td>
-                            <td class="text-right">Rp {{ number_format($detail->total_price, 0, ',', '.') }}</td>
-                        </tr>
-                    @empty
-                        <tr class="empty-row">
-                            <td colspan="4">Tidak ada data transaksi.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        {{-- Summary --}}
-        <div class="invoice-summary">
-            <table class="summary-table">
-                @if ($transaction && $transaction->discount > 0)
-                    <tr>
-                        <td class="label-col">Subtotal</td>
-                        <td class="value-col">Rp
-                            {{ number_format($transaction->total_price + $transaction->discount, 0, ',', '.') }}</td>
-                    </tr>
-                    <tr>
-                        <td class="label-col">Diskon</td>
-                        <td class="value-col">-Rp {{ number_format($transaction->discount, 0, ',', '.') }}</td>
-                    </tr>
-                @endif
-                <tr class="total-row">
-                    <td class="label-col">TOTAL</td>
-                    <td class="value-col">Rp
-                        {{ number_format($transaction ? $transaction->total_price : 0, 0, ',', '.') }}</td>
-                </tr>
-            </table>
-        </div>
-
-        {{-- Signatures --}}
-        <div class="signatures-section">
-            <div class="sign-block">
-                <p class="sign-label">Tanda Terima,</p>
-                <div class="sign-space"></div>
-                <div class="sign-line"></div>
-                <p class="sign-name">( {{ $customer->name }} )</p>
-            </div>
-            <div class="sign-block">
-                <p class="sign-label">Hormat Kami,</p>
-                <div class="sign-space"></div>
-                <div class="sign-line"></div>
-                <p class="sign-name">( Admin Sumbertani )</p>
-            </div>
-        </div>
-
-        {{-- Footer --}}
-        <div class="invoice-footer">
-            Terima kasih atas kepercayaan Anda berbelanja di Toko Sumbertani.<br>
-            <em>Nota ini sah sebagai bukti transaksi yang valid.</em>
-        </div>
+        @include('customer-r2.partials._invoice-content', [
+            'invoice' => $invoice, 
+            'customer' => $customer, 
+            'transaction' => $transaction, 
+            'details' => $details
+        ])
     </div>
 </body>
 

@@ -28,7 +28,7 @@ class ProductController extends Controller
             });
         }
 
-        switch ($request->get('sort')) {
+        switch ($request->input('sort')) {
             case 'product_code_asc':
                 $query->orderBy('code_id', 'asc');
                 break;
@@ -59,8 +59,9 @@ class ProductController extends Controller
 
 
         $products = $query->paginate(10)->withQueryString();
+        $categories = ItemCategory::orderBy('name', 'asc')->get();
 
-        return view('product.index', compact('products'));
+        return view('product.index', compact('products', 'categories'));
     }
 
     /**

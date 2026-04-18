@@ -29,7 +29,7 @@ class CustomerR2Controller extends Controller
             });
         }
 
-        switch ($request->get('sort')) {
+        switch ($request->input('sort')) {
             case 'name_asc':
                 $query->orderBy('name', 'asc');
                 break;

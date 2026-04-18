@@ -2,13 +2,20 @@
   <div class="py-6 flex justify-center items-start min-h-screen font-mont">
     <div class="mx-auto w-full sm:px-6 lg:px-8">
       <div class="mb-4 flex justify-start">
-        <x-button.add-button href="item-category/create">
+        <x-button.add-button @click="$dispatch('open-modal', 'create-item-category')" class="cursor-pointer">
           <x-slot name="icon">
             <img src="{{ asset('icon/add-icon.svg') }}" alt="Add Icon" class="h-5 w-5">
           </x-slot>
           <span class="font-bold">TAMBAH KATEGORI<span>
         </x-button.add-button>
       </div>
+
+      <x-modal name="create-item-category" title="TAMBAH KATEGORI BARU" maxWidth="2xl" 
+        x-init="if ($errors->any()) $dispatch('open-modal', 'create-item-category')">
+        <div class="p-1">
+          @include('item-category._form', ['action' => route('item-category.store'), 'method' => 'POST'])
+        </div>
+      </x-modal>
 
       <x-content.data-table>
         <x-slot name="sortOptions">

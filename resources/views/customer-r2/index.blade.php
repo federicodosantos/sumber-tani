@@ -3,13 +3,20 @@
         <div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
             <!-- Header dengan button -->
             <div class="mb-4 flex justify-start">
-                <x-button.add-button href="customer-r2/create" class="w-full sm:w-auto">
+                <x-button.add-button @click="$dispatch('open-modal', 'create-customer')" class="w-full sm:w-auto cursor-pointer">
                     <x-slot name="icon">
                         <img src="{{ asset('icon/add-icon.svg') }}" alt="Add Icon" class="h-5 w-5">
                     </x-slot>
                     <span class="font-bold">TAMBAH PELANGGAN</span>
                 </x-button.add-button>
             </div>
+
+            <x-modal name="create-customer" title="TAMBAH PELANGGAN BARU" maxWidth="4xl" 
+                x-init="if ($errors->any()) $dispatch('open-modal', 'create-customer')">
+                <div class="p-1">
+                    @include('customer-r2._form', ['action' => route('customer-r2.store'), 'method' => 'POST'])
+                </div>
+            </x-modal>
 
             <x-content.data-table>
                 <x-slot name="sortOptions">

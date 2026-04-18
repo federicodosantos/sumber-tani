@@ -72,8 +72,9 @@ class ProductPurchaseController extends Controller
         }
 
         $purchases = $query->paginate(10)->withQueryString();
+        $products = Product::select('id', 'code_id', 'name')->orderBy('code_id')->get();
 
-        return view('product-purchase.index', compact('purchases'));
+        return view('product-purchase.index', compact('purchases', 'products'));
     }
 
     /**

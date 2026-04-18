@@ -2,41 +2,13 @@
   <div class="py-12 font-mont">
     <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
 
-      <x-content.form-card action="{{ route('product.update', $product->id) }}" method="PUT">
-        @csrf
-        @method('PUT')
-
-        <x-slot:leftCol>
-          <x-content.form-input label="Kode Produk" name="code_id" value="{{ old('id', $product->code_id) }}" required />
-
-          <x-content.form-input label="Nama Produk" name="name" value="{{ old('name', $product->name) }}" required />
-          <x-content.form-select label="Nama Kategori" name="item_category_id" required>
-            <option value="">Pilih Kategori Produk</option>
-            @foreach ($categories as $category)
-              <option value="{{ $category->id }}"
-                {{ old('item_category_id', $product->item_category_id) == $category->id ? 'selected' : '' }}>
-                {{ $category->name }}
-              </option>
-            @endforeach
-          </x-content.form-select>
-        </x-slot:leftCol>
-
-        <x-slot:rightCol>
-          <x-content.form-textarea label="Deskripsi Produk" name="description" placeholder="Udin sedunia..."
-            rows="6">{{ old('description', $product->description) }}</x-content.form-textarea>
-        </x-slot:rightCol>
-
-        <x-slot:actions>
-          <x-button.remove-button href="{{ route('product') }}">
-            <span class="font-bold">BATAL</span>
-          </x-button.remove-button>
-
-          <x-button.add-button type="submit">
-            <span class="font-bold">SIMPAN PERUBAHAN</span>
-          </x-button.add-button>
-        </x-slot:actions>
-
-      </x-content.form-card>
+      @include('product._form', [
+          'action' => route('product.update', $product->id), 
+          'method' => 'POST', 
+          'product' => $product, 
+          'categories' => $categories, 
+          'isEdit' => true
+      ])
     </div>
   </div>
 </x-app-layout>

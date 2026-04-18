@@ -22,7 +22,7 @@ class ItemCategoryController extends Controller
             });
         }
 
-        switch ($req->get('sort')) {
+        switch ($req->input('sort')) {
             case 'name_asc':
                 $query->orderBy('name', 'asc');
                 break;

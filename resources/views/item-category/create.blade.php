@@ -2,28 +2,7 @@
   <div class="py-12 font-mont">
     <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
 
-      <x-content.form-card action="{{ route('item-category.store') }}" method="POST">
-        @csrf
-        <x-slot:leftCol>
-          <x-content.form-input label="Nama Kategori" name="name" placeholder="Pupuk" required />
-        </x-slot:leftCol>
-
-        <x-slot:rightCol>
-          <x-content.form-textarea label="Deskripsi Kategori" name="description" placeholder="Isi kategori deskripsi"
-            rows="6" />
-        </x-slot:rightCol>
-
-        <x-slot:actions>
-          <x-button.remove-button href="/item-category">
-            <span class="font-bold">BATAL</span>
-          </x-button.remove-button>
-
-          <x-button.add-button type="submit">
-            <span class="font-bold">TAMBAH KATEGORI</span>
-          </x-button.add-button>
-        </x-slot:actions>
-
-      </x-content.form-card>
+      @include('item-category._form', ['action' => route('item-category.store'), 'method' => 'POST'])
     </div>
   </div>
 </x-app-layout>

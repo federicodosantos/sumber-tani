@@ -77,7 +77,7 @@
                     'bg-button-main text-white shadow-md' :
                     'bg-white hover:bg-gray-100'
                 ]"
-                class="mode-btn border-button-hover rounded-lg border-2 px-3 py-1 text-sm font-medium transition-all duration-200">
+                class="mode-btn border-button-hover rounded-lg border-2 px-3 py-1 text-sm font-medium transition-all duration-200 cursor-pointer">
                 Konsumen
             </button>
 
@@ -87,17 +87,17 @@
                     'bg-button-main text-white shadow-md' :
                     'bg-white hover:bg-gray-100'
                 ]"
-                class="mode-btn border-button-hover rounded-lg border-2 px-3 py-1 text-sm font-medium transition-all duration-200">
+                class="mode-btn border-button-hover rounded-lg border-2 px-3 py-1 text-sm font-medium transition-all duration-200 cursor-pointer">
                 R1
             </button>
 
-            <button @click="openR2Modal()"
+            <button @click="openR2Modal(); $dispatch('open-modal', 'r2-customer')"
                 :class="[
                     priceMode === 'r2' ?
                     'bg-button-main text-white shadow-md' :
                     'bg-white hover:bg-gray-100'
                 ]"
-                class="mode-btn border-button-hover rounded-lg border-2 px-3 py-1 text-sm font-medium transition-all duration-200">
+                class="mode-btn border-button-hover rounded-lg border-2 px-3 py-1 text-sm font-medium transition-all duration-200 cursor-pointer">
                 R2
             </button>
 
@@ -109,7 +109,7 @@
                             d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                     <span class="text-sm font-semibold text-gray-800" x-text="'R2 — ' + selectedCustomer.name"></span>
-                    <button @click="removeR2Customer()" type="button"
+                    <button @click="removeR2Customer(); $dispatch('open-modal', 'r2-customer')" type="button"
                         class="text-gray-400 hover:text-red-500 transition-colors" title="Hapus Pelanggan R2">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -173,7 +173,16 @@
 
     <style>
         .sort-btn {
-            @apply w-full rounded px-2 py-2 text-sm hover:bg-button-main hover:text-white text-left;
+            width: 100%;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+            text-align: left;
+            transition: all 0.2s;
+        }
+        .sort-btn:hover {
+            background-color: var(--color-button-main);
+            color: white;
         }
     </style>
 
