@@ -22,8 +22,7 @@ class Customer extends Model
 
     public function debtPayments()
     {
-        return $this->hasManyThrough(DebtPayment::class, Invoice::class, 'customer_id', 'invoice_id', 'id', 'id');
-    
+        return $this->hasMany(DebtPayment::class, 'customer_id', 'id');
     }
     public function customProductPrices()
     {

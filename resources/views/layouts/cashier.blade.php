@@ -271,11 +271,17 @@
                                 <label class="block text-[11px] font-semibold text-gray-600">Adjustment Harga
                                     Satuan</label>
                                 <div class="flex items-center gap-2">
-                                    <input type="number" min="0" step="1" :value="item.price"
-                                        @input="setItemManualPrice(item.id, $event.target.value)"
-                                        class="focus:border-button-main focus:ring-button-main h-8 w-full rounded-lg border border-gray-300 px-2 text-right text-sm focus:outline-none focus:ring-2">
+                                    <div class="flex-1">
+                                        <x-input-rupiah 
+                                            value="0"
+                                            placeholder="0"
+                                            containerClass="w-full mb-0"
+                                            @rupiah-change="setItemManualPrice(item.id, $event.detail.value)"
+                                            x-init="$watch('isEditingPrice', v => v && $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: item.price } })))"
+                                        />
+                                    </div>
                                     <button type="button" @click="resetItemPrice(item.id); isEditingPrice = false"
-                                        class="rounded-md border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-100 cursor-pointer">
+                                        class="rounded-md border border-gray-200 px-3 h-[38px] text-xs font-semibold text-gray-600 hover:bg-gray-100 cursor-pointer transition-colors shrink-0">
                                         Reset
                                     </button>
                                 </div>
@@ -298,188 +304,229 @@
                 </template>
             </div>
 
-            <div class="w-full border-t border-gray-200 flex justify-between items-center pt-4 px-6 mb-2">
-                <div>
-                    <h3 class="font-bold text-gray-700">Metode Pembayaran</h3>
-                </div>
-
-                <div x-data="{ open: false }" class="relative">
-
-                    <button @click="open = !open"
-                        class="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-bold text-gray-700 bg-white hover:border-button-main hover:text-button-main transition-all shadow-sm active:scale-95">
-
-                        <template x-if="paymentMethod === 'Cash'">
-                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z">
-                                </path>
+            <!-- Checkout Section Toggle -->
+            <div class="border-t border-gray-200 bg-white">
+                <button @click="toggleCheckoutExpansion()" 
+                    class="group flex w-full items-center justify-between px-6 py-3 transition-colors hover:bg-gray-50">
+                    <div class="flex items-center gap-2">
+                        <div class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 transition-transform duration-300 group-hover:bg-button-main/20"
+                            :class="isCheckoutExpanded ? 'rotate-180' : ''">
+                            <svg class="h-4 w-4 text-gray-600 transition-colors group-hover:text-button-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                             </svg>
-                        </template>
-                        <template x-if="paymentMethod === 'QRIS'">
-                            <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
-                                </path>
-                            </svg>
-                        </template>
-                        <template x-if="paymentMethod === 'Transfer'">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z">
-                                </path>
-                            </svg>
-                        </template>
-                        <template x-if="paymentMethod === 'Kredit'">
-                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
-                                </path>
-                            </svg>
-                        </template>
-
-                        <span x-text="paymentMethod" class="uppercase tracking-wide"></span>
-
-                        <svg class="w-4 h-4 ml-1 text-gray-400 transition-transform duration-200"
-                            :class="{ 'rotate-180': open }" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
-                            </path>
-                        </svg>
-                    </button>
-
-                    <div x-show="open" @click.outside="open = false"
-                        x-transition:enter="transition ease-out duration-100"
-                        x-transition:enter-start="transform opacity-0 scale-95 translate-y-2"
-                        x-transition:enter-end="transform opacity-100 scale-100 translate-y-0"
-                        x-transition:leave="transition ease-in duration-75"
-                        x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
-                        x-transition:leave-end="transform opacity-0 scale-95 translate-y-2"
-                        class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-gray-300 py-1 z-20 overflow-hidden">
-
-                        <p class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Pilih Metode
-                        </p>
-
-                        <button @click="setPaymentMethod('Cash'); open = false"
-                            class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 flex items-center gap-3"
-                            :class="paymentMethod === 'Cash' ? 'text-green-600 bg-green-50' : 'text-gray-700'">
-                            <span>💵</span> CASH
-                        </button>
-
-                        <button @click="setPaymentMethod('QRIS'); open = false"
-                            class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 flex items-center gap-3"
-                            :class="paymentMethod === 'QRIS' ? 'text-gray-900 bg-gray-100' : 'text-gray-700'">
-                            <span>📱</span> QRIS
-                        </button>
-
-                        <button @click="setPaymentMethod('Transfer'); open = false"
-                            class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 flex items-center gap-3"
-                            :class="paymentMethod === 'Transfer' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'">
-                            <span>💳</span> TRANSFER
-                        </button>
-
-                        <div class="border-t border-gray-100 my-1"></div>
-
-                        <button @click="setPaymentMethod('Kredit'); open = false"
-                            class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-red-50 flex items-center gap-3"
-                            :class="paymentMethod === 'Kredit' ? 'text-red-600 bg-red-50' : 'text-gray-700'">
-                            <span>📝</span> KREDIT / BON
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div x-show="paymentMethod === 'Cash'" class="px-6 pb-4" style="display: none;">
-                <div class="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                    <div class="mb-2">
-                        <label class="mb-1 block text-xs font-semibold text-gray-600">Uang Consumer</label>
-                        <input type="text" inputmode="numeric" x-model="cashReceivedInput"
-                            @input="cashReceivedInput = formatNumberInput(cashReceivedInput)"
-                            class="focus:border-button-main focus:ring-button-main h-9 w-full rounded-lg border border-gray-300 px-3 text-right text-sm font-semibold focus:outline-none focus:ring-2"
-                            placeholder="0">
-                    </div>
-                    <div class="flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm">
-                        <span class="font-semibold text-gray-600">Kembalian</span>
-                        <span class="font-bold text-gray-900" x-text="formatRupiah(changeAmount)"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-6">
-                <div class="bg-button-main rounded-3xl p-5 shadow-xl">
-                    <div class="mb-4 flex items-center justify-between px-1">
-                        <div class="flex flex-col">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-gray-700 opacity-70">Total
-                                Item</p>
-                            <p class="font-bold text-gray-900"><span x-text="totalQty"></span> Pcs</p>
                         </div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Informasi Pembayaran</span>
+                    </div>
+
+                    <!-- Summary when collapsed -->
+                    <div x-show="!isCheckoutExpanded" x-transition:enter="transition ease-out duration-300 delay-100"
+                        x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0"
+                        class="flex items-center gap-4">
                         <div class="text-right">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-gray-700 opacity-70">
-                                Total Bayar
-                                <span x-show="manualTotal !== null"
-                                    class="ml-1 font-bold text-red-500">(Manual)</span>
-                            </p>
+                            <p class="text-[10px] font-bold uppercase tracking-tighter text-gray-400">Total Harga</p>
+                            <p class="text-sm font-black text-gray-900" x-text="formatRupiah(totalPrice)"></p>
+                        </div>
+                    </div>
+                </button>
+            </div>
 
-                            <div x-data="{ isEditing: false }" class="relative">
-                                <div x-show="!isEditing" class="group flex items-center justify-end gap-2">
-                                    <p class="text-xl font-black text-gray-900" x-text="formatRupiah(totalPrice)"></p>
+            <!-- Collapsible Section with Smooth Grid Transition -->
+            <div class="grid transition-all duration-500 ease-in-out" 
+                style="display: grid;"
+                :style="isCheckoutExpanded ? 'grid-template-rows: 1fr; border-top-width: 1px;' : 'grid-template-rows: 0fr; border-top-width: 0px;'"
+                class="border-gray-100 bg-white">
+                <div class="overflow-hidden">
+                    <div class="w-full flex justify-between items-center pt-4 px-6 mb-2">
+                        <div>
+                            <h3 class="font-bold text-gray-700">Metode Pembayaran</h3>
+                        </div>
 
-                                    <button x-show="cart.length > 0"
-                                        @click="isEditing = true; 
-                                        manualTotal = manualTotal || totalPrice; 
-                                        $nextTick(() => $refs.totalInput.focus());"
-                                        class="transition-opacity hover:text-blue-500"
-                                        title="Edit Harga Total Manual">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                        </svg>
-                                    </button>
+                        <div x-data="{ open: false }" class="relative">
+
+                            <button @click="open = !open"
+                                class="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-bold text-gray-700 bg-white hover:border-button-main hover:text-button-main transition-all shadow-sm active:scale-95">
+
+                                <template x-if="paymentMethod === 'Cash'">
+                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z">
+                                        </path>
+                                    </svg>
+                                </template>
+                                <template x-if="paymentMethod === 'QRIS'">
+                                    <svg class="w-5 h-5 text-gray-800" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
+                                        </path>
+                                    </svg>
+                                </template>
+                                <template x-if="paymentMethod === 'Transfer'">
+                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z">
+                                        </path>
+                                    </svg>
+                                </template>
+                                <template x-if="paymentMethod === 'Kredit'">
+                                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                                        </path>
+                                    </svg>
+                                </template>
+
+                                <span x-text="paymentMethod" class="uppercase tracking-wide"></span>
+
+                                <svg class="w-4 h-4 ml-1 text-gray-400 transition-transform duration-200"
+                                    :class="{ 'rotate-180': open }" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                                    </path>
+                                </svg>
+                            </button>
+
+                            <div x-show="open" @click.outside="open = false"
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="transform opacity-0 scale-95 translate-y-2"
+                                x-transition:enter-end="transform opacity-100 scale-100 translate-y-0"
+                                x-transition:leave="transition ease-in duration-75"
+                                x-transition:leave-start="transform opacity-100 scale-100 translate-y-0"
+                                x-transition:leave-end="transform opacity-0 scale-95 translate-y-2"
+                                class="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-gray-300 py-1 z-20 overflow-hidden">
+
+                                <p class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Pilih Metode
+                                </p>
+
+                                <button @click="setPaymentMethod('Cash'); open = false"
+                                    class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 flex items-center gap-3"
+                                    :class="paymentMethod === 'Cash' ? 'text-green-600 bg-green-50' : 'text-gray-700'">
+                                    <span>💵</span> CASH
+                                </button>
+
+                                <button @click="setPaymentMethod('QRIS'); open = false"
+                                    class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 flex items-center gap-3"
+                                    :class="paymentMethod === 'QRIS' ? 'text-gray-900 bg-gray-100' : 'text-gray-700'">
+                                    <span>📱</span> QRIS
+                                </button>
+
+                                <button @click="setPaymentMethod('Transfer'); open = false"
+                                    class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 flex items-center gap-3"
+                                    :class="paymentMethod === 'Transfer' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'">
+                                    <span>💳</span> TRANSFER
+                                </button>
+
+                                <div class="border-t border-gray-100 my-1"></div>
+
+                                <button @click="setPaymentMethod('Kredit'); open = false"
+                                    class="w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-red-50 flex items-center gap-3"
+                                    :class="paymentMethod === 'Kredit' ? 'text-red-600 bg-red-50' : 'text-gray-700'">
+                                    <span>📝</span> KREDIT / BON
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div x-show="paymentMethod === 'Cash'" class="px-6 pb-4" style="display: none;">
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                            <div class="mb-2">
+                                <x-input-rupiah 
+                                    label="Uang Konsumer"
+                                    value=""
+                                    placeholder="0"
+                                    containerClass="mb-0"
+                                    @rupiah-change="cashReceivedInput = $event.detail.value"
+                                    x-init="$watch('cashReceivedInput', v => v === '' && $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: '' } })))"
+                                />
+                            </div>
+                            <div class="flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm">
+                                <span class="font-semibold text-gray-600">Kembalian</span>
+                                <span class="font-bold text-gray-900" x-text="formatRupiah(changeAmount)"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-6">
+                        <div class="bg-button-main rounded-3xl p-5 shadow-xl">
+                            <div class="mb-4 flex items-center justify-between px-1">
+                                <div class="flex flex-col">
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-700 opacity-70">Total
+                                        Item</p>
+                                    <p class="font-bold text-gray-900"><span x-text="totalQty"></span> Pcs</p>
                                 </div>
+                                <div class="text-right">
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-700 opacity-70">
+                                        Total Bayar
+                                        <span x-show="manualTotal !== null"
+                                            class="ml-1 font-bold text-red-500">(Manual)</span>
+                                    </p>
 
-                                <div x-show="isEditing" class="mt-1 flex items-center justify-end gap-1">
-                                    <div class="relative w-32">
-                                        <span class="absolute left-2 top-1.5 text-xs font-bold text-gray-500">Rp</span>
-                                        <input x-ref="totalInput" type="text" x-model="manualTotal"
-                                            @blur="
-                                                let autoTotal = cart.reduce((t, i) => t + (i.price * i.qty), 0);
-                                                if(Number(manualTotal) === autoTotal) { manualTotal = null; }
-                                                isEditing = false;
-                                            "
-                                            @keydown.enter.prevent="$el.blur();"
-                                            class="focus:ring-button-hover w-full rounded border py-1 pl-6 pr-2 text-right text-sm font-bold outline-none focus:bg-white focus:ring-2">
+                                    <div x-data="{ isEditing: false }" class="relative">
+                                        <div x-show="!isEditing" class="group flex items-center justify-end gap-2">
+                                            <p class="text-xl font-black text-gray-900" x-text="formatRupiah(totalPrice)"></p>
+
+                                            <button x-show="cart.length > 0"
+                                                @click="isEditing = true; 
+                                                manualTotal = manualTotal || totalPrice; 
+                                                $nextTick(() => $refs.totalInput.focus());"
+                                                class="transition-opacity hover:text-blue-500"
+                                                title="Edit Harga Total Manual">
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        <div x-show="isEditing" class="mt-1 flex items-center justify-end gap-2">
+                                            <x-input-rupiah 
+                                                value="0"
+                                                placeholder="0"
+                                                containerClass="w-36"
+                                                @rupiah-change="manualTotal = $event.detail.value"
+                                                x-init="$watch('isEditing', v => v && $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: manualTotal || totalPrice } })))"
+                                                @keydown.enter.prevent="isEditing = false"
+                                            />
+                                            <div class="flex flex-col gap-1 mb-6">
+                                                <button @click="isEditing = false"
+                                                    class="rounded bg-gray-100 p-1.5 text-gray-600 hover:bg-gray-200"
+                                                    title="Simpan">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                </button>
+                                                <button @click="manualTotal = null; isEditing = false;"
+                                                    class="rounded bg-red-50 p-1.5 text-red-500 hover:bg-red-100"
+                                                    title="Reset ke Harga Otomatis">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <button @click="manualTotal = null; isEditing = false;"
-                                        class="rounded p-1 text-red-500 hover:bg-red-50"
-                                        title="Reset ke Harga Otomatis">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
+
+                                    <template x-if="manualTotal !== null && cart.length > 0">
+                                        <p class="text-xs text-gray-900 mt-0.5 " title="Harga Asli Sebelum Edit">Harga Sistem:
+                                            <span x-text="formatRupiah(systemCartTotal)" class="font-bold"></span>
+                                        </p>
+                                    </template>
+
                                 </div>
                             </div>
-
-                            <template x-if="manualTotal !== null && cart.length > 0">
-                                <p class="text-xs text-gray-900 mt-0.5 " title="Harga Asli Sebelum Edit">Harga Sistem:
-                                    <span x-text="formatRupiah(systemCartTotal)" class="font-bold"></span>
-                                </p>
-                            </template>
-
+                            <button @click="processCheckout()"
+                                :disabled="cart.length === 0 || (paymentMethod === 'Cash' && cashReceived < totalPrice)"
+                                :class="(cart.length === 0 || (paymentMethod === 'Cash' && cashReceived < totalPrice)) ?
+                                'opacity-50 cursor-not-allowed' : ''"
+                                class="text-button-main flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-3.5 font-bold shadow-sm transition-all hover:bg-gray-50 hover:shadow-md active:scale-95">
+                                <span>BAYAR</span>
+                            </button>
                         </div>
                     </div>
-                    <button @click="processCheckout()"
-                        :disabled="cart.length === 0 || (paymentMethod === 'Cash' && cashReceived < totalPrice)"
-                        :class="(cart.length === 0 || (paymentMethod === 'Cash' && cashReceived < totalPrice)) ?
-                        'opacity-50 cursor-not-allowed' : ''"
-                        class="text-button-main flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-3.5 font-bold shadow-sm transition-all hover:bg-gray-50 hover:shadow-md active:scale-95">
-                        <span>BAYAR</span>
-                    </button>
                 </div>
             </div>
         </aside>
@@ -497,6 +544,7 @@
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                     <input type="text" x-model="r2SearchQuery" @input="searchR2Customers()"
+                        id="r2-customer-search-input"
                         placeholder="Cari nama, nomor HP, atau alamat..."
                         class="w-full rounded-lg border-2 border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-button-main focus:outline-none focus:ring-2 focus:ring-button-main/20">
                 </div>
@@ -530,8 +578,10 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <template x-for="cust in r2SearchResults" :key="cust.id">
-                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <template x-for="(cust, index) in r2SearchResults" :key="cust.id">
+                            <tr :id="'r2-row-' + index" 
+                                :class="{ 'bg-button-main/10 ring-2 ring-button-main ring-inset': r2HighlightedIndex === index }"
+                                class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                                 <td class="px-4 py-3 font-medium text-gray-900" x-text="cust.name"></td>
                                 <td class="px-4 py-3 text-gray-600" x-text="cust.phone_number"></td>
                                 <td class="px-4 py-3 text-gray-600" x-text="cust.address"></td>

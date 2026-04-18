@@ -126,6 +126,8 @@ class TransactionController extends Controller
                     'customer_id' => $request->customer_id,
                     'transaction_id' => $transaction->id,
                     'debts' => $debtAmount,
+                    'type' => Invoice::TYPE_PURCHASE,
+                    'inv_code' => Invoice::generateInvCode(Invoice::TYPE_PURCHASE),
                 ]);
 
                 // Save custom prices for each item where the price was manually changed

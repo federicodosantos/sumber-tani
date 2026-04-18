@@ -8,6 +8,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         activeTabId: Alpine.$persist(null).as('pos-active-tab'),
 
         search: '',
+        highlightedIndex: 0,
         selectedCategory: null,
         sortType: 'name_az',
         isOffline: !navigator.onLine,
@@ -20,6 +21,8 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         showR2Modal: false,
         r2SearchQuery: '',
         r2SearchResults: [],
+        r2HighlightedIndex: 0,
+        isCheckoutExpanded: true,
         isSearchingR2: false,
         r2SearchTimeout: null,
 
@@ -173,6 +176,191 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             this.syncCartPricesToMode();
             this.orderPanelWidth = Math.max(this.panelMinWidth, Math.min(420, Math.floor(window.innerWidth * 0.28)));
             this.leftSidebarCollapsed = localStorage.getItem('cashier-left-sidebar-collapsed') === '1';
+
+            // Keyboard navigation
+            window.addEventListener('keydown', (e) => this.handleGlobalKeydown(e));
+            
+            // Watchers to reset highlight
+            this.$watch('search', () => { this.highlightedIndex = 0; });
+            this.$watch('selectedCategory', () => { this.highlightedIndex = 0; });
+            this.$watch('sortType', () => { this.highlightedIndex = 0; });
+            this.$watch('r2SearchResults', () => { this.r2HighlightedIndex = 0; });
+        },
+
+        calculateColumns() {
+            if (window.innerWidth >= 1536) return 3; // 2xl
+            if (window.innerWidth >= 1024) return 2; // lg
+            return 1;
+        },
+
+        handleGlobalKeydown(e) {
+            // R2 Modal Navigation Handling
+            if (this.showR2Modal) {
+                const results = this.r2SearchResults;
+
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    document.getElementById('r2-customer-search-input')?.focus();
+                    return;
+                }
+
+                if (['ArrowUp', 'ArrowDown'].includes(e.key)) {
+                    if (results.length === 0) return;
+                    e.preventDefault();
+                    const direction = e.key === 'ArrowUp' ? -1 : 1;
+                    this.r2HighlightedIndex = Math.max(0, Math.min(results.length - 1, this.r2HighlightedIndex + direction));
+                    
+                    this.$nextTick(() => {
+                        const el = document.getElementById(`r2-row-${this.r2HighlightedIndex}`);
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    });
+                    return;
+                }
+
+                if (e.key === 'Enter') {
+                    const isInSearch = document.activeElement.id === 'r2-customer-search-input';
+                    
+                    if (results.length > 0 && this.r2HighlightedIndex >= 0 && this.r2HighlightedIndex < results.length) {
+                        e.preventDefault();
+                        this.selectR2Customer(results[this.r2HighlightedIndex]);
+                        this.$dispatch('close-modal', 'r2-customer');
+                    }
+                    return;
+                }
+
+                // Don't block character typing in search input
+                if (document.activeElement.id === 'r2-customer-search-input') return;
+
+                // Stop other shortcuts from triggering while modal is open
+                return;
+            }
+
+            // Global handling (shortcuts when modal is closed)
+
+            // Handle Ctrl shortcuts (Category & Price Mode)
+            if (e.ctrlKey) {
+                if (['ArrowUp', 'ArrowDown'].includes(e.key)) {
+                    e.preventDefault();
+                    this.cycleCategory(e.key === 'ArrowUp' ? -1 : 1);
+                    return;
+                }
+                if (['ArrowRight', 'ArrowLeft'].includes(e.key)) {
+                    e.preventDefault();
+                    this.cyclePriceMode(e.key === 'ArrowLeft' ? -1 : 1);
+                    return;
+                }
+            }
+
+            const products = this.filteredProducts;
+            if (products.length === 0) return;
+
+            const cols = this.calculateColumns();
+            const maxIndex = products.length - 1;
+
+            // Handle Enter to add highlighted item
+            if (e.key === 'Enter') {
+                // If focus is in an input other than search, let default happen
+                if (document.activeElement.tagName === 'INPUT' && document.activeElement !== document.querySelector('input[x-model="search"]')) {
+                    return;
+                }
+                
+                if (this.highlightedIndex >= 0 && this.highlightedIndex <= maxIndex) {
+                    e.preventDefault();
+                    this.addToCart(products[this.highlightedIndex]);
+                }
+                return;
+            }
+
+            // Handle Backspace to decrease/remove highlighted item
+            if (e.key === 'Backspace') {
+                // If focus is in any input, let default backspace happen (character deletion)
+                if (document.activeElement.tagName === 'INPUT') {
+                    return;
+                }
+
+                if (this.highlightedIndex >= 0 && this.highlightedIndex <= maxIndex) {
+                    const product = products[this.highlightedIndex];
+                    const existingItem = this.cart.find(item => item.id === product.id);
+                    if (existingItem) {
+                        e.preventDefault();
+                        this.updateQty(product.id, -1);
+                    }
+                }
+                return;
+            }
+
+            // Arrow navigation
+            if (['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
+                // If in search input, ArrowDown starts navigation
+                if (document.activeElement.tagName === 'INPUT' && e.key !== 'ArrowDown') {
+                     // Allow horizontal navigation in input
+                     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') return;
+                }
+
+                e.preventDefault();
+
+                switch (e.key) {
+                    case 'ArrowRight':
+                        this.highlightedIndex = Math.min(maxIndex, this.highlightedIndex + 1);
+                        break;
+                    case 'ArrowLeft':
+                        this.highlightedIndex = Math.max(0, this.highlightedIndex - 1);
+                        break;
+                    case 'ArrowDown':
+                        if (document.activeElement === document.querySelector('input[x-model="search"]')) {
+                            // Already at index 0 probably, just move focus away if desired or just update index
+                        }
+                        this.highlightedIndex = Math.min(maxIndex, this.highlightedIndex + cols);
+                        break;
+                    case 'ArrowUp':
+                        this.highlightedIndex = Math.max(0, this.highlightedIndex - cols);
+                        break;
+                }
+
+                // Scroll into view
+                this.$nextTick(() => {
+                    const el = document.getElementById(`product-card-${this.highlightedIndex}`);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                });
+            }
+
+            // Shortcut to focus search
+            if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+                e.preventDefault();
+                document.querySelector('input[x-model="search"]')?.focus();
+            }
+        },
+
+        cycleCategory(direction) {
+            // [null, ...ids]
+            const categoryIds = [null, ...this.categories.map(c => c.id)];
+            const currentIndex = categoryIds.indexOf(this.selectedCategory);
+            
+            let nextIndex = currentIndex + direction;
+            if (nextIndex < 0) nextIndex = categoryIds.length - 1;
+            if (nextIndex >= categoryIds.length) nextIndex = 0;
+
+            this.selectedCategory = categoryIds[nextIndex];
+        },
+
+        cyclePriceMode(direction) {
+            const modes = ['consument', 'r1', 'r2'];
+            const currentIndex = modes.indexOf(this.priceMode);
+
+            let nextIndex = currentIndex + direction;
+            if (nextIndex < 0) nextIndex = modes.length - 1;
+            if (nextIndex >= modes.length) nextIndex = 0;
+
+            const targetMode = modes[nextIndex];
+            this.setPriceMode(targetMode);
+
+            // If switching to r2 via shortcut and no customer selected, open modal
+            if (targetMode === 'r2' && !this.selectedCustomer) {
+                this.openR2Modal();
+                this.$dispatch('open-modal', 'r2-customer');
+            }
         },
 
         openR2Modal() {
@@ -343,6 +531,10 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             localStorage.setItem('cashier-left-sidebar-collapsed', this.leftSidebarCollapsed ? '1' : '0');
         },
 
+        toggleCheckoutExpansion() {
+            this.isCheckoutExpanded = !this.isCheckoutExpanded;
+        },
+
         get panelMaxWidth() {
             return Math.floor(window.innerWidth / 2);
         },
@@ -439,27 +631,38 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         },
 
         setItemManualPrice(id, rawValue) {
-            const item = this.cart.find(cartItem => cartItem.id === id);
-            if (!item) return;
-
+            const targetId = Number(id);
             const parsedValue = this.parseNumberInput(rawValue);
-            if (parsedValue <= 0) {
-                item.price = Number(item.basePrice) || 0;
-                item.isManualPrice = false;
-                return;
-            }
-
-            item.price = parsedValue;
-            item.isManualPrice = parsedValue !== Number(item.basePrice);
+            
+            this.cart = this.cart.map(item => {
+                if (Number(item.id) === targetId) {
+                    const newPrice = parsedValue <= 0 ? (Number(item.basePrice) || 0) : parsedValue;
+                    return {
+                        ...item,
+                        price: newPrice,
+                        isManualPrice: newPrice !== Number(item.basePrice)
+                    };
+                }
+                return item;
+            });
+            
             this.manualTotal = null;
+            this.tabs = [...this.tabs]; // Force global reactive refresh
         },
 
         resetItemPrice(id) {
-            const item = this.cart.find(cartItem => cartItem.id === id);
-            if (!item) return;
-
-            item.price = Number(item.basePrice) || 0;
-            item.isManualPrice = false;
+            const targetId = Number(id);
+            this.cart = this.cart.map(item => {
+                if (Number(item.id) === targetId) {
+                    return {
+                        ...item,
+                        price: Number(item.basePrice) || 0,
+                        isManualPrice: false
+                    };
+                }
+                return item;
+            });
+            this.tabs = [...this.tabs]; // Force global reactive refresh
         },
 
         async decrementLocalStock(soldItems) {

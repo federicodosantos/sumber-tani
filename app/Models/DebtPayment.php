@@ -8,14 +8,30 @@ class DebtPayment extends Model
 {
     protected $table = 'debt_payments';
 
-    protected $fillable = ['invoice_id', 'amount', 'payment_date'];
+    protected $fillable = ['customer_id', 'payment_invoice_id', 'amount', 'payment_method', 'payment_date'];
 
     protected $casts = [
         'payment_date' => 'datetime',
     ];
 
-    public function invoice()
+    public function customer()
     {
-        return $this->belongsTo(Invoice::class, 'invoice_id', 'id');
+        return $this->belongsTo(Customer::class, 'customer_id', 'id');
+    }
+
+    /**
+     * The receipt invoice created for this payment.
+     */
+    public function paymentInvoice()
+    {
+        return $this->belongsTo(Invoice::class, 'payment_invoice_id', 'id');
+    }
+
+    /**
+     * The detailed breakdown of which source invoices were paid.
+     */
+    public function details()
+    {
+        return $this->hasMany(DebtPaymentDetail::class, 'debt_payment_id', 'id');
     }
 }

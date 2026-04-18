@@ -132,11 +132,15 @@
         </div>
 
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-            <template x-for="product in filteredProducts" :key="product.id">
+            <template x-for="(product, index) in filteredProducts" :key="product.id">
                 <button @click="addToCart(product)" :disabled="getVisualStock(product) <= 0"
-                    :class="cart.some(item => item.id === product.id) ?
+                    :id="'product-card-' + index"
+                    :class="[
+                        cart.some(item => item.id === product.id) ?
                         'border-button-hover bg-button-main/20 scale-[1.02] shadow-md' :
-                        'border-gray-200 bg-white hover:shadow-lg hover:scale-[1.01]'"
+                        'border-gray-200 bg-white hover:shadow-lg hover:scale-[1.01]',
+                        highlightedIndex === index ? 'ring-4 ring-button-main ring-offset-2 z-10' : ''
+                    ]"
                     class="group relative w-full rounded-2xl border-2 p-4 text-left transition-all">
 
                     <div class="mb-3 flex items-start justify-between">

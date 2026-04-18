@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\DebtPayment;
+use App\Models\DebtPaymentDetail;
 use App\Models\CustomerProductPrice;
 use App\Models\Invoice;
 use Exception;
@@ -85,16 +86,22 @@ class CustomerR2Controller extends Controller
     /**
      * Display R-2 customer detail with debt info, invoices, and payment history.
      */
-    public function show(Customer $customer)
+    public function show(Request $request, Customer $customer)
     {
-        $totalDebt = $customer->invoices()->sum('debts');
+        $totalDebt = $customer->invoices()->where('type', Invoice::TYPE_PURCHASE)->sum('debts');
 
-        $invoices = $customer->invoices()
-            ->with('transaction')
-            ->orderBy('created_at', 'desc')
-            ->paginate(5, ['*'], 'invoices_page');
+        $invoicesQuery = $customer->invoices()
+            ->with(['transaction.transactionDetails.product', 'debtPayment.details.invoice'])
+            ->orderBy('created_at', 'desc');
+
+        if ($request->filled('type') && in_array($request->type, [Invoice::TYPE_PURCHASE, Invoice::TYPE_DEBT_PAYMENT])) {
+            $invoicesQuery->where('type', $request->type);
+        }
+
+        $invoices = $invoicesQuery->paginate(15, ['*'], 'invoices_page');
 
         $debtPayments = $customer->debtPayments()
+            ->with(['details.invoice', 'paymentInvoice'])
             ->orderBy('payment_date', 'desc')
             ->paginate(5, ['*'], 'payments_page');
 
@@ -118,12 +125,17 @@ class CustomerR2Controller extends Controller
     {
         $validated = $request->validate([
             'amount' => 'required|numeric|min:1',
+            'payment_method' => 'required|string|in:Cash,Transfer,QRIS',
         ]);
 
         $amount = (float) $validated['amount'];
+        $paymentMethod = $validated['payment_method'];
 
         // Check total debt
-        $totalDebt = $customer->invoices()->where('debts', '>', 0)->sum('debts');
+        $totalDebt = $customer->invoices()
+            ->where('type', Invoice::TYPE_PURCHASE)
+            ->where('debts', '>', 0)
+            ->sum('debts');
 
         if ($amount > $totalDebt) {
             return redirect()
@@ -133,11 +145,31 @@ class CustomerR2Controller extends Controller
         }
 
         try {
-            DB::transaction(function () use ($customer, &$amount) {
+            DB::transaction(function () use ($customer, $amount, $paymentMethod) {
                 $originalAmount = $amount;
 
-                // FIFO: get unpaid invoices ordered by oldest first
+                // 1. Create receipt invoice (debt_payment type)
+                $invCode = Invoice::generateInvCode(Invoice::TYPE_DEBT_PAYMENT);
+                $paymentInvoice = Invoice::create([
+                    'customer_id' => $customer->id,
+                    'transaction_id' => null,
+                    'debts' => 0,
+                    'type' => Invoice::TYPE_DEBT_PAYMENT,
+                    'inv_code' => $invCode,
+                ]);
+
+                // 2. Create debt payment record
+                $debtPayment = DebtPayment::create([
+                    'customer_id' => $customer->id,
+                    'payment_invoice_id' => $paymentInvoice->id,
+                    'amount' => $originalAmount,
+                    'payment_method' => $paymentMethod,
+                    'payment_date' => now(),
+                ]);
+
+                // 3. FIFO: get unpaid purchase invoices ordered by oldest first
                 $invoices = $customer->invoices()
+                    ->where('type', Invoice::TYPE_PURCHASE)
                     ->where('debts', '>', 0)
                     ->orderBy('created_at', 'asc')
                     ->get();
@@ -145,6 +177,7 @@ class CustomerR2Controller extends Controller
                 foreach ($invoices as $invoice) {
                     if ($amount <= 0) break;
 
+                    $debtBefore = $invoice->debts;
                     $paymentForThisInvoice = 0;
 
                     if ($amount >= $invoice->debts) {
@@ -153,7 +186,7 @@ class CustomerR2Controller extends Controller
                         $amount -= $invoice->debts;
                         $invoice->update(['debts' => 0]);
 
-                        // Automatically update related transaction status to is_paid = true
+                        // Automatically update related transaction status
                         if ($invoice->transaction) {
                             $invoice->transaction->update(['is_paid' => true]);
                         }
@@ -164,12 +197,14 @@ class CustomerR2Controller extends Controller
                         $amount = 0;
                     }
 
-                    // Record audit trail for this specific invoice
+                    // 4. Create detail record for each source invoice
                     if ($paymentForThisInvoice > 0) {
-                        DebtPayment::create([
+                        DebtPaymentDetail::create([
+                            'debt_payment_id' => $debtPayment->id,
                             'invoice_id' => $invoice->id,
-                            'amount' => $paymentForThisInvoice,
-                            'payment_date' => now(),
+                            'amount_paid' => $paymentForThisInvoice,
+                            'debt_before' => $debtBefore,
+                            'debt_after' => $invoice->fresh()->debts,
                         ]);
                     }
                 }
@@ -182,7 +217,7 @@ class CustomerR2Controller extends Controller
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['general' => 'Terjadi kesalahan saat memproses pembayaran.']);
+                ->withErrors(['general' => 'Terjadi kesalahan saat memproses pembayaran: ' . $e->getMessage()]);
         }
     }
 
@@ -212,7 +247,7 @@ class CustomerR2Controller extends Controller
      */
     public function previewInvoice(Invoice $invoice)
     {
-        $invoice->load(['customer', 'transaction.transactionDetails.product']);
+        $invoice->load(['customer', 'transaction.transactionDetails.product', 'debtPayment.details.invoice']);
 
         $customer = $invoice->customer;
         $transaction = $invoice->transaction;
