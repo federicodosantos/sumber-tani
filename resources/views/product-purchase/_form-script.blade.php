@@ -1,7 +1,11 @@
 <script>
-    let rowIndex = {{ $rowIndex ?? 1 }};
+    let rowIndex = parseInt('{{ $rowIndex ?? 1 }}');
     let systemCalculatedPrice = 0;
     let isManualPriceActive = false;
+
+    function setRowIndex(val) {
+        rowIndex = val;
+    }
 
     /* =========================
        DISCOUNT TYPE TOGGLE
@@ -68,14 +72,22 @@
        CALCULATION
     ========================= */
     function calculateSubtotal(row) {
-        const priceInput = row.querySelector('.price-input');
+        const hetInput = row.querySelector('.het-price-input');
+        const basicDiscInput = row.querySelector('.basic-discount-input');
+        const addDiscInput = row.querySelector('.additional-discount-input');
         const quantityInput = row.querySelector('.quantity-input');
+        const netPriceInput = row.querySelector('.net-price-input');
         const subtotalInput = row.querySelector('.subtotal-input');
 
-        const price = parseCurrency(priceInput.value);
+        const het = parseCurrency(hetInput.value);
+        const basicDisc = parseCurrency(basicDiscInput.value);
+        const addDisc = parseCurrency(addDiscInput.value);
         const qty = parseFloat(quantityInput.value) || 0;
 
-        const subtotal = price * qty;
+        const netPrice = het - basicDisc - addDisc;
+        const subtotal = netPrice * qty;
+
+        netPriceInput.value = formatCurrency(netPrice);
         subtotalInput.value = formatCurrency(subtotal);
 
         calculateGrandTotal();
@@ -193,12 +205,26 @@
        ROW EVENTS
     ========================= */
     function addRowListeners(row) {
-        const priceInput = row.querySelector('.price-input');
+        const hetInput = row.querySelector('.het-price-input');
+        const basicDiscInput = row.querySelector('.basic-discount-input');
+        const addDiscInput = row.querySelector('.additional-discount-input');
         const quantityInput = row.querySelector('.quantity-input');
         const removeBtn = row.querySelector('.remove-row');
         const comboboxHidden = row.querySelector('.combobox-hidden');
 
-        priceInput.addEventListener('input', function (e) {
+        hetInput.addEventListener('input', function (e) {
+            const value = parseCurrency(e.target.value);
+            e.target.value = formatCurrency(value);
+            calculateSubtotal(row);
+        });
+
+        basicDiscInput.addEventListener('input', function (e) {
+            const value = parseCurrency(e.target.value);
+            e.target.value = formatCurrency(value);
+            calculateSubtotal(row);
+        });
+
+        addDiscInput.addEventListener('input', function (e) {
             const value = parseCurrency(e.target.value);
             e.target.value = formatCurrency(value);
             calculateSubtotal(row);
@@ -256,10 +282,10 @@
 
             if (el.tagName === 'SELECT') {
                 el.selectedIndex = 0;
-            } else if (!el.classList.contains('subtotal-input')) {
-                el.value = '';
-            } else {
+            } else if (el.classList.contains('net-price-input') || el.classList.contains('subtotal-input')) {
                 el.value = '0';
+            } else {
+                el.value = '';
             }
         });
 
@@ -307,20 +333,29 @@
     /* =========================
        INIT ON PAGE LOAD
     ========================= */
-    document.querySelectorAll('.product-row').forEach(row => {
-        addRowListeners(row);
-    });
+    function initPurchaseForm() {
+        document.querySelectorAll('.product-row').forEach(row => {
+            addRowListeners(row);
+        });
 
-    // Set initial discount type max constraint
-    if (discountTypeInput?.value === 'percent') {
-        document.getElementById('globalDiscount')?.setAttribute('max', '100');
-    }
-    if (ppnTypeInput?.value === 'percent') {
-        document.getElementById('ppnInput')?.setAttribute('max', '100');
+        // Set initial discount type max constraint
+        if (discountTypeInput?.value === 'percent') {
+            document.getElementById('globalDiscount')?.setAttribute('max', '100');
+        }
+        if (ppnTypeInput?.value === 'percent') {
+            document.getElementById('ppnInput')?.setAttribute('max', '100');
+        }
+
+        updateRemoveButtons();
+        syncPaymentStatus();
+        initManualPriceHandlers();
+        calculateGrandTotal();
     }
 
-    updateRemoveButtons();
-    syncPaymentStatus();
-    initManualPriceHandlers();
-    calculateGrandTotal();
+    // Export functions to window for modal use
+    window.initPurchaseForm = initPurchaseForm;
+    window.setRowIndex = setRowIndex;
+
+    // Run on initial load
+    initPurchaseForm();
 </script>

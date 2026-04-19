@@ -35,7 +35,7 @@
 
     {{-- Dynamic Rows Section (NEW) --}}
     @if(isset($dynamicRows))
-      <div class="mb-6">
+      <div class="">
         {{ $dynamicRows }}
       </div>
     @endif

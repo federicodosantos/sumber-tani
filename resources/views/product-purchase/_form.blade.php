@@ -97,22 +97,25 @@
 
         <div id="rowsContainer">
             {{-- Header Row - Hidden on Mobile --}}
-            <div class="mb-3 hidden lg:grid lg:grid-cols-12 gap-3 px-3 text-sm font-semibold text-gray-700">
-                <div class="col-span-3">Produk</div>
-                <div class="col-span-2">Harga Beli</div>
-                <div class="col-span-2">Jumlah</div>
-                <div class="col-span-2">Satuan</div>
-                <div class="col-span-2">Sub Total</div>
-                <div class="col-span-1"></div>
+            <div class="mb-3 hidden lg:grid lg:grid-cols-[4fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr_40px] gap-3 px-3 text-sm font-semibold text-gray-700">
+                <div>Produk</div>
+                <div class="text-center">Jumlah</div>
+                <div class="text-center">Satuan</div>
+                <div class="text-center">HET Price</div>
+                <div class="text-center">Basic Disc</div>
+                <div class="text-center">Add Disc</div>
+                <div class="text-center">Net Price</div>
+                <div class="text-center">Sub Total</div>
+                <div></div>
             </div>
 
             @php $rowCount = $isEdit ? $purchase->details->count() : 1; @endphp
             @for($i = 0; $i < $rowCount; $i++)
                 @php $detail = $isEdit ? $purchase->details[$i] : null; @endphp
                 <div class="product-row mb-3 rounded-lg border border-gray-200 p-3 sm:p-4">
-                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-start lg:gap-3">
+                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr_40px] lg:items-start lg:gap-3">
                         {{-- Product Selector --}}
-                        <div class="lg:col-span-3">
+                        <div>
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Produk</label>
                             <x-content.combobox 
                                 name="products[{{ $i }}][product_id]"
@@ -123,41 +126,63 @@
                                 required />
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3 lg:col-span-4 lg:contents">
-                            <div class="lg:col-span-2">
-                                <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Harga Beli</label>
-                                <input type="text" name="products[{{ $i }}][price]"
-                                    value="{{ old('products.'.$i.'.price', number_format($detail?->price ?? 0, 0, ',', '.')) }}"
-                                    class="price-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
-                                    placeholder="12.000" required>
-                            </div>
-
-                            <div class="lg:col-span-2">
-                                <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Jumlah</label>
-                                <input type="number" name="products[{{ $i }}][quantity]"
-                                    value="{{ old('products.'.$i.'.quantity', $detail?->quantity ?? 1) }}"
-                                    class="quantity-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
-                                    placeholder="10" required min="1">
-                            </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Jumlah</label>
+                            <input type="number" name="products[{{ $i }}][quantity]"
+                                value="{{ old('products.' . $i . '.quantity', $detail?->quantity ?? 1) }}"
+                                class="quantity-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                                placeholder="10" required min="1">
                         </div>
 
-                        <div class="lg:col-span-2">
+                        <div>
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Satuan</label>
                             <input type="text" name="products[{{ $i }}][unit]"
-                                value="{{ old('products.'.$i.'.unit', $detail?->unit ?? 'PCS') }}"
-                                class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
+                                value="{{ old('products.' . $i . '.unit', $detail?->unit ?? 'PCS') }}"
+                                class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-xs"
                                 placeholder="PCS" required>
                         </div>
 
-                        <div class="lg:col-span-2">
-                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Sub Total</label>
-                            <input type="text" name="products[{{ $i }}][subtotal]"
-                                value="{{ number_format($detail?->subtotal ?? 0, 0, ',', '.') }}"
-                                class="subtotal-input w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500"
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">HET Price</label>
+                            <input type="text" name="products[{{ $i }}][het_price]"
+                                value="{{ old('products.' . $i . '.het_price', number_format($detail?->het_price ?? 0, 0, ',', '.')) }}"
+                                class="het-price-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-xs text-center"
+                                placeholder="0" required>
+                        </div>
+
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Basic Disc</label>
+                            <input type="text" name="products[{{ $i }}][basic_discount]"
+                                value="{{ old('products.' . $i . '.basic_discount', number_format($detail?->basic_discount ?? 0, 0, ',', '.')) }}"
+                                class="basic-discount-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-xs text-center"
+                                placeholder="0">
+                        </div>
+
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Add Disc</label>
+                            <input type="text" name="products[{{ $i }}][additional_discount]"
+                                value="{{ old('products.' . $i . '.additional_discount', number_format($detail?->additional_discount ?? 0, 0, ',', '.')) }}"
+                                class="additional-discount-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-xs text-center"
+                                placeholder="0">
+                        </div>
+
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Net Price</label>
+                            <input type="text" name="products[{{ $i }}][net_price]"
+                                value="{{ old('products.' . $i . '.net_price', number_format($detail?->net_price ?? 0, 0, ',', '.')) }}"
+                                class="net-price-input w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-xs text-center"
                                 placeholder="0" readonly>
                         </div>
 
-                        <div class="flex items-center justify-center lg:col-span-1">
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Sub Total</label>
+                            <input type="text" name="products[{{ $i }}][subtotal]"
+                                value="{{ number_format($detail?->subtotal ?? 0, 0, ',', '.') }}"
+                                class="subtotal-input w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 font-bold text-xs text-center"
+                                placeholder="0" readonly>
+                        </div>
+
+                        <div class="flex h-[42px] items-center justify-end">
                             <button type="button"
                                 class="remove-row w-full lg:w-auto rounded-md bg-red-50 px-4 py-2 text-red-600 hover:bg-red-100 hover:text-red-800 disabled:opacity-50 lg:bg-transparent lg:p-0"
                                 {{ $rowCount <= 1 ? 'disabled' : '' }}>

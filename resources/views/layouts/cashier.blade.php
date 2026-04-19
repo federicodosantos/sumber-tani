@@ -339,7 +339,7 @@
                 style="display: grid;"
                 :style="isCheckoutExpanded ? 'grid-template-rows: 1fr; border-top-width: 1px;' : 'grid-template-rows: 0fr; border-top-width: 0px;'"
                 class="border-gray-100 bg-white">
-                <div class="overflow-hidden">
+                <div :class="isCheckoutExpanded ? 'overflow-visible' : 'overflow-hidden'" class="min-h-0">
                     <div class="w-full flex justify-between items-center pt-4 px-6 mb-2">
                         <div>
                             <h3 class="font-bold text-gray-700">Metode Pembayaran</h3>

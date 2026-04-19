@@ -102,7 +102,9 @@ class ProductPurchaseController extends Controller
             'manual_grand_total' => ['nullable', 'numeric', 'min:0'],
             'products'           => ['required', 'array', 'min:1'],
             'products.*.product_id' => ['required', 'exists:products,id'],
-            'products.*.price'      => ['required'],
+            'products.*.het_price'   => ['required'],
+            'products.*.basic_discount' => ['nullable'],
+            'products.*.additional_discount' => ['nullable'],
             'products.*.quantity'    => ['required', 'integer', 'min:1'],
             'products.*.unit'        => ['required', 'string', 'max:50'],
         ]);
@@ -114,17 +116,26 @@ class ProductPurchaseController extends Controller
 
         $items = collect($validated['products'])->map(function ($item) {
             $product = Product::findOrFail($item['product_id']);
-            $price = $this->parseNumber($item['price']);
+            $het = $this->parseNumber($item['het_price']);
+            $basicDisc = $this->parseNumber($item['basic_discount'] ?? '0');
+            $addDisc = $this->parseNumber($item['additional_discount'] ?? '0');
             $qty = (int) $item['quantity'];
+
+            $netPrice = $het - $basicDisc - $addDisc;
+            $subtotal = $netPrice * $qty;
 
             return [
                 'product_id'   => $product->id,
                 'product_code' => $product->code_id,
                 'product_name' => $product->name,
                 'unit'         => $item['unit'],
-                'price'        => $price,
+                'het_price'    => $het,
+                'basic_discount' => $basicDisc,
+                'additional_discount' => $addDisc,
+                'net_price'    => $netPrice,
+                'price'        => $netPrice, // maintains compatibility
                 'quantity'     => $qty,
-                'subtotal'     => $price * $qty,
+                'subtotal'     => $subtotal,
             ];
         });
 
@@ -191,10 +202,14 @@ class ProductPurchaseController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(ProductPurchase $purchase)
+    public function edit(Request $request, ProductPurchase $purchase)
     {
         $purchase->load('details');
         $products = Product::select('id', 'code_id', 'name')->orderBy('code_id')->get();
+
+        if ($request->ajax()) {
+            return view('product-purchase.edit-partial', compact('purchase', 'products'))->render();
+        }
 
         return view('product-purchase.edit', compact('purchase', 'products'));
     }
@@ -214,7 +229,9 @@ class ProductPurchaseController extends Controller
             'manual_grand_total' => ['nullable', 'numeric', 'min:0'],
             'products'           => ['required', 'array', 'min:1'],
             'products.*.product_id' => ['required', 'exists:products,id'],
-            'products.*.price'      => ['required'],
+            'products.*.het_price'   => ['required'],
+            'products.*.basic_discount' => ['nullable'],
+            'products.*.additional_discount' => ['nullable'],
             'products.*.quantity'    => ['required', 'integer', 'min:1'],
             'products.*.unit'        => ['required', 'string'],
         ]);
@@ -226,17 +243,26 @@ class ProductPurchaseController extends Controller
 
         $items = collect($validated['products'])->map(function ($item) {
             $product = Product::findOrFail($item['product_id']);
-            $price = $this->parseNumber($item['price']);
+            $het = $this->parseNumber($item['het_price']);
+            $basicDisc = $this->parseNumber($item['basic_discount'] ?? '0');
+            $addDisc = $this->parseNumber($item['additional_discount'] ?? '0');
             $qty = (int) $item['quantity'];
+
+            $netPrice = $het - $basicDisc - $addDisc;
+            $subtotal = $netPrice * $qty;
 
             return [
                 'product_id'   => $product->id,
                 'product_code' => $product->code_id,
                 'product_name' => $product->name,
                 'unit'         => $item['unit'],
-                'price'        => $price,
+                'het_price'    => $het,
+                'basic_discount' => $basicDisc,
+                'additional_discount' => $addDisc,
+                'net_price'    => $netPrice,
+                'price'        => $netPrice, // maintains compatibility
                 'quantity'     => $qty,
-                'subtotal'     => $price * $qty,
+                'subtotal'     => $subtotal,
             ];
         });
 

@@ -1,5 +1,44 @@
 <x-app-layout>
-    <div class="py-4 lg:py-6 flex justify-center items-start min-h-screen font-mont">
+    <div class="py-4 lg:py-6 flex justify-center items-start min-h-screen font-mont"
+        x-data="{
+            loading: false,
+            editContent: '',
+            loadEdit(url) {
+                this.loading = true;
+                this.editContent = '<div class=\'flex items-center justify-center p-10\'><div class=\'animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600\'></div><span class=\'ml-3 text-gray-500\'>Memuat data...</span></div>';
+                $dispatch('open-modal', 'edit-purchase');
+                
+                fetch(url, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    this.editContent = html;
+                    this.loading = false;
+                    
+                    // Re-init form components
+                    $nextTick(() => {
+                        if (window.Alpine) {
+                            window.Alpine.initTree(document.getElementById('edit-modal-body'));
+                        }
+                        
+                        // Re-init purchase form logic
+                        if (window.initPurchaseForm) {
+                            // Update rowIndex based on loaded rows
+                            const rows = document.querySelectorAll('#edit-modal-body .product-row');
+                            if (window.setRowIndex) window.setRowIndex(rows.length);
+                            window.initPurchaseForm();
+                        }
+                    });
+                })
+                .catch(err => {
+                    this.editContent = '<div class=\'p-3 text-red-600\'>Gagal memuat data. Silakan coba lagi.</div>';
+                    this.loading = false;
+                });
+            }
+        }">
         <div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
             <!-- Header dengan button -->
             <div class="mb-4 flex justify-start">
@@ -11,10 +50,16 @@
                 </x-button.add-button>
             </div>
 
-            <x-modal name="create-purchase" title="TAMBAH PEMBELIAN PRODUK" maxWidth="7xl" 
+            <x-modal name="create-purchase" title="TAMBAH PEMBELIAN PRODUK" maxWidth="full" 
                 x-init="if ($errors->any()) $dispatch('open-modal', 'create-purchase')">
-                <div class="p-1">
+                <div class="">
                     @include('product-purchase._form', ['action' => route('purchase.store'), 'method' => 'POST', 'products' => $products])
+                </div>
+            </x-modal>
+
+            <x-modal name="edit-purchase" title="UBAH DATA PEMBELIAN" maxWidth="full">
+                <div id="edit-modal-body" x-html="editContent">
+                    {{-- Content loaded via AJAX --}}
                 </div>
             </x-modal>
 
@@ -182,7 +227,8 @@
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
                                 <div class="flex items-center gap-3">
-                                    <a href="{{ route('purchase.edit', $purchase->id) }}"
+                                    <a href="#"
+                                        @click.prevent="loadEdit('{{ route('purchase.edit', $purchase->id) }}')"
                                         class="text-blue-600 hover:text-blue-800" title="Edit">
                                         <img src="{{ asset('update-button.svg') }}" alt="Edit"
                                             class="inline h-5 w-5">

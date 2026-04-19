@@ -14,12 +14,20 @@ class ProductPurchaseDetail extends Model
         'product_code',
         'product_name',
         'unit',
+        'het_price',
+        'basic_discount',
+        'additional_discount',
+        'net_price',
         'price',
         'quantity',
         'subtotal',
     ];
 
     protected $casts = [
+        'het_price' => 'decimal:2',
+        'basic_discount' => 'decimal:2',
+        'additional_discount' => 'decimal:2',
+        'net_price' => 'decimal:2',
         'price' => 'decimal:2',
         'subtotal' => 'decimal:2',
     ];
