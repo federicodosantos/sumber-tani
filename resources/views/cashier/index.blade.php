@@ -1,6 +1,6 @@
 <x-cashier-layout :categories="$categories" :products="$products" :customers_r2="$customers_r2" :r2_custom_prices="$r2_custom_prices">
 
-    <div class="flex items-center justify-end gap-4 px-8 py-4">
+    <div class="flex items-center justify-end gap-4 px-4 lg:px-8 py-4">
 
         {{-- SORT BUTTONS --}}
         <div class="relative -space-x-2" x-data="{ open: false }">
@@ -61,14 +61,14 @@
         </div>
 
         {{-- SEARCH INPUT (REALTIME) --}}
-        <div class="relative w-80">
+        <div class="relative w-64 lg:w-80">
             <input type="text" x-model="search" placeholder="Cari Produk"
                 class="focus:border-button-main w-full rounded-lg border-2 border-gray-300 py-1 pl-4 pr-4 focus:outline-none">
         </div>
     </div>
 
-    <div class="flex flex-col px-8 pb-2">
-        <div class="flex items-center gap-2">
+    <div class="flex flex-col px-4 lg:px-8 pb-2">
+        <div class="flex flex-wrap items-center gap-2">
             <p class="font-bold">Mode Harga: </p>
 
             <button @click="setPriceMode('consument')"
@@ -124,7 +124,7 @@
         </p>
     </div>
 
-    <div class="flex-1 overflow-y-auto px-8 py-6">
+    <div class="flex-1 overflow-y-auto px-4 lg:px-8 py-4">
 
         <div x-show="filteredProducts.length === 0" class="flex h-64 flex-col items-center justify-center text-gray-500"
             style="display: none;">

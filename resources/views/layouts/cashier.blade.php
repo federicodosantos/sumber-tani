@@ -181,10 +181,10 @@
                     </button>
                 </div>
                 
-                <div class="p-6 pb-4">
+                <div class="p-4 pb-3">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h2 class="text-2xl font-bold text-gray-900 line-clamp-1">Data Pemesanan</h2>
+                            <h2 class="text-xl font-bold text-gray-900 line-clamp-1">Data Pemesanan</h2>
                             <template x-if="selectedCustomer">
                                 <div
                                     class="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-button-main/30 bg-button-main/10 px-2.5 py-1 text-xs font-bold text-button-hover shadow-sm transition-all duration-200">
@@ -200,7 +200,7 @@
                 </div>
             </div>
 
-            <div class="flex-1 space-y-3 overflow-y-auto p-6">
+            <div class="flex-1 space-y-3 overflow-y-auto p-4 min-h-0">
                 <div x-show="cart.length === 0" class="mt-10 text-center text-gray-400">
                     Belum ada produk dipilih
                 </div>
@@ -309,9 +309,9 @@
             </div>
 
             <!-- Checkout Section Toggle -->
-            <div class="border-t border-gray-200 bg-white">
+            <div class="border-t border-gray-200 bg-white shrink-0">
                 <button @click="toggleCheckoutExpansion()" 
-                    class="group flex w-full items-center justify-between px-6 py-3 transition-colors hover:bg-gray-50">
+                    class="group flex w-full items-center justify-between px-4 py-2 transition-colors hover:bg-gray-50">
                     <div class="flex items-center gap-2">
                         <div class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 transition-transform duration-300 group-hover:bg-button-main/20"
                             :class="isCheckoutExpanded ? 'rotate-180' : ''">
@@ -335,12 +335,12 @@
             </div>
 
             <!-- Collapsible Section with Smooth Grid Transition -->
-            <div class="grid transition-all duration-500 ease-in-out" 
+            <div class="grid transition-all duration-500 ease-in-out shrink-0" 
                 style="display: grid;"
                 :style="isCheckoutExpanded ? 'grid-template-rows: 1fr; border-top-width: 1px;' : 'grid-template-rows: 0fr; border-top-width: 0px;'"
                 class="border-gray-100 bg-white">
-                <div :class="isCheckoutExpanded ? 'overflow-visible' : 'overflow-hidden'" class="min-h-0">
-                    <div class="w-full flex justify-between items-center pt-4 px-6 mb-2">
+                <div :class="isCheckoutExpanded ? 'overflow-visible' : 'overflow-hidden'" class="min-h-0 flex flex-col">
+                    <div class="w-full flex justify-between items-center pt-3 px-4 mb-2">
                         <div>
                             <h3 class="font-bold text-gray-700">Metode Pembayaran</h3>
                         </div>
@@ -434,8 +434,8 @@
                         </div>
                     </div>
 
-                    <div x-show="paymentMethod === 'Cash'" class="px-6 pb-4" style="display: none;">
-                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <div x-show="paymentMethod === 'Cash'" class="px-4 pb-2" style="display: none;">
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-2 text-sm">
                             <div class="mb-2">
                                 <x-input-rupiah 
                                     label="Uang Konsumer"
@@ -453,9 +453,9 @@
                         </div>
                     </div>
 
-                    <div class="p-6">
-                        <div class="bg-button-main rounded-3xl p-5 shadow-xl">
-                            <div class="mb-4 flex items-center justify-between px-1">
+                    <div class="p-4 pt-1 pb-4">
+                        <div class="bg-button-main rounded-2xl p-4 shadow-xl">
+                            <div class="mb-3 flex items-center justify-between px-0">
                                 <div class="flex flex-col">
                                     <p class="text-xs font-semibold uppercase tracking-wider text-gray-700 opacity-70">Total
                                         Item</p>
@@ -526,7 +526,7 @@
                                 :disabled="cart.length === 0 || (paymentMethod === 'Cash' && cashReceived < totalPrice)"
                                 :class="(cart.length === 0 || (paymentMethod === 'Cash' && cashReceived < totalPrice)) ?
                                 'opacity-50 cursor-not-allowed' : ''"
-                                class="text-button-main flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-3.5 font-bold shadow-sm transition-all hover:bg-gray-50 hover:shadow-md active:scale-95">
+                                class="text-button-main flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3 font-bold shadow-sm transition-all hover:bg-gray-50 hover:shadow-md active:scale-95">
                                 <span>BAYAR</span>
                             </button>
                         </div>
