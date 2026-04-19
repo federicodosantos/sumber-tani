@@ -256,6 +256,74 @@ class CustomerR2Controller extends Controller
         return view('customer-r2.invoice-preview', compact('invoice', 'customer', 'transaction', 'details'));
     }
     /**
+     * Get invoice data for thermal printing (JSON API).
+     */
+    public function receiptData(Invoice $invoice)
+    {
+        $invoice->load(['customer', 'transaction.transactionDetails.product', 'debtPayment.details.invoice']);
+
+        $customer = $invoice->customer;
+        $transaction = $invoice->transaction;
+        
+        $data = [
+            'store' => [
+                'name' => 'TOKO SUMBERTANI',
+                'address' => 'Jl. Trans Sulawesi, Motolohu, Kec. Randangan, ' . PHP_EOL . 'Kab. Pohuwato, Gorontalo 96469',
+                'phone' => '+6281356745129',
+                'email' => 'sumbertani0209@gmail.com',
+            ],
+            'invoice' => [
+                'code' => $invoice->inv_code ?? '#' . $invoice->id,
+                'type' => $invoice->type, // purchasement or debt_payment
+                'datetime' => $invoice->created_at->translatedFormat('d M Y H:i'),
+            ],
+            'customer' => [
+                'name' => $customer->name,
+                'phone' => $customer->phone_number,
+                'address' => $customer->address,
+            ],
+        ];
+
+        if ($invoice->type === Invoice::TYPE_PURCHASE && $transaction) {
+            $data['transaction'] = [
+                'total' => (float) $transaction->total_price,
+                'discount' => (float) $transaction->discount,
+                'payment_method' => $transaction->payment_method,
+                'cash_received' => $transaction->cash_received,
+                'change_amount' => $transaction->change_amount,
+            ];
+
+            $data['items'] = $transaction->transactionDetails->map(function ($detail) {
+                return [
+                    'name' => $detail->product?->name ?? 'Unknown',
+                    'price' => (float) $detail->product_price,
+                    'qty' => (int) $detail->quantity,
+                    'total' => (float) $detail->total_price,
+                ];
+            });
+        } elseif ($invoice->type === Invoice::TYPE_DEBT_PAYMENT && $invoice->debtPayment) {
+            $debtPayment = $invoice->debtPayment;
+            
+            $data['payment'] = [
+                'total' => (float) $debtPayment->amount,
+                'payment_method' => $debtPayment->payment_method,
+                'payment_date' => $debtPayment->payment_date->translatedFormat('d M Y H:i'),
+            ];
+
+            $data['details'] = $debtPayment->details->map(function ($detail) {
+                return [
+                    'inv_code' => $detail->invoice->inv_code ?? '#' . $detail->invoice_id,
+                    'debt_before' => (float) $detail->debt_before,
+                    'amount_paid' => (float) $detail->amount_paid,
+                    'debt_after' => (float) $detail->debt_after,
+                ];
+            });
+        }
+
+        return response()->json($data);
+    }
+
+    /**
      * Get all custom product prices for a given customer (JSON API).
      */
     public function getCustomPrices(Customer $customer)

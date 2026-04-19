@@ -4,8 +4,8 @@
     {{-- Header --}}
     <div class="invoice-header p-6 text-center text-white" style="background: linear-gradient(135deg, #8AB763 0%, #ABD36F 100%);">
         <h1 class="text-xl font-bold uppercase tracking-widest">Toko Sumbertani</h1>
-        <p class="mt-1 text-[10px] opacity-90">Jl. Trans Sulawesi, Motolohu, Kec. Randangan, Kab. Pohuwato, Gorontalo 96469</p>
-        <p class="text-[10px] opacity-90">Telp: <strong>+62 813-5674-5129</strong> | Email: sumbertani0209@gmail.com</p>
+        <p class="mt-1 text-[12px] text-gray-800">Jl. Trans Sulawesi, Motolohu, Kec. Randangan, Kab. Pohuwato, Gorontalo 96469</p>
+        <p class="text-[12px] text-gray-800">Telp: <strong>+62 813-5674-5129</strong> | Email: sumbertani0209@gmail.com</p>
     </div>
 
     {{-- Customer & Date Info --}}
@@ -18,13 +18,12 @@
         </div>
         <div class="info-block text-right">
             <h3 class="mb-1 text-[9px] font-bold uppercase tracking-widest text-gray-400">Detail Invoice</h3>
-            <p class="text-xs text-gray-700">Kode: <strong>{{ $invoice->inv_code ?? '-' }}</strong></p>
-            <p class="text-xs text-gray-700">Tanggal: {{ $invoice->created_at->translatedFormat('d F Y') }}</p>
-            <p class="text-xs text-gray-700">Waktu: {{ $invoice->created_at->translatedFormat('H:i') }}</p>
+            <p class="text-xs text-gray-700"><strong>{{ $invoice->inv_code ?? '-' }}</strong></p>
+            <p class="text-xs text-gray-700">{{ $invoice->created_at->translatedFormat('d F Y') }}, {{ $invoice->created_at->translatedFormat('H:i') }}</p>
             @if ($invoice->type === 'purchasement' && $transaction)
-                <p class="text-xs text-gray-700">Metode Pembayaran: <strong>{{ strtoupper($transaction->payment_method) }}</strong></p>
+                <p class="text-xs text-gray-700">{{ strtoupper($transaction->payment_method) }}</p>
             @elseif ($invoice->type === 'debt_payment' && $invoice->debtPayment)
-                <p class="text-xs text-gray-700">Metode Pembayaran: <strong>{{ strtoupper($invoice->debtPayment->payment_method) }}</strong></p>
+                <p class="text-xs text-gray-700">{{ strtoupper($invoice->debtPayment->payment_method) }}</p>
             @endif
         </div>
     </div>

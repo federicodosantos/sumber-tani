@@ -92,6 +92,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/customer-r2/{customer}/pay', [CustomerR2Controller::class, 'processPayment'])->name('customer-r2.process');
     Route::get('/api/customer-r2/search', [CustomerR2Controller::class, 'search'])->name('customer-r2.search');
     Route::get('/customer-r2/invoice/{invoice}/preview', [CustomerR2Controller::class, 'previewInvoice'])->name('customer-r2.invoice.preview');
+    Route::get('/invoice-receipt/{invoice}', [CustomerR2Controller::class, 'receiptData'])->name('customer-r2.invoice.receipt-data');
     Route::get('/api/customer-r2/{customer}/custom-prices', [CustomerR2Controller::class, 'getCustomPrices'])->name('customer-r2.custom-prices');
 });
 

@@ -62,7 +62,7 @@
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
                                 <a href="{{ route('customer-r2.show', $customer->id) }}"
-                                    class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-button-main transition-colors"
+                                    class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-button-main transition-colors cursor-pointer"
                                     title="Lihat detail pelanggan">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                         stroke-width="1.5" stroke="currentColor" class="h-5 w-5">

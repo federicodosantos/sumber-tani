@@ -12,7 +12,11 @@
     <link rel="manifest" href="{{ asset('build/manifest.webmanifest') }}">
 
     <script src="{{ asset('qz/qz-tray.js') }}"></script>
-    <script src="{{ asset('qz/config.js') }}"></script>
+    <script src="{{ asset('qz/qz-config.js') }}"></script>
+    <script src="{{ asset('qz/printer-utils.js') }}"></script>
+    <script src="{{ asset('qz/layouts/cashier-layout.js') }}"></script>
+    <script src="{{ asset('qz/layouts/r2-layout.js') }}"></script>
+    <script src="{{ asset('qz/printer-main.js') }}"></script>
     {{-- <button onclick="listPrinters()">Cek Printer QZ</button> --}}
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
