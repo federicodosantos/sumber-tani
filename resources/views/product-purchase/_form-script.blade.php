@@ -10,48 +10,18 @@
     /* =========================
        DISCOUNT TYPE TOGGLE
     ========================= */
-    const discountTypeInput = document.getElementById('discountTypeInput');
-    const discountUnitLabel = document.getElementById('discountUnitLabel');
-    const toggleBtn = document.getElementById('toggleDiscountType');
-    const ppnTypeInput = document.getElementById('ppnTypeInput');
-    const ppnUnitLabel = document.getElementById('ppnUnitLabel');
-    const togglePpnBtn = document.getElementById('togglePpnType');
-
-    toggleBtn?.addEventListener('click', function () {
-        const discountInput = document.getElementById('globalDiscount');
-        const current = discountTypeInput.value;
-        if (current === 'percent') {
-            discountTypeInput.value = 'nominal';
-            discountUnitLabel.textContent = 'Rp';
-            toggleBtn.textContent = 'Rp';
-            // Reset max constraint
-            discountInput?.removeAttribute('max');
-        } else {
-            discountTypeInput.value = 'percent';
-            discountUnitLabel.textContent = '%';
-            toggleBtn.textContent = '%';
-            discountInput?.setAttribute('max', '100');
-        }
-        if (discountInput) discountInput.value = 0;
+    /* =========================
+       CALCULATION TRIGGER
+    ========================= */
+    window.addEventListener('rupiah-change', function() {
         calculateGrandTotal();
     });
 
-    togglePpnBtn?.addEventListener('click', function () {
-        const ppnInput = document.getElementById('ppnInput');
-        const current = ppnTypeInput.value;
-        if (current === 'percent') {
-            ppnTypeInput.value = 'nominal';
-            ppnUnitLabel.textContent = 'Rp';
-            togglePpnBtn.textContent = 'Rp';
-            ppnInput?.removeAttribute('max');
-        } else {
-            ppnTypeInput.value = 'percent';
-            ppnUnitLabel.textContent = '%';
-            togglePpnBtn.textContent = '%';
-            ppnInput?.setAttribute('max', '100');
+    // Reset form when modal is closed (X button, backdrop, or Batal)
+    window.addEventListener('modal-closed', (e) => {
+        if (e.detail === 'create-purchase' || e.detail === 'edit-purchase') {
+            window.resetPurchaseForm();
         }
-        if (ppnInput) ppnInput.value = 0;
-        calculateGrandTotal();
     });
 
     /* =========================
@@ -72,23 +42,38 @@
        CALCULATION
     ========================= */
     function calculateSubtotal(row) {
-        const hetInput = row.querySelector('.het-price-input');
-        const basicDiscInput = row.querySelector('.basic-discount-input');
-        const addDiscInput = row.querySelector('.additional-discount-input');
+        // Find hidden value inputs of input-rupiah components
+        const hetInput = row.querySelector('input[name$="[het_price]"][type="hidden"]');
+        const basicDiscInput = row.querySelector('input[name$="[basic_discount]"][type="hidden"]');
+        const addDiscInput = row.querySelector('input[name$="[additional_discount]"][type="hidden"]');
+        const netPriceHidden = row.querySelector('input[name$="[net_price]"][type="hidden"]');
+        const subtotalHidden = row.querySelector('input[name$="[subtotal]"][type="hidden"]');
+        
         const quantityInput = row.querySelector('.quantity-input');
-        const netPriceInput = row.querySelector('.net-price-input');
-        const subtotalInput = row.querySelector('.subtotal-input');
 
-        const het = parseCurrency(hetInput.value);
-        const basicDisc = parseCurrency(basicDiscInput.value);
-        const addDisc = parseCurrency(addDiscInput.value);
-        const qty = parseFloat(quantityInput.value) || 0;
+        const het = parseFloat(hetInput?.value) || 0;
+        const basicDisc = parseFloat(basicDiscInput?.value) || 0;
+        const addDisc = parseFloat(addDiscInput?.value) || 0;
+        const qty = parseFloat(quantityInput?.value) || 0;
 
         const netPrice = het - basicDisc - addDisc;
         const subtotal = netPrice * qty;
 
-        netPriceInput.value = formatCurrency(netPrice);
-        subtotalInput.value = formatCurrency(subtotal);
+        // Update hidden inputs for submission
+        if (netPriceHidden) netPriceHidden.value = netPrice;
+        if (subtotalHidden) subtotalHidden.value = subtotal;
+
+        // Update display inputs of input-rupiah via custom event
+        const namePrefix = hetInput?.name.split('[')[0]; // products
+        const rowIndex = hetInput?.name.match(/\[(\d+)\]/)[1];
+        
+        window.dispatchEvent(new CustomEvent('update-rupiah-value', { 
+            detail: { name: `products[${rowIndex}][net_price]`, value: netPrice } 
+        }));
+        
+        window.dispatchEvent(new CustomEvent('update-rupiah-value', { 
+            detail: { name: `products[${rowIndex}][subtotal]`, value: subtotal } 
+        }));
 
         calculateGrandTotal();
     }
@@ -97,26 +82,35 @@
         let total = 0;
 
         document.querySelectorAll('.product-row').forEach(row => {
-            total += parseCurrency(row.querySelector('.subtotal-input').value);
+            const subtotalHidden = row.querySelector('input[name$="[subtotal]"][type="hidden"]');
+            total += parseFloat(subtotalHidden?.value) || 0;
         });
 
-        const discountType = discountTypeInput?.value || 'percent';
-        const discountInput =
-            parseFloat(document.getElementById('globalDiscount')?.value) || 0;
-        const ppnInput = parseFloat(document.getElementById('ppnInput')?.value) || 0;
-        const ppnType = ppnTypeInput?.value || 'percent';
+        const discountType = document.getElementById('discountTypeInput')?.value || 'percent';
+        const ppnType = document.getElementById('ppnTypeInput')?.value || 'percent';
+
+        const discountInputEl = discountType === 'percent' 
+            ? document.getElementById('globalDiscount') 
+            : document.getElementById('globalDiscountNominal_value');
+        
+        const ppnInputEl = ppnType === 'percent' 
+            ? document.getElementById('ppnInput') 
+            : document.getElementById('ppnInputNominal_value');
+
+        const discountInputValue = parseFloat(discountInputEl?.value) || 0;
+        const ppnInputValue = parseFloat(ppnInputEl?.value) || 0;
 
         let discountValue = 0;
         if (discountType === 'percent') {
-            discountValue = total * (discountInput / 100);
+            discountValue = total * (discountInputValue / 100);
         } else {
-            discountValue = discountInput;
+            discountValue = discountInputValue;
         }
 
         const afterDiscount = total - discountValue;
         const ppnValue = ppnType === 'percent'
-            ? afterDiscount * (ppnInput / 100)
-            : ppnInput;
+            ? afterDiscount * (ppnInputValue / 100)
+            : ppnInputValue;
         const grandTotal = afterDiscount + ppnValue;
 
         // Simpan harga sistem
@@ -205,33 +199,22 @@
        ROW EVENTS
     ========================= */
     function addRowListeners(row) {
-        const hetInput = row.querySelector('.het-price-input');
-        const basicDiscInput = row.querySelector('.basic-discount-input');
-        const addDiscInput = row.querySelector('.additional-discount-input');
         const quantityInput = row.querySelector('.quantity-input');
+        const comboboxHidden = row.querySelector('.product-select input[type="hidden"]');
         const removeBtn = row.querySelector('.remove-row');
-        const comboboxHidden = row.querySelector('.combobox-hidden');
 
-        hetInput.addEventListener('input', function (e) {
-            const value = parseCurrency(e.target.value);
-            e.target.value = formatCurrency(value);
+        quantityInput?.addEventListener('input', function () {
             calculateSubtotal(row);
         });
 
-        basicDiscInput.addEventListener('input', function (e) {
-            const value = parseCurrency(e.target.value);
-            e.target.value = formatCurrency(value);
-            calculateSubtotal(row);
-        });
-
-        addDiscInput.addEventListener('input', function (e) {
-            const value = parseCurrency(e.target.value);
-            e.target.value = formatCurrency(value);
-            calculateSubtotal(row);
-        });
-
-        quantityInput.addEventListener('input', function () {
-            calculateSubtotal(row);
+        // Rupiah Change Listener for HET and Discounts
+        row.addEventListener('rupiah-change', function(e) {
+            // Only recalculate if it's one of the price/discount inputs
+            if (e.detail.name.includes('het_price') || 
+                e.detail.name.includes('basic_discount') || 
+                e.detail.name.includes('additional_discount')) {
+                calculateSubtotal(row);
+            }
         });
 
         // Searchable Combobox Listener
@@ -271,6 +254,22 @@
         const firstRow = container.querySelector('.product-row');
         const newRow = firstRow.cloneNode(true);
 
+        // CLEANUP: Remove Alpine-rendered artifacts to prevent duplication
+        // Alpine 3 renders elements as siblings of the template tags.
+        // We must remove these clones before Alpine.initTree re-renders them.
+        newRow.querySelectorAll('template').forEach(t => {
+            while (t.nextSibling && (t.nextSibling.nodeType === 1) && t.nextSibling.tagName !== 'TEMPLATE' && !t.nextSibling.hasAttribute('x-data')) {
+                t.nextSibling.remove();
+            }
+        });
+
+        newRow.querySelectorAll('[id]').forEach(el => {
+            const id = el.getAttribute('id');
+            if (id) {
+                el.setAttribute('id', id.replace(/_\d+_/, `_${rowIndex}_`));
+            }
+        });
+
         newRow.querySelectorAll('input, select').forEach(el => {
             const name = el.getAttribute('name');
             if (name) {
@@ -282,8 +281,6 @@
 
             if (el.tagName === 'SELECT') {
                 el.selectedIndex = 0;
-            } else if (el.classList.contains('net-price-input') || el.classList.contains('subtotal-input')) {
-                el.value = '0';
             } else {
                 el.value = '';
             }
@@ -352,9 +349,76 @@
         calculateGrandTotal();
     }
 
+    function resetPurchaseForm() {
+        const globalDiscount = document.getElementById('globalDiscount');
+        const ppnInput = document.getElementById('ppnInput');
+        const method = document.getElementById('method');
+        const manualGrandTotal = document.getElementById('manualGrandTotal');
+        const manualValueHidden = document.getElementById('manualGrandTotalValue');
+        const resetBtn = document.getElementById('resetManualPrice');
+        const systemInfo = document.getElementById('systemPriceInfo');
+
+        // Reset global inputs
+        const discountTypeInput = document.getElementById('discountTypeInput');
+        const ppnTypeInput = document.getElementById('ppnTypeInput');
+
+        if (globalDiscount) globalDiscount.value = '';
+        if (ppnInput) ppnInput.value = '';
+
+        // Trigger change to update input-rupiah components
+        window.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { name: 'ppn', value: '' } }));
+        window.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { name: 'discount', value: '' } }));
+
+        if (method) method.value = '0';
+        syncPaymentStatus();
+
+        // Rows
+        const container = document.getElementById('rowsContainer');
+        const rows = container?.querySelectorAll('.product-row') || [];
+        
+        // Remove all but first
+        for (let i = 1; i < rows.length; i++) {
+            rows[i].remove();
+        }
+
+        // Reset first row
+        const firstRow = rows[0];
+        if (firstRow) {
+            const qtyInput = firstRow.querySelector('input[name*="[quantity]"]');
+            const unitInput = firstRow.querySelector('input[name*="[unit]"]');
+            if (qtyInput) qtyInput.value = 1;
+            if (unitInput) unitInput.value = 'PCS';
+
+            // Reset first row rupiah components
+            const firstRowFields = ['het_price', 'basic_discount', 'additional_discount', 'net_price', 'subtotal'];
+            firstRowFields.forEach(field => {
+                window.dispatchEvent(new CustomEvent('update-rupiah-value', { 
+                    detail: { name: `products[0][${field}]`, value: '' } 
+                }));
+            });
+
+            // Reset first row combobox
+            window.dispatchEvent(new CustomEvent('combobox-reset', { 
+                detail: { name: 'products[0][product_id]' } 
+            }));
+        }
+
+        // Reset manual price state
+        if (manualGrandTotal) manualGrandTotal.value = '';
+        if (manualValueHidden) manualValueHidden.value = '';
+        isManualPriceActive = false;
+        if (resetBtn) resetBtn.disabled = true;
+        systemInfo?.classList.add('hidden');
+
+        rowIndex = 1;
+        calculateGrandTotal();
+        updateRemoveButtons();
+    }
+
     // Export functions to window for modal use
     window.initPurchaseForm = initPurchaseForm;
     window.setRowIndex = setRowIndex;
+    window.resetPurchaseForm = resetPurchaseForm;
 
     // Run on initial load
     initPurchaseForm();

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ProductPurchase;
 use App\Models\Product;
+use App\Models\ItemCategory;
 use App\Services\ProductStockService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -67,14 +68,15 @@ class ProductPurchaseController extends Controller
                 break;
 
             default:
-                $query->orderBy('purchase_date', 'desc');
+                $query->latest();
                 break;
         }
 
         $purchases = $query->paginate(10)->withQueryString();
         $products = Product::select('id', 'code_id', 'name')->orderBy('code_id')->get();
+        $categories = ItemCategory::orderBy('name', 'asc')->get();
 
-        return view('product-purchase.index', compact('purchases', 'products'));
+        return view('product-purchase.index', compact('purchases', 'products', 'categories'));
     }
 
     /**
@@ -83,8 +85,9 @@ class ProductPurchaseController extends Controller
     public function create()
     {
         $products = Product::select('id', 'code_id', 'name')->orderBy('code_id')->get();
+        $categories = ItemCategory::orderBy('name', 'asc')->get();
 
-        return view('product-purchase.create', compact('products'));
+        return view('product-purchase.create', compact('products', 'categories'));
     }
 
     /**
@@ -188,6 +191,7 @@ class ProductPurchaseController extends Controller
 
                 $this->stockService->createNewBatch($item['product_id'], [
                     'stock_opname'    => $item['quantity'],
+                    'unit_price'      => $item['net_price'],
                     'price_consument' => $latestPrices['price_consument'],
                     'price_r1'        => $latestPrices['price_r1'],
                     'price_r2'        => $latestPrices['price_r2'],
@@ -206,12 +210,13 @@ class ProductPurchaseController extends Controller
     {
         $purchase->load('details');
         $products = Product::select('id', 'code_id', 'name')->orderBy('code_id')->get();
+        $categories = ItemCategory::orderBy('name', 'asc')->get();
 
         if ($request->ajax()) {
-            return view('product-purchase.edit-partial', compact('purchase', 'products'))->render();
+            return view('product-purchase.edit-partial', compact('purchase', 'products', 'categories'))->render();
         }
 
-        return view('product-purchase.edit', compact('purchase', 'products'));
+        return view('product-purchase.edit', compact('purchase', 'products', 'categories'));
     }
 
     /**

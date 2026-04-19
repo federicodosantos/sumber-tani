@@ -33,8 +33,8 @@ class AuthenticatedSessionController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()
                 ->back()
-                ->withInput($request->only('email', 'remember'))
-                ->withErrors(['email' => 'Gagal masuk. Silakan periksa kredensial Anda dan coba lagi.']);
+                ->withInput($request->only('username', 'remember'))
+                ->withErrors(['username' => 'Gagal masuk. Silakan periksa kredensial Anda dan coba lagi.']);
         }
     }
 

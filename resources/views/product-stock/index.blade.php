@@ -251,19 +251,226 @@
 
 
 
-                            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
+                            <td class="whitespace-nowrap px-6 py-4 text-sm font-medium" x-data="{
+                                updateRupiah(name, value) {
+                                    this.$dispatch('update-rupiah-value', { name: name, value: value });
+                                }
+                            }">
                                 @if (is_null($product->latest_stock_id))
-                                    <a href="{{ route('stock.create', ['product_id' => $product->product_id]) }}"
-                                        class="text-button-main hover:text-button-hover font-bold text-xs">
+                                    {{-- TRIGGER ISI STOK AWAL --}}
+                                    <button @click="$dispatch('open-modal', 'create-stock-{{ $product->product_id }}')"
+                                        class="text-button-main hover:text-button-hover font-bold text-xs cursor-pointer">
                                         Isi Stok Awal
-                                    </a>
+                                    </button>
+
+                                    {{-- MODAL ISI STOK AWAL --}}
+                                    <x-modal name="create-stock-{{ $product->product_id }}" title="ISI STOK AWAL: {{ $product->name }}" maxWidth="4xl">
+                                        <div class="p-1">
+                                            <form action="{{ route('stock.store') }}" method="POST">
+                                                @csrf
+                                                <input type="hidden" name="product_id" value="{{ $product->product_id }}">
+                                                
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6 rounded-lg border border-gray-200 p-5">
+                                                    {{-- Kode Produk --}}
+                                                    <x-content.form-input label="Kode Produk" name="product_code_display"
+                                                        value="{{ $product->code_id }}" 
+                                                        class="cursor-not-allowed border-gray-300 bg-gray-100"
+                                                        disabled readonly />
+
+                                                    {{-- Nama Produk (Display only) --}}
+                                                    <x-content.form-input label="Nama Produk" name="product_name_display"
+                                                        value="{{ $product->name }}" 
+                                                        class="cursor-not-allowed border-gray-300 bg-gray-100"
+                                                        disabled readonly />
+
+                                                    {{-- Row 2: Harga HPP (Unit Price) --}}
+                                                    <x-input-rupiah label="Harga HPP (Unit Price)" name="unit_price"
+                                                        placeholder="0" containerClass="" />
+
+                                                    {{-- Row 2: Jumlah Stok --}}
+                                                    <x-content.form-input label="Jumlah Stok" name="stock_opname"
+                                                        type="number" placeholder="0" required />
+
+                                                    {{-- Row 3: Harga Konsumen --}}
+                                                    <x-input-rupiah label="Harga Produk per Satuan (Konsumen)" name="price_consument"
+                                                        placeholder="0" containerClass="" required />
+
+                                                    {{-- Row 3: Harga R1 --}}
+                                                    <x-input-rupiah label="Harga Produk per Satuan (R1)" name="price_r1"
+                                                        placeholder="0" containerClass="" required />
+
+                                                    {{-- Row 4: Harga R2 --}}
+                                                    <x-input-rupiah label="Harga Produk per Satuan (R2)" name="price_r2"
+                                                        placeholder="0" containerClass="" required />
+
+                                                    {{-- Row 4: Tanggal Kadaluarsa --}}
+                                                    <div>
+                                                        <label class="mb-2 block text-sm font-semibold text-gray-900">Tanggal Kadaluarsa</label>
+                                                        <input type="date" name="expired_date" min="{{ date('Y-m-d') }}"
+                                                            class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex items-center justify-end gap-3 border-t border-gray-200 pt-6">
+                                                    <x-button.remove-button type="button" @click="$dispatch('close-modal', 'create-stock-{{ $product->product_id }}')">
+                                                        BATAL
+                                                    </x-button.remove-button>
+                                                    <x-button.add-button type="submit">
+                                                        SIMPAN STOK
+                                                    </x-button.add-button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </x-modal>
                                 @else
                                     <div class="flex items-center gap-3">
-                                        <a href="{{ route('stock.edit', $product->latest_stock_id) }}"
-                                            class="text-button-main hover:text-button-hover" title="Edit">
+                                        {{-- TRIGGER EDIT STOK --}}
+                                        <button @click="$dispatch('open-modal', 'edit-stock-{{ $product->product_id }}')"
+                                            class="text-button-main hover:text-button-hover cursor-pointer" title="Edit">
                                             <img src="{{ asset('update-button.svg') }}" alt="Edit"
                                                 class="inline h-5 w-5">
-                                        </a>
+                                        </button>
+
+                                        {{-- MODAL EDIT STOK --}}
+                                        @php
+                                            $latestStock = $product->stock->firstWhere('id', $product->latest_stock_id);
+                                            $batchOptions = $product->stock->sortByDesc('batch')->map(fn($s) => [
+                                                'id' => $s->id,
+                                                'label' => 'BATCH ' . $s->batch . ' (Stok: ' . $s->stock_opname . ')',
+                                                'data' => [
+                                                    'id' => $s->id,
+                                                    'stock_opname' => $s->stock_opname,
+                                                    'price_consument' => (int)$s->price_consument,
+                                                    'price_r1' => (int)$s->price_r1,
+                                                    'price_r2' => (int)$s->price_r2,
+                                                    'unit_price' => (int)$s->unit_price,
+                                                    'expired_date' => $s->expired_date ? \Carbon\Carbon::parse($s->expired_date)->format('Y-m-d') : '',
+                                                ]
+                                            ])->values()->all();
+                                            
+                                            // Add "New Batch" option
+                                            $batchOptions[] = [
+                                                'id' => 'new',
+                                                'label' => '+ Tambah Batch Baru',
+                                                'data' => [
+                                                    'id' => 'new',
+                                                    'stock_opname' => 0,
+                                                    'price_consument' => 0,
+                                                    'price_r1' => 0,
+                                                    'price_r2' => 0,
+                                                    'unit_price' => (int)($latestStock->unit_price ?? 0),
+                                                    'expired_date' => '',
+                                                ]
+                                            ];
+                                        @endphp
+
+                                        <x-modal name="edit-stock-{{ $product->product_id }}" title="SESUAIKAN STOK: {{ $product->name }}" maxWidth="4xl">
+                                            <div class="p-1" x-data="{
+                                                isNewBatch: false,
+                                                currentStockId: '{{ $product->latest_stock_id }}',
+                                                currentData: {{ json_encode($latestStock ? [
+                                                    'stock_opname' => $latestStock->stock_opname,
+                                                    'price_consument' => (int)$latestStock->price_consument,
+                                                    'price_r1' => (int)$latestStock->price_r1,
+                                                    'price_r2' => (int)$latestStock->price_r2,
+                                                    'unit_price' => (int)$latestStock->unit_price,
+                                                    'expired_date' => $latestStock->expired_date ? \Carbon\Carbon::parse($latestStock->expired_date)->format('Y-m-d') : '',
+                                                ] : []) }},
+                                                
+                                                handleBatchChange(detail) {
+                                                    if (detail.value === 'new') {
+                                                        this.isNewBatch = true;
+                                                    } else {
+                                                        this.isNewBatch = false;
+                                                        this.currentStockId = detail.value;
+                                                    }
+                                                    
+                                                    this.currentData = detail.selected.data;
+                                                    
+                                                    // Sync display components
+                                                    this.$dispatch('update-rupiah-value', { name: 'unit_price', value: this.currentData.unit_price });
+                                                    this.$dispatch('update-rupiah-value', { name: 'price_consument', value: this.currentData.price_consument });
+                                                    this.$dispatch('update-rupiah-value', { name: 'price_r1', value: this.currentData.price_r1 });
+                                                    this.$dispatch('update-rupiah-value', { name: 'price_r2', value: this.currentData.price_r2 });
+                                                }
+                                            }" @combobox-change="if($event.detail.value) handleBatchChange($event.detail)">
+                                                
+                                                <form :action="'{{ url('stock') }}/' + currentStockId" method="POST">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    
+                                                    <input type="hidden" name="is_new_batch" :value="isNewBatch ? '1' : '0'">
+                                                    <input type="hidden" name="batch_id" :value="currentStockId">
+                                                    
+                                                    <div class="mb-6 flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                                        <div class="text-sm font-bold text-gray-700">PILIH BATCH</div>
+                                                        <div class="w-64">
+                                                            <x-content.combobox 
+                                                                name="batch_selector" 
+                                                                value="{{ $product->latest_stock_id }}"
+                                                                :options="$batchOptions"
+                                                                placeholder="Pilih Batch..."
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6 rounded-lg border border-gray-200 p-5">
+                                                        {{-- Kode Produk --}}
+                                                        <x-content.form-input label="Kode Produk" name="product_code_display"
+                                                            value="{{ $product->code_id }}" 
+                                                            class="cursor-not-allowed border-gray-300 bg-gray-100"
+                                                            disabled readonly />
+
+                                                        {{-- Nama Produk --}}
+                                                        <x-content.form-input label="Nama Produk" name="product_name_display"
+                                                            value="{{ $product->name }}" 
+                                                            class="cursor-not-allowed border-gray-300 bg-gray-100"
+                                                            disabled readonly />
+
+                                                        {{-- Harga HPP --}}
+                                                        <x-input-rupiah label="Harga HPP (Unit Price)" name="unit_price"
+                                                            :value="$latestStock->unit_price ?? 0"
+                                                            placeholder="0" containerClass="" />
+
+                                                        {{-- Jumlah Stok --}}
+                                                        <x-content.form-input label="Jumlah Stok" name="stock_opname"
+                                                            type="number" placeholder="0" x-model="currentData.stock_opname" required />
+
+                                                        {{-- Harga Konsumen --}}
+                                                        <x-input-rupiah label="Harga Produk per Satuan (Konsumen)" name="price_consument"
+                                                            :value="$latestStock->price_consument ?? 0"
+                                                            placeholder="0" containerClass="" required />
+
+                                                        {{-- Harga R1 --}}
+                                                        <x-input-rupiah label="Harga Produk per Satuan (R1)" name="price_r1"
+                                                            :value="$latestStock->price_r1 ?? 0"
+                                                            placeholder="0" containerClass="" required />
+
+                                                        {{-- Harga R2 --}}
+                                                        <x-input-rupiah label="Harga Produk per Satuan (R2)" name="price_r2"
+                                                            :value="$latestStock->price_r2 ?? 0"
+                                                            placeholder="0" containerClass="" required />
+
+                                                        {{-- Tanggal Kadaluarsa --}}
+                                                        <div>
+                                                            <label class="mb-2 block text-sm font-semibold text-gray-900">Tanggal Kadaluarsa</label>
+                                                            <input type="date" name="expired_date" min="{{ date('Y-m-d') }}"
+                                                                x-model="currentData.expired_date"
+                                                                class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="flex items-center justify-end gap-3 border-t border-gray-200 pt-6">
+                                                        <x-button.remove-button type="button" @click="$dispatch('close-modal', 'edit-stock-{{ $product->product_id }}')">
+                                                            BATAL
+                                                        </x-button.remove-button>
+                                                        <x-button.add-button type="submit">
+                                                            SIMPAN PERUBAHAN
+                                                        </x-button.add-button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </x-modal>
                                     </div>
                                 @endif
                             </td>

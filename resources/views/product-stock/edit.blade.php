@@ -34,63 +34,73 @@
 
                 <x-slot name="mainSection">true</x-slot>
 
-                {{-- LEFT COLUMN --}}
-                <x-slot:leftCol>
-                    <div class="space-y-5">
-                        <x-content.form-input label="Nama Produk" name="product_name_display" :value="$activeStock->product->name" disabled
-                            readonly class="cursor-not-allowed border-gray-300 bg-gray-100" />
+                <x-slot:content>
+                    {{-- Row 1: Kode & Nama --}}
+                    <div class="col-span-1 md:col-span-2">
+                        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            {{-- Kode Produk --}}
+                            <x-content.form-input label="Kode Produk" name="product_code_display" :value="$activeStock->product->code_id ?? $activeStock->product_id" 
+                                class="cursor-not-allowed border-gray-300 bg-gray-100"
+                                disabled readonly />
 
-                        <x-content.form-input label="Kode Produk" name="product_code_display" :value="$activeStock->product->code_id ?? $activeStock->product_id" disabled
-                            readonly class="cursor-not-allowed border-gray-300 bg-gray-100" />
-
-                        <x-content.form-currency label="Harga Produk per Satuan (Konsumen)" name="price_consument"
-                            placeholder="Rp 10 xxx" :value="old('price_consument', $activeStock->price_consument)" required />
-
-                        <x-content.form-currency label="Harga Produk per Satuan (R1)" name="price_r1"
-                            placeholder="Rp 10 xxx" :value="old('price_r1', $activeStock->price_r1)" required />
+                            {{-- Nama Produk --}}
+                            <x-content.form-input label="Nama Produk" name="product_name_display" :value="$activeStock->product->name" disabled
+                                readonly class="cursor-not-allowed border-gray-300 bg-gray-100" />
+                        </div>
                     </div>
-                </x-slot:leftCol>
 
-                {{-- RIGHT COLUMN --}}
-                <x-slot:rightCol>
-                    <div class="space-y-5">
+                    {{-- Row 2: Harga HPP (Disabled) --}}
+                    <x-input-rupiah label="Harga HPP (Unit Price)" name="unit_price"
+                        :value="old('unit_price', $activeStock->unit_price)" 
+                        containerClass="" placeholder="0" disabled readonly />
 
-                        <x-content.form-currency label="Stok Produk" name="stock_opname" placeholder="0"
-                            :value="old('stock_opname', $activeStock->stock_opname)" required />
+                    {{-- Row 2: Jumlah Stok --}}
+                    <x-content.form-input label="Jumlah Stok" name="stock_opname" type="number"
+                        placeholder="0" :value="old('stock_opname', $activeStock->stock_opname)" required />
 
-                        <div>
-                            <label for="expired_date" class="mb-2 block text-sm font-semibold text-gray-900">
-                                Tanggal Kadaluarsa <br>
-                                <span class="text-xs font-normal text-gray-600">
-                                    Hari ini: {{ \Carbon\Carbon::today()->locale('id')->translatedFormat('l, d F Y') }}
-                                </span>
-                            </label>
+                    {{-- Row 3: Harga Konsumen --}}
+                    <x-input-rupiah label="Harga Produk per Satuan (Konsumen)" name="price_consument"
+                        placeholder="0" :value="old('price_consument', $activeStock->price_consument)" containerClass="" required />
 
-                            {{-- WRAPPER FLEX BIAR SEBELAHAN SAMA TOMBOL HAPUS --}}
-                            <div class="flex gap-2">
-                                <div class="relative w-full">
-                                    <input type="date" id="expired_date" name="expired_date"
-                                        min="{{ date('Y-m-d') }}" value="{{ old('expired_date', $expiryValue ?? '') }}"
-                                        class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
-                                </div>
+                    {{-- Row 3: Harga R1 --}}
+                    <x-input-rupiah label="Harga Produk per Satuan (R1)" name="price_r1"
+                        placeholder="0" :value="old('price_r1', $activeStock->price_r1)" containerClass="" required />
 
-                                {{-- TOMBOL HAPUS --}}
-                                <button type="button" onclick="clearExpiry()"
-                                    class="rounded-lg border-2 border-red-500 px-3 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
-                                    title="Hapus Tanggal">
-                                    Hapus
-                                </button>
+                    {{-- Row 4: Harga R2 --}}
+                    <x-input-rupiah label="Harga Produk per Satuan (R2)" name="price_r2"
+                        placeholder="0" :value="old('price_r2', $activeStock->price_r2)" containerClass="" required />
+
+                    {{-- Row 4: Tanggal Kadaluarsa --}}
+                    <div x-data="{
+                        selectedDate: '{{ old('expired_date', $expiryValue ?? '') }}',
+                        remainingText: '- Pilih tanggal -'
+                    }">
+                        <label for="expired_date" class="mb-2 block text-sm font-semibold text-gray-900">
+                            Tanggal Kadaluarsa 
+                            <span class="text-xs font-normal text-gray-600">
+                                Hari ini: {{ \Carbon\Carbon::today()->locale('id')->translatedFormat('l, d F Y') }}
+                            </span>
+                        </label>
+
+                        <div class="flex gap-2">
+                            <div class="relative w-full">
+                                <input type="date" id="expired_date" name="expired_date"
+                                    min="{{ date('Y-m-d') }}" value="{{ old('expired_date', $expiryValue ?? '') }}"
+                                    class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
                             </div>
 
-                            <p id="expiredPreview" class="mt-2 text-xs font-medium text-gray-700">
-                                Status: <span class="font-bold text-gray-900">- Pilih Tanggal -</span>
-                            </p>
+                            <button type="button" onclick="clearExpiry()"
+                                class="rounded-lg border-2 border-red-500 px-3 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
+                                title="Hapus Tanggal">
+                                Hapus
+                            </button>
                         </div>
 
-                        <x-content.form-currency label="Harga Produk per Satuan (R2)" name="price_r2"
-                            placeholder="Rp 10 xxx" :value="old('price_r2', $activeStock->price_r2)" required />
+                        <p id="expiredPreview" class="mt-2 text-xs font-medium text-gray-700">
+                            Status: <span class="font-bold text-gray-900">- Pilih Tanggal -</span>
+                        </p>
                     </div>
-                </x-slot:rightCol>
+                </x-slot:content>
 
                 {{-- ACTION BUTTONS --}}
                 <x-slot:actions>
@@ -110,34 +120,14 @@
 </x-app-layout>
 
 <script>
-    // FUNGSI RESET FIELD CURRENCY (AUTO NUMERIC)
+    // FUNGSI RESET FIELD CURRENCY (MENGGUNAKAN EVENT DISPATCH KE INPUT-RUPIAH)
     function resetCurrencyField(name, value) {
-        const hidden = document.querySelector(`input[type="hidden"][name="${name}"]`);
-        if (hidden) {
-            hidden.value = String(value);
-            hidden.dispatchEvent(new Event('input', {
-                bubbles: true
-            }));
-            hidden.dispatchEvent(new Event('change', {
-                bubbles: true
-            }));
-        }
-
-        const display = document.getElementById(`${name}_display`);
-        if (display && window.AutoNumeric) {
-            const an = AutoNumeric.getAutoNumericElement(display);
-            if (an) {
-                an.set(String(value));
-            } else {
-                display.value = String(value);
-                display.dispatchEvent(new Event('input', {
-                    bubbles: true
-                }));
-                display.dispatchEvent(new Event('keyup', {
-                    bubbles: true
-                }));
+        window.dispatchEvent(new CustomEvent('update-rupiah-value', {
+            detail: {
+                name: name,
+                value: value
             }
-        }
+        }));
     }
 
     function clearExpiry() {
@@ -190,21 +180,26 @@
         preview.innerHTML = `Status: <span class="font-bold ${colorClass}">${text}</span>`;
     }
 
-    // FUNGSI HANDLE BATCH (UPDATE LOGIC RESET DATE)
+    // FUNGSI HANDLE BATCH (UPDATE LOGIC PERBAIKAN JS ERROR)
     function handleBatchChange(value) {
         const flag = document.getElementById('is_new_batch');
+        if (!flag) return;
 
         // KASUS 1: PILIH BATCH LAMA -> RELOAD
         if (value !== 'new') {
-            flag.value = 0;
-            window.location.href = '{{ route('stock.edit', $activeStock->id) }}?batch_id=' + value;
+            flag.value = '0';
+            const baseUrl = "{{ route('stock.edit', $activeStock->id) }}";
+            window.location.href = `${baseUrl}?batch_id=${value}`;
             return;
         }
 
         // KASUS 2: PILIH BATCH BARU -> RESET FORM (TANPA RELOAD)
-        flag.value = 1;
+        flag.value = '1';
 
-        resetCurrencyField('stock_opname', 0);
+        // Reset Stok (Regular Input)
+        const stockInput = document.getElementById('stock_opname');
+        if (stockInput) stockInput.value = '0';
+
         resetCurrencyField('price_consument', 0);
         resetCurrencyField('price_r1', 0);
         resetCurrencyField('price_r2', 0);

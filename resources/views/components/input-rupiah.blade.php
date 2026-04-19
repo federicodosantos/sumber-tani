@@ -1,27 +1,59 @@
-@props(['name' => null, 'label' => null, 'value' => '', 'placeholder' => '0', 'containerClass' => 'mb-6'])
+@props(['name' => null, 'label' => null, 'value' => '', 'placeholder' => '0', 'containerClass' => ''])
 
 <div x-data="{
     displayAmount: '',
     rawAmount: '',
     formatNumber(value) {
-        if (!value) return '';
-        let digits = value.toString().replace(/[^0-9]/g, '');
-        if (!digits) return '';
+        if (value === null || value === undefined || value === '') return '';
+        
+        // Fix for decimal values from backend (e.g. 25000.00 -> 25000)
+        let str = value.toString();
+        if (str.includes('.')) {
+            str = str.split('.')[0];
+        }
+        
+        let digits = str.replace(/[^0-9]/g, '');
+        // If it's empty or just '0', return empty string to show placeholder
+        if (!digits || digits === '0') return '';
+        
+        // Remove leading zeros
+        digits = parseInt(digits, 10).toString();
+        
         return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     },
     updateValues(val) {
-        let numeric = val ? val.toString().replace(/[^0-9]/g, '') : '';
-        this.rawAmount = numeric;
-        this.displayAmount = this.formatNumber(numeric);
+        if (val === null || val === undefined || val === '') {
+            this.rawAmount = '';
+            this.displayAmount = '';
+            this.$dispatch('rupiah-change', { value: '', name: '{{ $name }}' });
+            return;
+        }
+
+        let str = val.toString();
+        if (str.includes('.')) {
+            str = str.split('.')[0];
+        }
+
+        let numeric = str.replace(/[^0-9]/g, '');
         
-        // Use Alpine standard $dispatch
-        this.$dispatch('rupiah-change', { value: numeric, name: '{{ $name }}' });
+        // Strip leading zeros
+        if (numeric.length > 0) {
+            numeric = parseInt(numeric, 10).toString();
+        }
+
+        // If numeric is '0', treat as empty for display/placeholder purposes
+        this.rawAmount = numeric;
+        this.displayAmount = (numeric === '0' || numeric === '') ? '' : this.formatNumber(numeric);
+        
+        this.$nextTick(() => {
+            this.$dispatch('rupiah-change', { value: numeric, name: '{{ $name }}' });
+        });
     },
     init() {
         this.updateValues('{{ $name ? old($name, $value) : $value }}');
         
         this.$watch('displayAmount', v => {
-            let numeric = v.replace(/[^0-9]/g, '');
+            let numeric = v ? v.toString().replace(/[^0-9]/g, '') : '';
             if (this.rawAmount !== numeric) {
                 this.updateValues(numeric);
             }
@@ -33,7 +65,7 @@
 class="{{ $containerClass }}"
 {{ $attributes->whereDoesntStartWith('class')->whereDoesntStartWith('value')->whereDoesntStartWith('placeholder') }}>
     @if ($label)
-        <label @if($name) for="{{ $name }}_display" @endif class="mb-1.5 block text-xs font-bold text-gray-600">
+        <label @if($name) for="{{ $name }}_display" @endif class="mb-1.5 block text-sm font-semibold text-black">
             {{ $label }}
         </label>
     @endif
@@ -44,15 +76,19 @@ class="{{ $containerClass }}"
         </div>
 
         @if($name)
-            <input type="hidden" name="{{ $name }}" x-model="rawAmount">
+            <input type="hidden" name="{{ $name }}" x-model="rawAmount" 
+                @if($attributes->has('id')) id="{{ $attributes->get('id') }}_value" @endif
+                :disabled="{{ $attributes->has('x-bind:disabled') ? $attributes->get('x-bind:disabled') : ($attributes->has('disabled') ? 'true' : 'false') }}">
         @endif
 
         <input type="text" 
-            @if($name) id="{{ $name }}_display" @endif
+            @if($name) id="{{ $name }}_display" @elseif($attributes->has('id')) id="{{ $attributes->get('id') }}_display" @endif
             x-model="displayAmount" 
             inputmode="numeric"
             placeholder="{{ $placeholder }}"
-            class="block w-full rounded-lg border border-gray-300 pl-8 pr-3 py-2 text-sm focus:border-button-main focus:outline-none focus:ring-2 focus:ring-button-main transition-all text-right font-semibold text-gray-900">
+            {{ $attributes->merge([
+                'class' => 'block w-full rounded-md border border-gray-300 focus:border-button-hover pl-8 pr-3 py-2 text-sm focus:outline-none transition-all duration-100 text-right font-semibold text-gray-900' . ($attributes->has('disabled') ? ' bg-gray-100 cursor-not-allowed' : ' bg-white')
+            ])->whereStartsWith(['disabled', 'readonly', 'required', 'autofocus', 'class']) }}>
     </div>
 
     @if($name)

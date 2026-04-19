@@ -43,14 +43,24 @@
     {{-- Main Content Section with Border --}}
     @if(isset($mainSection))
       <div class="mb-6 rounded-lg border border-gray-200 p-5">
-        <div class="grid grid-cols-1 gap-x-6 md:grid-cols-2 lg:gap-x-8">
-          <div class="space-y-5">{{ $leftCol ?? '' }}</div>
-          <div class="space-y-5">{{ $rightCol ?? '' }}</div>
-        </div>
+        @if(isset($content))
+          <div class="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 lg:gap-x-8">
+            {{ $content }}
+          </div>
+        @else
+          <div class="grid grid-cols-1 gap-x-6 md:grid-cols-2 lg:gap-x-8">
+            <div class="space-y-5">{{ $leftCol ?? '' }}</div>
+            <div class="space-y-5">{{ $rightCol ?? '' }}</div>
+          </div>
+        @endif
       </div>
     @else
       {{-- Default Layout without Border (for backward compatibility) --}}
-      @if(isset($leftCol) || isset($rightCol))
+      @if(isset($content))
+        <div class="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2 lg:gap-x-8">
+          {{ $content }}
+        </div>
+      @elseif(isset($leftCol) || isset($rightCol))
         <div class="grid grid-cols-1 gap-x-6 md:grid-cols-2 lg:gap-x-8">
           <div class="space-y-5">{{ $leftCol ?? '' }}</div>
           <div class="space-y-5">{{ $rightCol ?? '' }}</div>

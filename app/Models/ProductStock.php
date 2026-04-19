@@ -20,6 +20,7 @@ class ProductStock extends Model
         'product_id',
         'batch',
         'stock_opname',
+        'unit_price',
         'price_consument',
         'price_r1',
         'price_r2',

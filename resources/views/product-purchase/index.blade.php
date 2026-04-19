@@ -53,7 +53,12 @@
             <x-modal name="create-purchase" title="TAMBAH PEMBELIAN PRODUK" maxWidth="full" 
                 x-init="if ($errors->any()) $dispatch('open-modal', 'create-purchase')">
                 <div class="">
-                    @include('product-purchase._form', ['action' => route('purchase.store'), 'method' => 'POST', 'products' => $products])
+                    @include('product-purchase._form', [
+                        'action' => route('purchase.store'), 
+                        'method' => 'POST', 
+                        'products' => $products,
+                        'categories' => $categories
+                    ])
                 </div>
             </x-modal>
 
@@ -188,12 +193,12 @@
                             </td>
                             <td class="max-w-sm px-6 py-4 text-sm text-gray-600">
                                 <span class="line-clamp-2">
-                                    {{ rtrim(rtrim(number_format($purchase->discount_percent, 2), '0'), '.') }}%
+                                    {{ rtrim(rtrim(number_format($purchase->discount_percent, 3), '0'), '.') }}%
                                 </span>
                             </td>
                             <td class="max-w-sm px-6 py-4 text-sm text-gray-600">
                                 <span class="line-clamp-2">
-                                    {{ rtrim(rtrim(number_format($purchase->ppn_percent, 2), '0'), '.') }}%
+                                    {{ rtrim(rtrim(number_format($purchase->ppn_percent, 3), '0'), '.') }}%
                                 </span>
                             </td>
                             <td class="max-w-sm px-6 py-4 text-sm text-gray-600">

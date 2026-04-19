@@ -143,6 +143,112 @@
         :trend="$stats['transaction_trend']" />
     </div>
 
+    {{-- Laba Rugi & Neraca Sections --}}
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {{-- Laba Rugi Card --}}
+      <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div class="border-b border-gray-100 bg-gray-50/50 px-6 py-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900">Laba Rugi (Periode Ini)</h3>
+            <span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+              Profit & Loss
+            </span>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Total Pendapatan</span>
+              <span class="text-sm font-semibold text-gray-900">Rp {{ number_format($profitLoss['revenue'], 0, ',', '.') }}</span>
+            </div>
+            <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-4">
+              <span class="text-sm text-gray-500">Harga Pokok Penjualan (HPP)</span>
+              <span class="text-sm font-semibold text-red-600">-Rp {{ number_format($profitLoss['cogs'], 0, ',', '.') }}</span>
+            </div>
+            <div class="flex items-center justify-between pt-2">
+              <span class="text-base font-bold text-gray-900">Laba Kotor</span>
+              <span class="text-xl font-extrabold text-button-hover">Rp {{ number_format($profitLoss['gross_profit'], 0, ',', '.') }}</span>
+            </div>
+          </div>
+          <div class="mt-6 rounded-xl bg-button-main/30 p-4">
+              <div class="flex gap-3">
+                  <svg class="h-5 w-5 text-button-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p class="text-xs leading-relaxed text-gray-800">
+                      Laba kotor dihitung berdasarkan selisih pendapatan dengan modal produk (HPP) yang terjual dalam periode yang dipilih.
+                  </p>
+              </div>
+          </div>
+        </div>
+      </div>
+
+      {{-- Neraca Card --}}
+      <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div class="border-b border-gray-100 bg-gray-50/50 px-6 py-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900">Neraca Keuangan (Akumulasi)</h3>
+            <span class="rounded-full bg-button-main/30 px-2.5 py-0.5 text-xs font-medium text-gray-800">
+              Balance Sheet
+            </span>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-2 gap-8">
+            {{-- Assets --}}
+            <div class="space-y-3">
+              <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Total Aset</p>
+              <div class="space-y-2">
+                <div class="flex justify-between">
+                  <span class="text-xs text-gray-500">Kas</span>
+                  <span class="text-xs font-medium text-gray-700">Rp {{ number_format($balanceSheet['assets']['cash'], 0, ',', '.') }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-xs text-gray-500">Persediaan</span>
+                  <span class="text-xs font-medium text-gray-700">Rp {{ number_format($balanceSheet['assets']['inventory'], 0, ',', '.') }}</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-100 pb-2">
+                  <span class="text-xs text-gray-500">Piutang</span>
+                  <span class="text-xs font-medium text-gray-700">Rp {{ number_format($balanceSheet['assets']['receivables'], 0, ',', '.') }}</span>
+                </div>
+                <div class="flex justify-between pt-1">
+                  <span class="text-xs font-bold text-gray-900">Total</span>
+                  <span class="text-xs font-bold text-button-hover">Rp {{ number_format($balanceSheet['assets']['total'], 0, ',', '.') }}</span>
+                </div>
+              </div>
+            </div>
+
+            {{-- Liabilities & Equity --}}
+            <div class="space-y-3">
+              <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Kewajiban & Ekuitas</p>
+              <div class="space-y-2">
+                <div class="flex justify-between border-b border-gray-100 pb-2">
+                  <span class="text-xs text-gray-500">Hutang</span>
+                  <span class="text-xs font-medium text-gray-700">Rp {{ number_format($balanceSheet['liabilities']['total'], 0, ',', '.') }}</span>
+                </div>
+                <div class="flex justify-between pt-1">
+                  <span class="text-xs font-bold text-gray-900">Ekuitas</span>
+                  <span class="text-xs font-extrabold text-button-hover">Rp {{ number_format($balanceSheet['equity'], 0, ',', '.') }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 rounded-xl bg-gray-50 p-4 border border-gray-100">
+              <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                      <div class="h-2 w-2 rounded-full bg-button-hover"></div>
+                      <span class="text-xs font-medium text-gray-600">Aset = Kewajiban + Ekuitas</span>
+                  </div>
+                  <svg class="h-4 w-4 text-button-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+              </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     {{-- Sales Chart --}}
     <x-finance.sales-chart :chartData="$chartData" />
 

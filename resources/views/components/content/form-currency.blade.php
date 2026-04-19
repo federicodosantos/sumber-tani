@@ -18,8 +18,9 @@ if (rawValue) autoNumericInstance.set(rawValue);">
     <input type="text" id="{{ $name }}_display" x-ref="displayInput" inputmode="numeric"
         placeholder="{{ $placeholder }}" x-on:keyup="rawValue = autoNumericInstance.getNumericString()"
         x-on:change="rawValue = autoNumericInstance.getNumericString()"
-        class="focus:border-button-hover transition-all duration-100  block w-full rounded-lg border-2 px-3 py-2 focus:outline-none"
-        {{ $attributes->whereDoesntStartWith('name') }}>
+        {{ $attributes->merge([
+            'class' => 'focus:border-button-hover transition-all duration-100 block w-full rounded-lg border-2 px-3 py-2 focus:outline-none bg-white'
+        ])->whereDoesntStartWith('name') }}>
 
     <input type="hidden" id="{{ $name }}" name="{{ $name }}" x-model="rawValue">
 

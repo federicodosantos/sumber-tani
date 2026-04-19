@@ -35,6 +35,9 @@ class ProductStockController extends Controller
         // Get dashboard statistics
         $stats = $this->stockService->getDashboardStats();
 
+        // Load all batches for each product for the Edit Modal
+        $products->load('stock');
+
         return view('product-stock.index', [
             'products' => $products,
             'totalStock' => $stats['total_stock'],
@@ -47,7 +50,17 @@ class ProductStockController extends Controller
      */
     public function create(Request $request)
     {
-        $products = Product::select('id', 'code_id', 'name')->get();
+        $products = Product::select('products.id', 'products.code_id', 'products.name', 'ps.unit_price')
+            ->leftJoinSub(
+                \Illuminate\Support\Facades\DB::table('product_stocks as ps1')
+                    ->select('ps1.product_id', 'ps1.unit_price')
+                    ->whereRaw('ps1.id = (SELECT id FROM product_stocks ps2 WHERE ps2.product_id = ps1.product_id AND ps2.deleted_at IS NULL ORDER BY ps2.batch DESC LIMIT 1)'),
+                'ps',
+                'ps.product_id',
+                '=',
+                'products.id'
+            )
+            ->get();
         $selectedProductId = $request->query('product_id');
 
         return view('product-stock.create', [

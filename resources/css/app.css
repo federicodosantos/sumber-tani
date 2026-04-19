@@ -20,3 +20,14 @@
         @apply mb-1.5 block text-sm font-semibold text-black;
     }
 }
+
+/* Hide number input spinners */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+}

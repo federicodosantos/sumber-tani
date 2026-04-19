@@ -4,6 +4,9 @@
     'value' => '',
     'placeholder' => 'Pilih Produk...',
     'id' => null,
+    'emptyAction' => null,
+    'emptyLabel' => '+ Tambah Baru',
+    'type' => null, // e.g., 'product', 'category'
 ])
 
 <div x-data="{
@@ -12,6 +15,7 @@
     value: '{{ $value }}',
     options: {{ json_encode($options) }},
     selectedIndex: -1,
+    type: '{{ $type }}',
     get filteredOptions() {
         if (!this.search) return this.options;
         const s = this.search.toLowerCase();
@@ -26,7 +30,6 @@
         this.search = '';
         this.open = false;
         
-        // Dispatch custom event to notify external listeners
         this.$nextTick(() => {
             $refs.hiddenInput.dispatchEvent(new CustomEvent('combobox-change', { 
                 bubbles: true,
@@ -34,15 +37,29 @@
             }));
         });
     }
-}" class="relative w-full" @click.away="open = false" @combobox-reset.window="if($event.detail.name === '{{ $name }}') { value = ''; search = ''; }">
+}" 
+class="relative w-full" 
+@combobox-reset.window="if($event.detail.name === '{{ $name }}') { value = ''; search = ''; }"
+@item-created.window="if(type && $event.detail.type === type) { 
+    const newItem = $event.detail.item;
+    // Check if item already exists to avoid duplicates
+    if (!options.find(o => o.id == newItem.id)) {
+        options.push(newItem);
+    }
+    value = newItem.id; 
+    search = '';
+    selectedIndex = -1;
+}"
+    @click.window.capture="if (open && !$el.contains($event.target)) open = false"
+>
     {{-- Hidden Input for Form Submission --}}
     <input type="hidden" name="{{ $name }}" x-model="value" x-ref="hiddenInput" id="{{ $id ?? $name }}" {{ $attributes->merge(['class' => 'combobox-hidden']) }}>
 
     {{-- Selected Label Display & Search Input --}}
     <div class="relative">
-        <div @click="open = !open; if(open) $nextTick(() => $refs.searchInput.focus())"
+        <div @click="if ($event.target === $refs.searchInput) return; open = !open; if(open) $nextTick(() => $refs.searchInput.focus())"
              :class="open ? 'border-button-hover ring-2 ring-button-main/10 bg-white' : 'border-gray-200 bg-white'"
-             class="flex w-full cursor-pointer items-center justify-between rounded-lg border-2 px-3 py-2 text-sm transition-all hover:border-button-hover shadow-sm">
+             class="flex w-full cursor-pointer items-center justify-between rounded-md border px-3 py-2 text-sm transition-all hover:border-button-hover shadow-sm">
             
             <template x-if="!open">
                 <span x-text="value ? selectedLabel : '{{ $placeholder }}'" 
@@ -76,25 +93,33 @@
                     <div @click="select(opt)"
                          @mouseenter="selectedIndex = index"
                          :class="{
-                            'bg-button-main text-white': selectedIndex === index,
+                            'bg-button-main text-gray-800': selectedIndex === index,
                             'text-gray-700 hover:bg-gray-50': selectedIndex !== index,
                             'bg-gray-50 border-l-4 border-button-main': value == opt.id && selectedIndex !== index
                          }"
                          class="group cursor-pointer rounded-lg px-3 py-2.5 text-sm transition-all mb-0.5 last:mb-0">
                         <div class="flex items-center justify-between">
                             <span x-text="opt.label" :class="value == opt.id ? 'font-bold' : ''"></span>
-                            <svg x-show="value == opt.id" class="h-4 w-4" :class="selectedIndex === index ? 'text-white' : 'text-button-main'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg x-show="value == opt.id" class="h-4 w-4" :class="selectedIndex === index ? 'text-gray-800' : 'text-button-main'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                             </svg>
                         </div>
                     </div>
                 </template>
                 
-                <div x-show="filteredOptions.length === 0" class="px-3 py-6 text-center">
+                <div x-show="filteredOptions.length === 0" class="px-2 py-4 text-center">
                     <svg class="mx-auto h-8 w-8 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <p class="text-xs text-gray-400">Produk tidak ditemukan</p>
+                    <p class="text-xs text-gray-400 mb-3">Produk tidak ditemukan</p>
+                    
+                    @if($emptyAction)
+                        <button type="button" 
+                                @click="open = false; $dispatch('open-modal', '{{ $emptyAction }}')"
+                                class="w-full rounded-lg bg-button-main/10 px-3 py-2 text-xs font-bold text-button-main hover:bg-button-main hover:text-gray-800 transition-all">
+                            {{ $emptyLabel }}
+                        </button>
+                    @endif
                 </div>
             </div>
         </div>

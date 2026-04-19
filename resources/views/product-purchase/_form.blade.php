@@ -40,36 +40,100 @@
                         </div>
                     </div>
 
-                    <div class="flex flex-col gap-1.5">
+                    <div class="flex flex-col gap-1.5" x-data="{ 
+                        type: '{{ old('ppn_type', $purchase?->ppn_type ?? 'percent') }}', 
+                        toggle() { 
+                            this.type = this.type === 'percent' ? 'nominal' : 'percent';
+                            // Clear inputs on toggle to avoid confusion (but keep the price sync if desired)
+                            // for now following original behavior: clear
+                            $nextTick(() => {
+                                const input = document.getElementById(this.type === 'percent' ? 'ppnInput' : 'ppnInputNominal_display');
+                                if (input) { input.value = ''; input.dispatchEvent(new Event('input')); }
+                            });
+                        } 
+                    }">
                         <label for="ppnInput" class="text-xs font-bold text-gray-600">PPN</label>
                         <div class="flex gap-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200">
-                            <input type="number" name="ppn" id="ppnInput"
+                            {{-- Percent Mode --}}
+                            <input x-show="type === 'percent'" type="number" 
+                                name="ppn" 
+                                id="ppnInput"
                                 class="w-full border-none bg-transparent py-2.5 pl-3 text-sm focus:ring-0"
-                                placeholder="0" min="0" step="0.01" 
-                                value="{{ old('ppn', $purchase?->ppn_percent ?? $purchase?->ppn_value ?? 0) }}">
-                            <button type="button" id="togglePpnType"
+                                placeholder="0" min="0" step="0.001" 
+                                value="{{ old('ppn_type', $purchase?->ppn_type) == 'percent' || !old('ppn_type') ? old('ppn', $purchase?->ppn_percent !== null ? round($purchase->ppn_percent, 3) : '') : '' }}"
+                                @input="if($el.value.includes('.')) { 
+                                    const parts = $el.value.split('.'); 
+                                    if(parts[1].length > 3) { 
+                                        $el.value = parts[0] + '.' + parts[1].slice(0, 3); 
+                                    } 
+                                }"
+                                x-bind:disabled="type !== 'percent'">
+
+                            {{-- Nominal Mode --}}
+                            <div x-show="type === 'nominal'" class="w-full">
+                                <x-input-rupiah 
+                                    name="ppn" 
+                                    id="ppnInputNominal"
+                                    class="w-full"
+                                    placeholder="0"
+                                    :value="old('ppn_type', $purchase?->ppn_type) == 'nominal' ? old('ppn', $purchase?->ppn_value ?? '') : ''" 
+                                    x-bind:disabled="type !== 'nominal'" />
+                            </div>
+
+                            <button type="button" @click="toggle()"
                                 class="flex items-center justify-center border-l border-gray-200 bg-white px-3 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
                                 title="Klik untuk ganti tipe PPN">
-                                <span id="ppnUnitLabel">{{ (old('ppn_type', $purchase?->ppn_type) == 'nominal' ? 'Rp' : '%') }}</span>
+                                <span x-text="type === 'nominal' ? 'Rp' : '%'"></span>
                             </button>
                         </div>
-                        <input type="hidden" name="ppn_type" id="ppnTypeInput" value="{{ old('ppn_type', $purchase?->ppn_type ?? 'percent') }}">
+                        <input type="hidden" name="ppn_type" id="ppnTypeInput" :value="type">
                     </div>
 
-                    <div class="flex flex-col gap-1.5">
+                    <div class="flex flex-col gap-1.5" x-data="{ 
+                        type: '{{ old('discount_type', $purchase?->discount_type ?? 'percent') }}', 
+                        toggle() { 
+                            this.type = this.type === 'percent' ? 'nominal' : 'percent';
+                            $nextTick(() => {
+                                const input = document.getElementById(this.type === 'percent' ? 'globalDiscount' : 'globalDiscountNominal_display');
+                                if (input) { input.value = ''; input.dispatchEvent(new Event('input')); }
+                            });
+                        } 
+                    }">
                         <label for="globalDiscount" class="text-xs font-bold text-gray-600">Diskon Global</label>
                         <div class="flex gap-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200">
-                            <input type="number" name="discount" id="globalDiscount"
+                            {{-- Percent Mode --}}
+                            <input x-show="type === 'percent'" type="number" 
+                                name="discount" 
+                                id="globalDiscount"
                                 class="w-full border-none bg-transparent py-2.5 pl-3 text-sm focus:ring-0"
-                                placeholder="0" min="0" step="0.01"
-                                value="{{ old('discount', $purchase?->discount_percent ?? $purchase?->discount_value ?? 0) }}">
-                            <button type="button" id="toggleDiscountType"
+                                placeholder="0" min="0" step="0.001"
+                                value="{{ old('discount_type', $purchase?->discount_type) == 'percent' || !old('discount_type') ? old('discount', $purchase?->discount_percent !== null ? round($purchase->discount_percent, 3) : '') : '' }}"
+                                @input="if($el.value.includes('.')) { 
+                                    const parts = $el.value.split('.'); 
+                                    if(parts[1].length > 3) { 
+                                        $el.value = parts[0] + '.' + parts[1].slice(0, 3); 
+                                    } 
+                                }"
+                                x-bind:disabled="type !== 'percent'">
+
+                            {{-- Nominal Mode --}}
+                            <div x-show="type === 'nominal'" class="w-full">
+                                <x-input-rupiah 
+                                    name="discount" 
+                                    id="globalDiscountNominal"
+                                    class="w-full"
+                                    placeholder="0"
+                                    :value="old('discount_type', $purchase?->discount_type) == 'nominal' ? old('discount', $purchase?->discount_value ?? '') : ''" 
+                                    x-bind:disabled="type !== 'nominal'" />
+                            </div>
+
+                            <button type="button" @click="toggle()"
                                 class="flex items-center justify-center border-l border-gray-200 bg-white px-3 text-sm font-bold text-button-hover cursor-pointer hover:bg-green-50 transition-colors"
                                 title="Klik untuk ganti tipe diskon">
-                                <span id="discountUnitLabel">{{ (old('discount_type', $purchase?->discount_type) == 'nominal' ? 'Rp' : '%') }}</span>
+                                <span x-text="type === 'nominal' ? 'Rp' : '%'"></span>
                             </button>
                         </div>
-                        <input type="hidden" name="discount_type" id="discountTypeInput" value="{{ old('discount_type', $purchase?->discount_type ?? 'percent') }}">
+                        <input type="hidden" name="discount_type" id="discountTypeInput" :value="type">
                     </div>
 
                     <div class="flex flex-col gap-1.5">
@@ -97,7 +161,7 @@
 
         <div id="rowsContainer">
             {{-- Header Row - Hidden on Mobile --}}
-            <div class="mb-3 hidden lg:grid lg:grid-cols-[4fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr_40px] gap-3 px-3 text-sm font-semibold text-gray-700">
+            <div class="mb-3 hidden lg:grid lg:grid-cols-[2fr_0.7fr_1fr_1.5fr_1.5fr_1.5fr_1.5fr_1.5fr_10px] gap-3 px-3 text-sm font-semibold text-gray-700">
                 <div>Produk</div>
                 <div class="text-center">Jumlah</div>
                 <div class="text-center">Satuan</div>
@@ -113,7 +177,7 @@
             @for($i = 0; $i < $rowCount; $i++)
                 @php $detail = $isEdit ? $purchase->details[$i] : null; @endphp
                 <div class="product-row mb-3 rounded-lg border border-gray-200 p-3 sm:p-4">
-                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[4fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr_40px] lg:items-start lg:gap-3">
+                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[2fr_0.7fr_1fr_1.5fr_1.5fr_1.5fr_1.5fr_1.5fr_10px] lg:items-start lg:gap-3">
                         {{-- Product Selector --}}
                         <div>
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Produk</label>
@@ -123,6 +187,9 @@
                                 :value="old('products.' . $i . '.product_id', $detail?->product_id)"
                                 placeholder="Pilih atau cari produk..."
                                 class="product-select"
+                                empty-action="create-product"
+                                empty-label="+ Tambah Produk Baru"
+                                type="product"
                                 required />
                         </div>
 
@@ -144,45 +211,58 @@
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">HET Price</label>
-                            <input type="text" name="products[{{ $i }}][het_price]"
-                                value="{{ old('products.' . $i . '.het_price', number_format($detail?->het_price ?? 0, 0, ',', '.')) }}"
-                                class="het-price-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-xs text-center"
-                                placeholder="0" required>
+                            <x-input-rupiah 
+                                name="products[{{ $i }}][het_price]"
+                                id="products_{{ $i }}_het_price"
+                                class="w-full"
+                                placeholder="0"
+                                :value="old('products.' . $i . '.het_price', $detail?->het_price ?? '')"
+                                required />
                         </div>
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Basic Disc</label>
-                            <input type="text" name="products[{{ $i }}][basic_discount]"
-                                value="{{ old('products.' . $i . '.basic_discount', number_format($detail?->basic_discount ?? 0, 0, ',', '.')) }}"
-                                class="basic-discount-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-xs text-center"
-                                placeholder="0">
+                            <x-input-rupiah 
+                                name="products[{{ $i }}][basic_discount]"
+                                id="products_{{ $i }}_basic_discount"
+                                class="w-full"
+                                placeholder="0"
+                                :value="old('products.' . $i . '.basic_discount', $detail?->basic_discount ?? '')" />
                         </div>
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Add Disc</label>
-                            <input type="text" name="products[{{ $i }}][additional_discount]"
-                                value="{{ old('products.' . $i . '.additional_discount', number_format($detail?->additional_discount ?? 0, 0, ',', '.')) }}"
-                                class="additional-discount-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-xs text-center"
-                                placeholder="0">
+                            <x-input-rupiah 
+                                name="products[{{ $i }}][additional_discount]"
+                                id="products_{{ $i }}_additional_discount"
+                                class="w-full"
+                                placeholder="0"
+                                :value="old('products.' . $i . '.additional_discount', $detail?->additional_discount ?? '')" />
                         </div>
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Net Price</label>
-                            <input type="text" name="products[{{ $i }}][net_price]"
-                                value="{{ old('products.' . $i . '.net_price', number_format($detail?->net_price ?? 0, 0, ',', '.')) }}"
-                                class="net-price-input w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-xs text-center"
-                                placeholder="0" readonly>
+                            <x-input-rupiah 
+                                name="products[{{ $i }}][net_price]"
+                                id="products_{{ $i }}_net_price"
+                                class="w-full"
+                                placeholder="0"
+                                :value="old('products.' . $i . '.net_price', $detail?->net_price ?? '')"
+                                readonly />
                         </div>
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Sub Total</label>
-                            <input type="text" name="products[{{ $i }}][subtotal]"
-                                value="{{ number_format($detail?->subtotal ?? 0, 0, ',', '.') }}"
-                                class="subtotal-input w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 font-bold text-xs text-center"
-                                placeholder="0" readonly>
+                            <x-input-rupiah 
+                                name="products[{{ $i }}][subtotal]"
+                                id="products_{{ $i }}_subtotal"
+                                class="w-full"
+                                placeholder="0"
+                                :value="$detail?->subtotal ?? ''"
+                                readonly />
                         </div>
 
-                        <div class="flex h-[42px] items-center justify-end">
+                        <div class="flex h-[42px] items-center justify-end -mr-1">
                             <button type="button"
                                 class="remove-row w-full lg:w-auto rounded-md bg-red-50 px-4 py-2 text-red-600 hover:bg-red-100 hover:text-red-800 disabled:opacity-50 lg:bg-transparent lg:p-0"
                                 {{ $rowCount <= 1 ? 'disabled' : '' }}>
@@ -263,9 +343,9 @@
 
     <x-slot:actions>
         <div class="flex flex-col gap-3 sm:flex-row">
-            @if(!$isEdit && !Request::is('purchase/create'))
-                {{-- In Modal --}}
-                <x-button.remove-button x-on:click="$dispatch('close-modal', 'create-purchase')" type="button" class="w-full sm:w-auto">
+            @if(Request::ajax() || (!Request::is('purchase/create') && !Request::is('purchase/*/edit')))
+                {{-- In Modal (Create or Edit) --}}
+                <x-button.remove-button x-on:click="$dispatch('close-modal', 'create-purchase'); $dispatch('close-modal', 'edit-purchase')" type="button" class="w-full sm:w-auto">
                     <span class="font-bold">BATAL</span>
                 </x-button.remove-button>
             @else
@@ -281,3 +361,15 @@
         </div>
     </x-slot:actions>
 </x-content.form-card>
+
+{{-- Modal Tambah Produk Baru --}}
+<x-modal name="create-product" title="TAMBAH PRODUK BARU" maxWidth="4xl">
+    <div class="p-1">
+        @include('product._form', [
+            'action' => route('product.store'), 
+            'method' => 'POST', 
+            'categories' => $categories,
+            'isAjax' => true
+        ])
+    </div>
+</x-modal>

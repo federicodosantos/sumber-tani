@@ -21,8 +21,7 @@ class ProductStockService
         // Hitung batch selanjutnya
         $nextBatch = $this->getNextBatchNumber($productId);
 
-        // Create batch baru
-        return ProductStock::create([
+        $insertData = [
             'product_id' => $productId,
             'batch' => $nextBatch,
             'stock_opname' => $data['stock_opname'],
@@ -30,7 +29,13 @@ class ProductStockService
             'price_r1' => $data['price_r1'],
             'price_r2' => $data['price_r2'],
             'expired_date' => $data["expired_date"],
-        ]);
+        ];
+
+        if (isset($data['unit_price'])) {
+            $insertData['unit_price'] = $data['unit_price'];
+        }
+
+        return ProductStock::create($insertData);
     }
 
     /**
@@ -44,13 +49,19 @@ class ProductStockService
     {
         $stock = ProductStock::findOrFail($batchId);
 
-        $stock->update([
+        $updateData = [
             'stock_opname' => $data['stock_opname'],
             'price_consument' => $data['price_consument'],
             'price_r1' => $data['price_r1'],
             'price_r2' => $data['price_r2'],
             'expired_date' => $data['expired_date'],
-        ]);
+        ];
+
+        if (isset($data['unit_price'])) {
+            $updateData['unit_price'] = $data['unit_price'];
+        }
+
+        $stock->update($updateData);
 
         return $stock->fresh();
     }
@@ -84,19 +95,21 @@ class ProductStockService
         return $stock->product_id;
     }
 
-    /**
-     * Prepare stock data for create/update
-     * Normalize and sanitize input data
-     */
     public function prepareStockData(array $validated): array
     {
-        return [
+        $data = [
             'stock_opname' => $validated['stock_opname'],
             'price_consument' => $validated['price_consument'],
             'price_r1' => $validated['price_r1'],
             'price_r2' => $validated['price_r2'],
             'expired_date' => $validated['expired_date'] ?? null,
         ];
+
+        if (isset($validated['unit_price'])) {
+            $data['unit_price'] = $validated['unit_price'];
+        }
+
+        return $data;
     }
 
     /**
@@ -119,6 +132,7 @@ class ProductStockService
                 'product_id' => $productId,
                 'batch' => $lastBatchNumber + 1,
                 'stock_opname' => 0,
+                'unit_price' => 0,
                 'price_consument' => 0,
                 'price_r1' => 0,
                 'price_r2' => 0,
@@ -266,6 +280,7 @@ class ProductStockService
             ->leftJoinSub($latestBatchSub, 'lb', 'lb.product_id', '=', 'products.id')
             ->leftJoinSub($nearestExpirySub, 'ne', 'ne.product_id', '=', 'products.id')
             ->select([
+                'products.id',
                 'products.id as product_id',
                 'products.code_id',
                 'products.name',

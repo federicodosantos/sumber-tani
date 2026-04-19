@@ -29,8 +29,9 @@
 
                 <x-slot name="mainSection">true</x-slot>
 
-                <x-slot:leftCol>
-                    <div x-data="{
+                <x-slot:content>
+                    {{-- Row 1: Kode & Nama --}}
+                    <div class="col-span-1 md:col-span-2" x-data="{
                         selectedId: '{{ $selectedProductId ?? old('product_id') }}',
                         isPreselected: {{ $selectedProductId ? 'true' : 'false' }},
                         productsMap: {{ $products->mapWithKeys(
@@ -38,14 +39,20 @@
                                     $p->id => [
                                         'code' => $p->code_id ?? $p->id,
                                         'name' => $p->name,
-                                        'price_r3' => $p->price_r3 ?? 0,
+                                        'unit_price' => $p->unit_price ?? 0,
                                     ],
                                 ],
                             )->toJson() }}
-                    }" class="space-y-5">
+                    }" 
+                    x-effect="$dispatch('update-rupiah-value', { name: 'unit_price', value: selectedId ? productsMap[selectedId].unit_price : 0 })">
+                        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            {{-- Kode Produk --}}
+                            <x-content.form-input label="Kode Produk" name="product_code_display"
+                                x-bind:value="selectedId ? productsMap[selectedId].code : '-'" 
+                                class="cursor-not-allowed border-gray-300 bg-gray-100"
+                                disabled readonly />
 
-                        {{-- Nama Produk --}}
-                        <div>
+                            {{-- Nama Produk --}}
                             <x-content.form-select label="Nama Produk" name="product_id" x-model="selectedId"
                                 x-bind:class="isPreselected ? 'cursor-not-allowed bg-gray-100 pointer-events-none' : ''"
                                 required>
@@ -57,37 +64,31 @@
                                 @endforeach
                             </x-content.form-select>
                         </div>
-
-                        {{-- Kode Produk --}}
-                        <div>
-                            <x-content.form-input label="Kode Produk" name="product_code_display"
-                                x-bind:value="selectedId ? productsMap[selectedId].code : '-'" disabled readonly
-                                class="cursor-not-allowed bg-gray-100" />
-                        </div>
-
-                        {{-- Harga Produk per Satuan (Konsumen) --}}
-                        <div>
-                            <x-content.form-currency label="Harga Produk per Satuan (Konsumen)" name="price_consument"
-                                placeholder="Rp 10 xxx" required />
-                        </div>
-
-                        {{-- Harga Produk per Satuan (R3) --}}
-                        <div>
-                            <x-content.form-currency label="Harga Produk per Satuan (R2)" name="price_r2"
-                                placeholder="Rp 10 xxx" required />
-                        </div>
                     </div>
-                </x-slot:leftCol>
 
-                <x-slot:rightCol>
-                    <div class="space-y-5">
-                        {{-- Jumlah Stok --}}
-                        <div>
-                            <x-content.form-currency label="Jumlah Stok" name="stock_opname"
-                                placeholder="Masukan Jumlah Stok" required />
-                        </div>
+                    {{-- Data fields --}}
+                    <div class="contents">
+                        {{-- Row 2: Harga HPP --}}
+                        <x-input-rupiah label="Harga HPP (Unit Price)" name="unit_price"
+                            containerClass="" placeholder="0" disabled readonly />
 
-                        {{-- Waktu Kadaluarsa (Calendar Mode) --}}
+                        {{-- Row 2: Jumlah Stok --}}
+                        <x-content.form-input label="Jumlah Stok" name="stock_opname"
+                            type="number" placeholder="0" required />
+
+                        {{-- Row 3: Harga Konsumen --}}
+                        <x-input-rupiah label="Harga Produk per Satuan (Konsumen)" name="price_consument"
+                            placeholder="0" containerClass="" required />
+
+                        {{-- Row 3: Harga R1 --}}
+                        <x-input-rupiah label="Harga Produk per Satuan (R1)" name="price_r1"
+                            placeholder="0" containerClass="" required />
+
+                        {{-- Row 4: Harga R2 --}}
+                        <x-input-rupiah label="Harga Produk per Satuan (R2)" name="price_r2"
+                            placeholder="0" containerClass="" required />
+
+                        {{-- Row 4: Tanggal Kadaluarsa --}}
                         <div x-data="expiryHandler()">
                             <label for="expired_date" class="mb-2 block text-sm font-semibold text-gray-900">
                                 Tanggal Kadaluarsa <br>
@@ -101,10 +102,8 @@
                                     min="{{ date('Y-m-d') }}" value="{{ old('expired_date', $expiryValue ?? '') }}"
                                     x-model="selectedDate" @change="calculateRemaining()"
                                     class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
-
                             </div>
 
-                            {{-- PREVIEW SISA WAKTU (Otomatis muncul saat tanggal dipilih) --}}
                             <p class="mt-2 text-xs font-medium text-gray-700">
                                 Status:
                                 <span x-text="remainingText" class="text-black font-bold">
@@ -112,14 +111,8 @@
                                 </span>
                             </p>
                         </div>
-
-                        {{-- Harga Produk per Satuan (R1) --}}
-                        <div>
-                            <x-content.form-currency label="Harga Produk per Satuan (R1)" name="price_r1"
-                                placeholder="Rp 10 xxx" required />
-                        </div>
                     </div>
-                </x-slot:rightCol>
+                </x-slot:content>
 
                 <x-slot:actions>
                     <x-button.remove-button href="{{ route('stock.index') }}">

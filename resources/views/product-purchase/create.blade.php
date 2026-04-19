@@ -5,7 +5,8 @@
             @include('product-purchase._form', [
                 'action' => route('purchase.store'), 
                 'method' => 'POST', 
-                'products' => $products
+                'products' => $products,
+                'categories' => $categories
             ])
         </div>
     </div>

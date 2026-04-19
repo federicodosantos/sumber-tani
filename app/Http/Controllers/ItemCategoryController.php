@@ -68,6 +68,12 @@ class ItemCategoryController extends Controller
 
         $isExist = ItemCategory::where('name', $validated['name'])->exists();
         if ($isExist) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'message' => 'Kategori dengan nama tersebut sudah ada.',
+                    'errors' => ['name' => ['Kategori dengan nama tersebut sudah ada.']]
+                ], 422);
+            }
             return redirect()
                 ->back()
                 ->withInput()
@@ -76,7 +82,18 @@ class ItemCategoryController extends Controller
                 ]);
         }
 
-        ItemCategory::create($validated);
+        $category = ItemCategory::create($validated);
+
+        if ($request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Kategori berhasil ditambahkan.',
+                'item' => [
+                    'id' => $category->id,
+                    'label' => $category->name
+                ]
+            ]);
+        }
 
         return redirect()->route('item-category')->with('success', 'Item category created successfully.');
     }

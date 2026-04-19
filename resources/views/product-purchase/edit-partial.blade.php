@@ -3,5 +3,6 @@
     'method' => 'POST', 
     'purchase' => $purchase, 
     'products' => $products, 
+    'categories' => $categories,
     'isEdit' => true
 ])

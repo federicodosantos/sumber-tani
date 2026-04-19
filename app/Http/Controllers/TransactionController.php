@@ -101,17 +101,24 @@ class TransactionController extends Controller
             ]);
 
             foreach ($items as $item) {
+                // Update Stok & Get Buying Price
+                $productStock = ProductStock::where('product_id', $item['id'])
+                    ->whereNull('deleted_at')
+                    ->where('stock_opname', '>', 0)
+                    ->orderBy('created_at', 'asc')
+                    ->first();
+
+                $buyingPrice = $productStock ? $productStock->unit_price : 0;
+
                 $transaction->transactionDetails()->create([
                     'product_id' => $item['id'],
                     'product_price' => $item['price'],
+                    'buying_price' => $buyingPrice,
                     'quantity' => $item['qty'],
                     'total_price' => $item['price'] * $item['qty'],
                     'created_at' => $transactionDate,
                     'updated_at' => $transactionDate,
                 ]);
-
-                // Update Stok
-                $productStock = ProductStock::where('product_id', $item['id'])->whereNull('deleted_at')->where('stock_opname', '>', 0)->orderBy('created_at', 'asc')->first();
 
                 if ($productStock) {
                     $productStock->decrement('stock_opname', $item['qty']);

@@ -35,7 +35,7 @@
                     accent-button-main shadow-sm 
                     checked:hover:accent-button-hover
                     checked:border-black"
-                    name="remember">
+                    name="remember" @checked(old('remember'))>
                 <span class="ms-2 text-xs mt-1 text-black">{{ __('Remember me') }}</span>
             </label>
         </div>

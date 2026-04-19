@@ -31,8 +31,8 @@ class DatabaseSeeder extends Seeder
             'role' => $role[1],
         ]);
 
-        $this->call([
-            TransactionSeeder::class,
-        ]);
+        // $this->call([
+        //     TransactionSeeder::class,
+        // ]);
     }
 }

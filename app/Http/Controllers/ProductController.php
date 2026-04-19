@@ -90,6 +90,12 @@ class ProductController extends Controller
             $isExist = Product::where('code_id', $validated['code_id'])->orWhere('name', $validated['name'])->exists();
 
             if ($isExist) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'message' => 'ID atau nama produk sudah digunakan.',
+                        'errors' => ['general' => ['ID atau nama produk sudah digunakan.']]
+                    ], 422);
+                }
                 return redirect()
                     ->back()
                     ->withInput()
@@ -98,10 +104,31 @@ class ProductController extends Controller
 
             $validated['code_id'] = Str::upper($validated['code_id']);
 
-            Product::create($validated);
+            $product = Product::create($validated);
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Produk berhasil ditambahkan.',
+                    'item' => [
+                        'id' => $product->id,
+                        'label' => $product->code_id . ' - ' . $product->name,
+                        'data' => [
+                            'code_id' => $product->code_id,
+                            'name' => $product->name
+                        ]
+                    ]
+                ]);
+            }
 
             return redirect()->route('product')->with('success', 'Product created successfully.');
         } catch (Exception $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'message' => 'ID atau nama produk sudah digunakan.',
+                    'errors' => ['general' => ['ID atau nama produk sudah digunakan.']]
+                ], 422);
+            }
             return redirect()
                 ->back()
                 ->withInput()
