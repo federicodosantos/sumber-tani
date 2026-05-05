@@ -74,7 +74,8 @@ async function connectQZ() {
         console.log("QZ Connected - Silent printing enabled!");
     } catch (err) {
         console.error("QZ Connection failed:", err);
-        setTimeout(connectQZ, 1000);
+        // Throw agar fungsi pemanggil (seperti printReceipt) tahu kalau koneksi gagal
+        throw new Error("Aplikasi QZ Tray belum aktif atau tidak terhubung. Silakan buka aplikasi QZ Tray di komputer ini.");
     }
 }
 
@@ -98,7 +99,7 @@ async function listPrinters() {
         console.log("Daftar printer:", printers);
         alert(printers.join("\n"));
     } catch (err) {
-        alert("Gagal mengambil daftar printer.\n" + err);
+        alert("⚠️ GAGAL MENGAMBIL DAFTAR PRINTER\n\nDetail: " + (err.message || err));
     }
 }
 
@@ -291,6 +292,22 @@ async function printReceipt(saleId, offlineData = null) {
 
     } catch (err) {
         console.error("QZ ERROR:", err);
-        alert("Gagal mencetak struk.\n" + err);
+        
+        let msg = err.message || String(err);
+        
+        // --- TRANSLASI ERROR KE BAHASA MANUSIA ---
+        if (msg.includes("reading '0'") || msg.includes("undefined")) {
+            msg = "Terjadi gangguan koneksi ke QZ Tray. Pastikan aplikasinya sudah berjalan dan icon di taskbar berwarna hijau.";
+        } else if (msg.includes("Printer not found")) {
+            msg = `Printer "${PRINTER_NAME}" tidak ditemukan.\nPastikan nama printer di Windows sesuai dengan "${PRINTER_NAME}".`;
+        } else if (msg.includes("web socket is not open") || msg.includes("Socket not connected")) {
+            msg = "Koneksi ke QZ Tray terputus. Silakan refresh halaman atau buka kembali aplikasi QZ Tray.";
+        } else if (msg.includes("Failed to fetch")) {
+            msg = "Gagal mengambil data struk dari server. Periksa koneksi internet/jaringan Anda.";
+        } else if (msg.includes("Permission denied")) {
+            msg = "Akses cetak ditolak oleh QZ Tray. Silakan klik 'Allow' pada pop-up QZ Tray.";
+        }
+
+        alert("GAGAL MENCETAK STRUK\n\nDetail: " + msg);
     }
 }
