@@ -26,6 +26,10 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         isSearchingR2: false,
         r2SearchTimeout: null,
 
+        // Tracks any globally-opened <x-modal> by name to disable cashier shortcuts while open
+        openModals: [],
+        get isAnyModalOpen() { return this.openModals.length > 0; },
+
         // --- Reactive Proxies to activeTab ---
         get activeTab() { return this.tabs.find(t => t.id === this.activeTabId) || null; },
         get cart() { return this.activeTab?.cart || []; },
@@ -133,6 +137,17 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                 this.isOffline = true;
             });
 
+            window.addEventListener('open-modal', (e) => {
+                if (e.detail && !this.openModals.includes(e.detail)) {
+                    this.openModals.push(e.detail);
+                }
+            });
+            window.addEventListener('modal-closed', (e) => {
+                if (e.detail) {
+                    this.openModals = this.openModals.filter(n => n !== e.detail);
+                }
+            });
+
             setInterval(async () => {
                 if (navigator.onLine) {
                     try {
@@ -237,8 +252,22 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
             // Global handling (shortcuts when modal is closed)
 
-            // Handle Ctrl shortcuts (Category & Price Mode)
+            // Block all cashier shortcuts while any other modal is open
+            // (prevents Enter/Backspace/etc. from leaking into cart while confirm modal is shown)
+            if (this.isAnyModalOpen) {
+                return;
+            }
+
+            // Handle Ctrl shortcuts (Category & Price Mode & Checkout)
             if (e.ctrlKey) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const cashGuard = this.paymentMethod === 'Cash' && this.cashReceived < this.totalPrice;
+                    if (this.cart.length > 0 && !cashGuard) {
+                        this.processCheckout();
+                    }
+                    return;
+                }
                 if (['ArrowUp', 'ArrowDown'].includes(e.key)) {
                     e.preventDefault();
                     this.cycleCategory(e.key === 'ArrowUp' ? -1 : 1);

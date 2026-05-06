@@ -24,6 +24,14 @@
         [x-cloak] {
             display: none !important;
         }
+        .cart-qty-input::-webkit-outer-spin-button,
+        .cart-qty-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .cart-qty-input {
+            -moz-appearance: textfield;
+        }
     </style>
 </head>
 
@@ -205,104 +213,125 @@
                     Belum ada produk dipilih
                 </div>
                 <template x-for="item in cart" :key="item.id">
-                    <div x-data="{ isEditingPrice: false }" class="border-button-main mb-3 rounded-2xl border-2 bg-gray-50 p-4">
-                        <div class="mb-3 flex items-start justify-between">
-                            <div class="flex-1">
-                                <h3 class="mb-1 font-bold text-gray-900" x-text="item.name"></h3>
-                                <template x-if="!item.isManualPrice">
-                                    <p class="text-sm text-gray-600">
-                                        Harga sistem:
-                                        <span class="font-semibold"
-                                            x-text="formatRupiah(item.basePrice ?? item.price)"></span>
-                                    </p>
-                                </template>
-                                <template x-if="item.isManualPrice">
-                                    <div>
-                                        <p class="text-sm text-gray-600">
-                                            Harga aktif:
-                                            <span class="font-semibold" x-text="formatRupiah(item.price)"></span>
-                                        </p>
-                                        <p class="text-[11px] text-gray-500">
-                                            Harga sistem:
-                                            <span class="font-semibold"
-                                                x-text="formatRupiah(item.basePrice ?? item.price)"></span>
-                                        </p>
-                                    </div>
-                                </template>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button type="button" @click="isEditingPrice = true"
-                                    class="text-gray-500 hover:text-blue-600" title="Edit Harga Satuan">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
-                                </button>
-                                <button @click="removeItem(item.id)" class="text-red-500 hover:text-red-700">
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
+                    <div x-data="{ isEditingPrice: false }"
+                        class="group rounded-xl border bg-white p-3.5 transition-all duration-200"
+                        :class="item.isManualPrice
+                            ? 'border-amber-300 bg-amber-50/40 shadow-[0_1px_0_0_rgba(217,119,6,0.04)]'
+                            : 'border-button-main/75 hover:border-gray-300 hover:shadow-sm'">
 
-                        <div class="flex items-center gap-3">
-                            <button @click="updateQty(item.id, -1)"
-                                class="bg-button-main hover:bg-button-hover flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors"
-                                type="button">
-                                -
-                            </button>
+                        {{-- Header: Name + Price + Actions --}}
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0 flex-1">
+                                <h3 class="truncate text-[15px] font-bold leading-snug text-gray-900" x-text="item.name"></h3>
 
-                            <input type="number" :value="item.qty"
-                                @input="setQty(item.id, $event.target.value)" @blur="handleQtyBlur(item.id, $event)"
-                                min="1" :max="item.stock"
-                                class="focus:border-button-main focus:ring-button-main h-8 w-16 rounded-lg border border-gray-300 bg-white text-center focus:outline-none focus:ring-2">
-
-                            <button @click="updateQty(item.id, 1)"
-                                class="bg-button-main hover:bg-button-hover flex h-8 w-8 items-center justify-center rounded-lg text-white transition-colors"
-                                type="button">
-                                +
-                            </button>
-
-                            <span class="ml-2 text-xs text-gray-500">
-                                / <span x-text="item.stock"></span>
-                            </span>
-                        </div>
-
-                        <div x-show="isEditingPrice" class="mt-3 rounded-lg border border-gray-200 bg-white p-2">
-                            <div class="space-y-2">
-                                <label class="block text-[11px] font-semibold text-gray-600">Adjustment Harga
-                                    Satuan</label>
-                                <div class="flex items-center gap-2">
-                                    <div class="flex-1">
-                                        <x-input-rupiah 
-                                            value="0"
-                                            placeholder="0"
-                                            containerClass="w-full mb-0"
-                                            @rupiah-change="setItemManualPrice(item.id, $event.detail.value)"
-                                            x-init="$watch('isEditingPrice', v => v && $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: item.price } })))"
-                                        />
-                                    </div>
-                                    <button type="button" @click="resetItemPrice(item.id); isEditingPrice = false"
-                                        class="rounded-md border border-gray-200 px-3 h-[38px] text-xs font-semibold text-gray-600 hover:bg-gray-100 cursor-pointer transition-colors shrink-0">
-                                        Reset
-                                    </button>
+                                {{-- Price line (default view) --}}
+                                <div x-show="!isEditingPrice" class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <span class="text-sm font-bold text-gray-900 tabular-nums" x-text="formatRupiah(item.price)"></span>
+                                    <template x-if="item.isManualPrice">
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-amber-200/60 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-amber-800">
+                                            <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                            Manual
+                                        </span>
+                                    </template>
+                                    <template x-if="item.isManualPrice">
+                                        <span class="text-[11px] text-gray-400 line-through tabular-nums" x-text="formatRupiah(item.basePrice ?? item.price)"></span>
+                                    </template>
+                                    <template x-if="item.isManualPrice">
+                                        <button type="button" @click.stop="resetItemPrice(item.id)"
+                                            :title="'Kembalikan ke harga sistem ' + formatRupiah(item.basePrice ?? item.price)"
+                                            class="group/reset inline-flex items-center gap-1 rounded-full border border-amber-200 bg-white/60 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700 transition-all hover:border-amber-400 hover:bg-amber-100 hover:text-amber-900 cursor-pointer">
+                                            <svg class="h-2.5 w-2.5 transition-transform group-hover/reset:-rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.6">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                                            </svg>
+                                            Reset
+                                        </button>
+                                    </template>
                                 </div>
-                                <p class="text-[11px] text-blue-600">
-                                    Harga sistem:
-                                    <span class="font-semibold"
-                                        x-text="formatRupiah(item.basePrice ?? item.price)"></span>
-                                </p>
+                            </div>
+
+                            {{-- Action icons --}}
+                            <div class="-mr-1 -mt-1 flex shrink-0 items-center">
+                                <button x-show="!isEditingPrice" type="button" @click="isEditingPrice = true"
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-blue-600 cursor-pointer"
+                                    title="Edit Harga Satuan">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                                    </svg>
+                                </button>
+                                <button x-show="isEditingPrice" type="button" @click="isEditingPrice = false"
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-emerald-600 cursor-pointer"
+                                    title="Selesai">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                    </svg>
+                                </button>
+                                <button type="button" @click="removeItem(item.id)"
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 cursor-pointer"
+                                    title="Hapus">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
 
-                        {{-- Total per produk --}}
-                        <div class="mt-3 flex items-center justify-between border-t border-gray-200 pt-2">
-                            <span class="text-xs text-gray-500"
-                                x-text="item.qty + ' × ' + formatRupiah(item.price)"></span>
-                            <span class="text-sm font-bold text-gray-900"
-                                x-text="formatRupiah(item.price * item.qty)"></span>
+                        {{-- Inline Price Editor --}}
+                        <div x-show="isEditingPrice"
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0 -translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            class="mt-2.5">
+                            <div class="flex items-stretch gap-2">
+                                <div class="flex-1">
+                                    <x-input-rupiah
+                                        value="0"
+                                        placeholder="0"
+                                        containerClass="w-full mb-0"
+                                        @rupiah-change="setItemManualPrice(item.id, $event.detail.value)"
+                                        x-init="$watch('isEditingPrice', v => v && $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: item.price } })))"
+                                    />
+                                </div>
+                                <button type="button" @click="resetItemPrice(item.id); isEditingPrice = false"
+                                    class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-[11px] font-bold uppercase tracking-wider text-gray-600 transition-all hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 cursor-pointer">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                                    </svg>
+                                    Reset
+                                </button>
+                            </div>
+                            <p class="mt-1.5 text-[11px] text-gray-500">
+                                Harga sistem:
+                                <span class="font-semibold text-gray-700 tabular-nums" x-text="formatRupiah(item.basePrice ?? item.price)"></span>
+                            </p>
+                        </div>
+
+                        {{-- Quantity Stepper + Subtotal --}}
+                        <div class="mt-3 flex items-center justify-between gap-3">
+                            <div class="inline-flex items-center gap-1.5">
+                                <button @click="updateQty(item.id, -1)" type="button"
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-base font-bold text-gray-700 transition-all hover:bg-button-main hover:text-white active:scale-95 cursor-pointer">
+                                    −
+                                </button>
+
+                                <input type="number" :value="item.qty"
+                                    @input="setQty(item.id, $event.target.value)" @blur="handleQtyBlur(item.id, $event)"
+                                    min="1" :max="item.stock"
+                                    class="h-8 w-12 rounded-lg border border-gray-200 bg-white text-center text-sm font-bold tabular-nums text-gray-900 focus:border-button-main focus:outline-none focus:ring-2 focus:ring-button-main/20 cart-qty-input">
+
+                                <button @click="updateQty(item.id, 1)" type="button"
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-base font-bold text-gray-700 transition-all hover:bg-button-main hover:text-white active:scale-95 cursor-pointer">
+                                    +
+                                </button>
+
+                                <span class="ml-1 text-[11px] font-medium text-gray-400 tabular-nums">
+                                    / <span x-text="item.stock"></span>
+                                </span>
+                            </div>
+
+                            <div class="text-right">
+                                <p class="text-[9px] font-bold uppercase tracking-[0.12em] text-gray-400">Subtotal</p>
+                                <p class="text-base font-black leading-tight text-gray-900 tabular-nums" x-text="formatRupiah(item.price * item.qty)"></p>
+                            </div>
                         </div>
                     </div>
                 </template>
@@ -434,21 +463,77 @@
                         </div>
                     </div>
 
-                    <div x-show="paymentMethod === 'Cash'" class="px-4 pb-2" style="display: none;">
-                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-2 text-sm">
-                            <div class="mb-2">
-                                <x-input-rupiah 
-                                    label="Uang Konsumer"
-                                    value=""
-                                    placeholder="0"
-                                    containerClass="mb-0"
-                                    @rupiah-change="cashReceivedInput = $event.detail.value"
-                                    x-init="$watch('cashReceivedInput', v => v === '' && $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: '' } })))"
-                                />
+                    <div x-show="paymentMethod === 'Cash'" class="px-4 pb-3" style="display: none;">
+                        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.02)]">
+                            {{-- Cash Received Input --}}
+                            <div class="p-3">
+                                <div class="mb-1.5 flex items-center justify-between gap-2">
+                                    <span class="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500">
+                                        Uang Diterima
+                                    </span>
+                                    <div class="flex items-center gap-1">
+                                        <button type="button" x-show="totalPrice > 0"
+                                            @click="$refs.cashRupiahWrapper.firstElementChild.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: totalPrice } }))"
+                                            :class="cashReceived === totalPrice
+                                                ? 'border-emerald-400 bg-emerald-100 text-emerald-800 shadow-[inset_0_-1px_0_0_rgba(5,150,105,0.2)]'
+                                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 hover:text-gray-800'"
+                                            class="rounded-md border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer">
+                                            Pas
+                                        </button>
+                                        <button type="button" x-show="totalPrice > 0 && totalPrice < 50000"
+                                            @click="$refs.cashRupiahWrapper.firstElementChild.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: 50000 } }))"
+                                            :class="cashReceived === 50000
+                                                ? 'border-emerald-400 bg-emerald-100 text-emerald-800 shadow-[inset_0_-1px_0_0_rgba(5,150,105,0.2)]'
+                                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 hover:text-gray-800'"
+                                            class="rounded-md border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer">
+                                            50K
+                                        </button>
+                                        <button type="button" x-show="totalPrice > 0 && totalPrice < 100000"
+                                            @click="$refs.cashRupiahWrapper.firstElementChild.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: 100000 } }))"
+                                            :class="cashReceived === 100000
+                                                ? 'border-emerald-400 bg-emerald-100 text-emerald-800 shadow-[inset_0_-1px_0_0_rgba(5,150,105,0.2)]'
+                                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 hover:text-gray-800'"
+                                            class="rounded-md border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer">
+                                            100K
+                                        </button>
+                                    </div>
+                                </div>
+                                <div x-ref="cashRupiahWrapper">
+                                    <x-input-rupiah
+                                        value=""
+                                        placeholder="0"
+                                        containerClass="mb-0"
+                                        @rupiah-change="cashReceivedInput = $event.detail.value"
+                                        x-init="$watch('cashReceivedInput', v => v === '' && $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: '' } })))"
+                                    />
+                                </div>
                             </div>
-                            <div class="flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm">
-                                <span class="font-semibold text-gray-600">Kembalian</span>
-                                <span class="font-bold text-gray-900" x-text="formatRupiah(changeAmount)"></span>
+
+                            {{-- Status Strip: Change / Shortage --}}
+                            <div class="border-t px-3.5 py-2.5 transition-colors duration-200"
+                                :class="cashReceived === 0
+                                    ? 'border-gray-100 bg-gray-50/60'
+                                    : (cashReceived >= totalPrice
+                                        ? 'border-emerald-100 bg-emerald-50/70'
+                                        : 'border-rose-100 bg-rose-50/70')">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="h-1.5 w-1.5 rounded-full transition-colors"
+                                            :class="cashReceived === 0
+                                                ? 'bg-gray-300'
+                                                : (cashReceived >= totalPrice ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse')"></span>
+                                        <span class="text-[10px] font-bold uppercase tracking-[0.14em]"
+                                            :class="cashReceived === 0
+                                                ? 'text-gray-500'
+                                                : (cashReceived >= totalPrice ? 'text-emerald-700' : 'text-rose-700')"
+                                            x-text="cashReceived > 0 && cashReceived < totalPrice ? 'Kurang Bayar' : 'Kembalian'"></span>
+                                    </div>
+                                    <span class="text-base font-black leading-none tabular-nums transition-colors"
+                                        :class="cashReceived === 0
+                                            ? 'text-gray-700'
+                                            : (cashReceived >= totalPrice ? 'text-emerald-700' : 'text-rose-600')"
+                                        x-text="cashReceived > 0 && cashReceived < totalPrice ? formatRupiah(totalPrice - cashReceived) : formatRupiah(changeAmount)"></span>
+                                </div>
                             </div>
                         </div>
                     </div>

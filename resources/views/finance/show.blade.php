@@ -16,7 +16,7 @@
                         <p>Jam {{ $transaction->created_at->format('H:i:s, d F Y') }}</p>
                     </div>
                     <a href="{{ route('finance.index') }}"
-                        class="inline-flex items-center gap-2 rounded-lg bg-button-main px-4 py-2 text-md font-semibold text-white hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-button-hover focus:ring-offset-2 active:scale-95 transition-transform">
+                        class="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-md font-semibold text-gray-700 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 active:scale-95 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                             stroke="currentColor" class="w-4 h-4">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12l7.5-7.5M3 12h18" />
@@ -175,7 +175,72 @@
                     </x-slot>
                 </x-content.data-table>
 
+                <x-slot name="actions">
+                    <div></div>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('finance.pdf.invoice', $transaction->id) }}" target="_blank" rel="noopener"
+                            x-data="{ loading: false }"
+                            x-on:click="loading = true; setTimeout(() => loading = false, 4000)"
+                            :class="loading ? 'opacity-70 pointer-events-none' : ''"
+                            class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-300 px-4 py-2 text-md font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-button-hover focus:ring-offset-2 active:scale-95 transition-transform">
+                            <template x-if="!loading">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-red-500">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                </svg>
+                            </template>
+                            <template x-if="loading">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    class="w-4 h-4 text-red-500 animate-spin">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"
+                                        stroke-opacity="0.25" />
+                                    <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" stroke-width="3"
+                                        stroke-linecap="round" />
+                                </svg>
+                            </template>
+                            <span x-text="loading ? 'Menyiapkan...' : 'Download PDF'"></span>
+                        </a>
+
+                        <button type="button" onclick="ThermalPrinter.printCashierReceipt({{ $transaction->id }})"
+                            class="inline-flex items-center gap-2 rounded-lg bg-button-main px-4 py-2 text-md font-semibold text-white hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-button-hover focus:ring-offset-2 active:scale-95 transition-transform">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 9H5.25" />
+                            </svg>
+                            Cetak Nota
+                        </button>
+                    </div>
+                </x-slot>
+
             </x-content.form-card>
 
         </div>
+
+        {{-- QZ Error Modal --}}
+        <div x-data="{ qzErrorTitle: '', qzErrorMessage: '' }"
+            @open-qz-error.window="qzErrorTitle = $event.detail.title; qzErrorMessage = $event.detail.message; $dispatch('open-modal', 'qz-error')">
+            <x-modal name="qz-error" maxWidth="md" zIndex="z-[100]">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold leading-6 text-gray-900" x-text="qzErrorTitle"></h3>
+                </div>
+                <div class="mt-2 text-sm text-gray-600 whitespace-pre-wrap" x-text="qzErrorMessage"></div>
+                <x-slot name="footer">
+                    <button @click="$dispatch('close-modal', 'qz-error')"
+                        class="rounded-lg bg-button-main px-4 py-2 text-white shadow-sm hover:bg-button-hover transition-colors font-bold">
+                        OK
+                    </button>
+                </x-slot>
+            </x-modal>
+        </div>
+
+        @push('scripts')
+            <script src="{{ asset('qz/qz-tray.js') }}"></script>
+            <script src="{{ asset('qz/qz-config.js') }}"></script>
+            <script src="{{ asset('qz/printer-utils.js') }}"></script>
+            <script src="{{ asset('qz/layouts/cashier-layout.js') }}"></script>
+            <script src="{{ asset('qz/layouts/r2-layout.js') }}"></script>
+            <script src="{{ asset('qz/printer-main.js') }}"></script>
+        @endpush
 </x-app-layout>

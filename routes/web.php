@@ -76,6 +76,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/laporan-keuangan', [FinanceReportController::class, 'index'])->name('finance.index');
     Route::post('/laporan-keuangan/download', [FinanceReportController::class, 'download'])->name('finance.download');
     Route::get('/laporan-keuangan/{transaction}/edit', [FinanceReportController::class, 'edit'])->name('finance.edit');
+    Route::get('/laporan-keuangan/{transaction}/pdf-invoice', [FinanceReportController::class, 'downloadInvoicePdf'])->name('finance.pdf.invoice');
     Route::put('/laporan-keuangan/{transaction}', [FinanceReportController::class, 'update'])->name('finance.update');
     Route::delete('/laporan-keuangan/{transaction}', [FinanceReportController::class, 'destroy'])->name('finance.destroy');
     Route::get('/laporan-keuangan/{transaction}', [FinanceReportController::class, 'show'])->name('finance.show');
@@ -95,6 +96,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/customer-r2/{customer}/pay', [CustomerR2Controller::class, 'processPayment'])->name('customer-r2.process');
     Route::get('/api/customer-r2/search', [CustomerR2Controller::class, 'search'])->name('customer-r2.search');
     Route::get('/customer-r2/invoice/{invoice}/preview', [CustomerR2Controller::class, 'previewInvoice'])->name('customer-r2.invoice.preview');
+    Route::get('/customer-r2/invoice/{invoice}/pdf', [CustomerR2Controller::class, 'downloadPdf'])->name('customer-r2.invoice.pdf');
     Route::get('/invoice-receipt/{invoice}', [CustomerR2Controller::class, 'receiptData'])->name('customer-r2.invoice.receipt-data');
     Route::get('/api/customer-r2/{customer}/custom-prices', [CustomerR2Controller::class, 'getCustomPrices'])->name('customer-r2.custom-prices');
 });

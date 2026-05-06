@@ -157,8 +157,22 @@
                                                                 {{ $invoice->debtPayment->payment_method === 'Cash' ? 'bg-green-100 text-green-700' : ($invoice->debtPayment->payment_method === 'Transfer' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700') }}">
                                                         {{ $invoice->debtPayment->payment_method }}
                                                     </span>
+                                                @elseif ($invoice->type === 'purchasement' && $invoice->transaction)
+                                                    @php
+                                                        $method = $invoice->transaction->payment_method;
+                                                        $bgClass = match($method) {
+                                                            'Cash' => 'bg-green-100 text-green-700',
+                                                            'Transfer' => 'bg-blue-100 text-blue-700',
+                                                            'QRIS' => 'bg-purple-100 text-purple-700',
+                                                            'Kredit' => 'bg-red-100 text-red-700',
+                                                            default => 'bg-gray-100 text-gray-700'
+                                                        };
+                                                    @endphp
+                                                    <span class="inline-flex items-center rounded-full {{ $bgClass }} px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                                                        {{ $method }}
+                                                    </span>
                                                 @else
-                                                    <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700 uppercase tracking-wider">KREDIT</span>
+                                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-700 uppercase tracking-wider">UNKNOWN</span>
                                                 @endif
                                             </td>
                                             <td class="px-5 py-3.5 text-center">
@@ -232,7 +246,27 @@
                                                         <x-button.remove-button x-on:click="$dispatch('close-modal', 'preview-invoice-{{ $invoice->id }}')" type="button">
                                                             <span class="font-bold text-gray-800">TUTUP</span>
                                                         </x-button.remove-button>
-                                                        
+                                                        <a href="{{ route('customer-r2.invoice.pdf', $invoice->id) }}"
+                                                            target="_blank"
+                                                            rel="noopener"
+                                                            x-data="{ loading: false }"
+                                                            x-on:click="loading = true; setTimeout(() => loading = false, 4000)"
+                                                            :class="loading ? 'opacity-70 pointer-events-none' : ''"
+                                                            class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm cursor-pointer">
+                                                            <template x-if="!loading">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-red-500">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                                                </svg>
+                                                            </template>
+                                                            <template x-if="loading">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 text-red-500 animate-spin">
+                                                                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.25" />
+                                                                    <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+                                                                </svg>
+                                                            </template>
+                                                            <span x-text="loading ? 'MENYIAPKAN...' : 'DOWNLOAD PDF'"></span>
+                                                        </a>
+
                                                         <button type="button" @click="ThermalPrinter.printR2Invoice({{ $invoice->id }})"
                                                             class="inline-flex items-center gap-2 rounded-lg bg-button-main px-4 py-2 text-sm font-bold text-gray-800 hover:bg-button-hover transition-colors shadow-sm cursor-pointer">
                                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">

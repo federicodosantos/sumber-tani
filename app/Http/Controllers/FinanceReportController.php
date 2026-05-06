@@ -326,6 +326,19 @@ class FinanceReportController extends Controller
     }
 
     /* ================================================================
+       DOWNLOAD INVOICE PDF (A4)
+    ================================================================ */
+    public function downloadInvoicePdf(Transaction $transaction)
+    {
+        $transaction->load('transactionDetails.product');
+
+        $pdf = Pdf::loadView('finance.invoice-pdf', compact('transaction'))
+            ->setPaper('A4', 'portrait');
+
+        return $pdf->stream("nota-trx-{$transaction->id}.pdf");
+    }
+
+    /* ================================================================
        EDIT — admin (OWNER) only
     ================================================================ */
     public function edit(Transaction $transaction)

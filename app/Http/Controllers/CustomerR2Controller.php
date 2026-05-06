@@ -10,6 +10,7 @@ use App\Models\Invoice;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class CustomerR2Controller extends Controller
 {
@@ -254,6 +255,32 @@ class CustomerR2Controller extends Controller
         $details = $transaction ? $transaction->transactionDetails : collect();
 
         return view('customer-r2.invoice-preview', compact('invoice', 'customer', 'transaction', 'details'));
+    }
+
+    /**
+     * Download invoice as PDF.
+     */
+    public function downloadPdf(Invoice $invoice)
+    {
+        $invoice->load(['customer', 'transaction.transactionDetails.product:id,name', 'debtPayment.details.invoice:id,inv_code']);
+
+        $customer = $invoice->customer;
+        $transaction = $invoice->transaction;
+        $details = $transaction ? $transaction->transactionDetails : collect();
+
+        $pdf = Pdf::loadView('customer-r2.invoice-pdf', compact('invoice', 'customer', 'transaction', 'details'))
+            ->setPaper('a4')
+            ->setOptions([
+                'defaultFont' => 'helvetica',
+                'isRemoteEnabled' => false,
+                'isPhpEnabled' => false,
+                'isHtml5ParserEnabled' => true,
+                'isFontSubsettingEnabled' => true,
+                'dpi' => 96,
+            ]);
+
+        $filename = 'Invoice-' . str_replace('/', '_', $invoice->inv_code ?? $invoice->id) . '-' . str_replace(' ', '_', $customer->name) . '.pdf';
+        return $pdf->download($filename);
     }
     /**
      * Get invoice data for thermal printing (JSON API).
