@@ -9,6 +9,7 @@ use App\Models\ProductPurchase;
 use App\Models\ProductStock;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
+use App\Services\TransactionReversalService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ class FinanceReportController extends Controller
     private function resolveDateRange(Request $request): array
     {
         $now = Carbon::now();
-        $rangeKey = $request->get('range_filter', 'this_month');
+        $rangeKey = $request->input('range_filter', 'this_month');
 
         switch ($rangeKey) {
             case 'this_week':
@@ -44,10 +45,10 @@ class FinanceReportController extends Controller
 
             case 'custom':
                 $start = $request->filled('start_date')
-                    ? Carbon::parse($request->get('start_date'))->startOfDay()
+                    ? Carbon::parse($request->input('start_date'))->startOfDay()
                     : $now->copy()->startOfMonth();
                 $end = $request->filled('end_date')
-                    ? Carbon::parse($request->get('end_date'))->endOfDay()
+                    ? Carbon::parse($request->input('end_date'))->endOfDay()
                     : $now->copy()->endOfMonth();
                 break;
 
@@ -84,7 +85,7 @@ class FinanceReportController extends Controller
     {
         [$startDate, $endDate, $rangeKey] = $this->resolveDateRange($request);
 
-        $transactionFilter = $request->get('transaction_filter', 'daily');
+        $transactionFilter = $request->input('transaction_filter', 'daily');
 
         $stats         = $this->getStats($startDate, $endDate);
         $chartData     = $this->getChartData($startDate, $endDate);
@@ -322,6 +323,97 @@ class FinanceReportController extends Controller
     {
         $transactionDetails = TransactionDetail::where('transaction_id', $transaction->id)->with('product')->get();
         return view('finance.show', compact('transaction', 'transactionDetails'));
+    }
+
+    /* ================================================================
+       EDIT — admin (OWNER) only
+    ================================================================ */
+    public function edit(Transaction $transaction)
+    {
+        $this->authorizeOwner();
+
+        $transaction->load(['transactionDetails.product', 'invoices']);
+
+        $products = Product::with(['stock' => function ($q) {
+            $q->whereNull('deleted_at')->orderBy('created_at', 'asc');
+        }])->get()->map(function ($p) {
+            $stockSum = $p->stock->sum('stock_opname');
+            $firstStock = $p->stock->first();
+            return [
+                'id' => $p->id,
+                'name' => $p->name,
+                'price' => $firstStock?->price_consument ?? 0,
+                'stock' => $stockSum,
+            ];
+        });
+
+        $initialItems = $transaction->transactionDetails->map(fn ($d) => [
+            'id'       => $d->product_id,
+            'name'     => $d->product?->name ?? '(produk dihapus)',
+            'price'    => (float) $d->product_price,
+            'qty'      => (int) $d->quantity,
+            'maxStock' => null,
+        ])->values();
+
+        return view('finance.edit', compact('transaction', 'products', 'initialItems'));
+    }
+
+    /* ================================================================
+       UPDATE — admin (OWNER) only
+    ================================================================ */
+    public function update(Request $request, Transaction $transaction, TransactionReversalService $service)
+    {
+        $this->authorizeOwner();
+
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|integer|exists:products,id',
+            'items.*.price' => 'required|numeric|min:0',
+            'items.*.qty' => 'required|integer|min:1',
+            'totalQty' => 'required|numeric|min:1',
+            'totalAmount' => 'required|numeric|min:0',
+            'discount' => 'nullable|numeric|min:0',
+            'payment_method' => 'required|string|in:Cash,Kredit,QRIS,Transfer',
+            'is_paid' => 'required|boolean',
+            'cash_received' => 'nullable|numeric|min:0',
+            'change_amount' => 'nullable|numeric',
+            'created_at' => 'nullable|date',
+        ]);
+
+        try {
+            $service->updateTransaction($transaction, $validated);
+        } catch (\Throwable $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('finance.index')
+            ->with('success', 'Transaksi #' . $transaction->id . ' berhasil diperbarui.');
+    }
+
+    /* ================================================================
+       DESTROY — admin (OWNER) only
+    ================================================================ */
+    public function destroy(Transaction $transaction, TransactionReversalService $service)
+    {
+        $this->authorizeOwner();
+
+        try {
+            $service->reverseAndDelete($transaction);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('finance.index')
+            ->with('success', 'Transaksi berhasil dihapus dan stok telah dikembalikan.');
+    }
+
+    private function authorizeOwner(): void
+    {
+        if (! auth()->check() || ! auth()->user()->isOwner()) {
+            abort(403, 'Hanya pemilik yang bisa mengubah/menghapus transaksi.');
+        }
     }
 
     /* ================================================================

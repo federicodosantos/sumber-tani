@@ -112,6 +112,7 @@ class TransactionController extends Controller
 
                 $transaction->transactionDetails()->create([
                     'product_id' => $item['id'],
+                    'product_stock_id' => $productStock?->id,
                     'product_price' => $item['price'],
                     'buying_price' => $buyingPrice,
                     'quantity' => $item['qty'],

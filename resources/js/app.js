@@ -5,7 +5,8 @@ import persist from '@alpinejs/persist';
 import AutoNumeric from 'autonumeric';
 
 import cashierHandler from './cashier';
-import financeHandler from './finance'; 
+import financeHandler from './finance';
+import financeEditHandler from './finance-edit';
 
 import { db } from './db';
 
@@ -26,7 +27,8 @@ if ('serviceWorker' in navigator) {
 Alpine.plugin(persist);
 
 Alpine.data('cashierHandler', cashierHandler);
-Alpine.data('financeHandler', financeHandler); 
+Alpine.data('financeHandler', financeHandler);
+Alpine.data('financeEditHandler', financeEditHandler);
 
 window.AutoNumeric = AutoNumeric;
 window.Alpine = Alpine;
