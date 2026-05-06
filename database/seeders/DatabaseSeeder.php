@@ -31,8 +31,10 @@ class DatabaseSeeder extends Seeder
             'role' => $role[1],
         ]);
 
-        // $this->call([
-        //     TransactionSeeder::class,
-        // ]);
+        $this->call([
+            ItemCategorySeeder::class,
+            ProductSeeder::class,
+            TransactionSeeder::class,
+        ]);
     }
 }
