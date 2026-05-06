@@ -601,6 +601,53 @@
                 </table>
             </div>
         </x-modal>
+
+        {{-- Confirm Checkout Modal --}}
+        <x-modal name="confirm-checkout" title="Konfirmasi" maxWidth="sm" zIndex="z-[100]">
+            <div class="mt-2 text-sm text-gray-600">
+                Apakah Anda yakin ingin memproses transaksi ini?
+            </div>
+            <x-slot name="footer">
+                <button @click="$dispatch('close-modal', 'confirm-checkout')" 
+                    class="rounded-lg bg-gray-500 px-4 py-1 text-white shadow-sm hover:bg-gray-600 transition-colors font-bold">
+                    Cancel
+                </button>
+                <button @click="$dispatch('close-modal', 'confirm-checkout'); executeCheckout()" 
+                    class="rounded-lg bg-button-main px-4 py-1 text-white shadow-sm hover:bg-button-hover transition-colors font-bold">
+                    OK
+                </button>
+            </x-slot>
+        </x-modal>
+
+        {{-- Success Checkout Modal --}}
+        <x-modal name="success-checkout" title="Informasi" maxWidth="sm" zIndex="z-[100]">
+            <div class="mt-2 text-sm text-gray-600">
+                Transaksi Berhasil!
+            </div>
+            <x-slot name="footer">
+                <button @click="$dispatch('close-modal', 'success-checkout')" 
+                    class="rounded-lg bg-button-main px-4 py-2 text-white shadow-sm hover:bg-button-hover transition-colors font-bold">
+                    OK
+                </button>
+            </x-slot>
+        </x-modal>
+
+        {{-- QZ Error Modal --}}
+        <div x-data="{ qzErrorTitle: '', qzErrorMessage: '' }"
+             @open-qz-error.window="qzErrorTitle = $event.detail.title; qzErrorMessage = $event.detail.message; $dispatch('open-modal', 'qz-error')">
+            <x-modal name="qz-error" maxWidth="md" zIndex="z-[100]">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold leading-6 text-gray-900" x-text="qzErrorTitle"></h3>
+                </div>
+                <div class="mt-2 text-sm text-gray-600 whitespace-pre-wrap" x-text="qzErrorMessage"></div>
+                <x-slot name="footer">
+                    <button @click="$dispatch('close-modal', 'qz-error')" 
+                        class="rounded-lg bg-button-main px-4 py-2 text-white shadow-sm hover:bg-button-hover transition-colors font-bold">
+                        OK
+                    </button>
+                </x-slot>
+            </x-modal>
+        </div>
         </div>
     </div>
 

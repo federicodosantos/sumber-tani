@@ -56,7 +56,28 @@ const ThermalPrinter = {
             await qz.print(config, cmds);
         } catch (err) {
             console.error("QZ ERROR (Cashier):", err);
-            alert("Gagal mencetak struk kasir.\n" + err);
+            
+            let msg = err.message || String(err);
+            
+            // --- TRANSLASI ERROR KE BAHASA MANUSIA ---
+            if (msg.includes("reading '0'") || msg.includes("undefined")) {
+                msg = "Terjadi gangguan koneksi ke QZ Tray. Pastikan aplikasinya sudah berjalan dan icon di taskbar berwarna hijau.";
+            } else if (msg.includes("Printer not found")) {
+                msg = `Printer "${typeof PRINTER_NAME !== 'undefined' ? PRINTER_NAME : 'kasir'}" tidak ditemukan.\nPastikan nama printer di Windows sesuai.`;
+            } else if (msg.includes("web socket is not open") || msg.includes("Socket not connected")) {
+                msg = "Koneksi ke QZ Tray terputus. Silakan refresh halaman atau buka kembali aplikasi QZ Tray.";
+            } else if (msg.includes("Failed to fetch")) {
+                msg = "Gagal mengambil data struk dari server. Periksa koneksi internet/jaringan Anda.";
+            } else if (msg.includes("Permission denied")) {
+                msg = "Akses cetak ditolak oleh QZ Tray. Silakan klik 'Allow' pada pop-up QZ Tray.";
+            }
+
+            window.dispatchEvent(new CustomEvent('open-qz-error', { 
+                detail: { 
+                    title: "GAGAL MENCETAK STRUK", 
+                    message: "Detail: " + msg 
+                } 
+            }));
         }
     },
 
@@ -78,7 +99,28 @@ const ThermalPrinter = {
             await qz.print(config, cmds);
         } catch (err) {
             console.error("QZ ERROR (R2):", err);
-            alert("Gagal mencetak nota R2.\n" + err);
+            
+            let msg = err.message || String(err);
+            
+            // --- TRANSLASI ERROR KE BAHASA MANUSIA ---
+            if (msg.includes("reading '0'") || msg.includes("undefined")) {
+                msg = "Terjadi gangguan koneksi ke QZ Tray. Pastikan aplikasinya sudah berjalan dan icon di taskbar berwarna hijau.";
+            } else if (msg.includes("Printer not found")) {
+                msg = `Printer "${typeof PRINTER_NAME !== 'undefined' ? PRINTER_NAME : 'kasir'}" tidak ditemukan.\nPastikan nama printer di Windows sesuai.`;
+            } else if (msg.includes("web socket is not open") || msg.includes("Socket not connected")) {
+                msg = "Koneksi ke QZ Tray terputus. Silakan refresh halaman atau buka kembali aplikasi QZ Tray.";
+            } else if (msg.includes("Failed to fetch")) {
+                msg = "Gagal mengambil data nota dari server. Periksa koneksi internet/jaringan Anda.";
+            } else if (msg.includes("Permission denied")) {
+                msg = "Akses cetak ditolak oleh QZ Tray. Silakan klik 'Allow' pada pop-up QZ Tray.";
+            }
+
+            window.dispatchEvent(new CustomEvent('open-qz-error', { 
+                detail: { 
+                    title: "GAGAL MENCETAK NOTA", 
+                    message: "Detail: " + msg 
+                } 
+            }));
         }
     }
 };

@@ -795,7 +795,11 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                 }
             }
 
-            if (!confirm('Proses Transaksi?')) return;
+            // Dispatch event to open confirm modal instead of using confirm()
+            window.dispatchEvent(new CustomEvent('open-modal', { detail: 'confirm-checkout' }));
+        },
+
+        async executeCheckout() {
 
             const cleanCart = JSON.parse(JSON.stringify(this.cart));
             const offlineUuid = self.crypto.randomUUID();
@@ -897,7 +901,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                             window.printReceipt(response.transaction_id);
                         }
 
-                        alert('Transaksi Berhasil!');
+                        window.dispatchEvent(new CustomEvent('open-modal', { detail: 'success-checkout' }));
                         this.forceCloseTab(this.activeTabId);
                     })
                     .catch(async error => {
