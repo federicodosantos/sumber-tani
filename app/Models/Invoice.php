@@ -18,7 +18,7 @@ class Invoice extends Model
 
     protected $table = 'invoices';
 
-    protected $fillable = ['customer_id', 'transaction_id', 'debts', 'type', 'inv_code'];
+    protected $fillable = ['customer_id', 'transaction_id', 'debts', 'type', 'inv_code', 'note'];
 
     public function getActivitylogOptions(): LogOptions
     {

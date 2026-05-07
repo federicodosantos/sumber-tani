@@ -94,6 +94,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/customer-r2/{customer}', [CustomerR2Controller::class, 'show'])->name('customer-r2.show');
     Route::get('/customer-r2/{customer}/pay', [CustomerR2Controller::class, 'payDebt'])->name('customer-r2.pay');
     Route::post('/customer-r2/{customer}/pay', [CustomerR2Controller::class, 'processPayment'])->name('customer-r2.process');
+    Route::get('/customer-r2/{customer}/invoice/create', [CustomerR2Controller::class, 'createInvoice'])->name('customer-r2.invoice.create');
+    Route::post('/customer-r2/{customer}/invoice', [CustomerR2Controller::class, 'storeInvoice'])->name('customer-r2.invoice.store');
+    Route::post('/customer-r2/{customer}/debt', [CustomerR2Controller::class, 'storeDebt'])->name('customer-r2.debt.store');
     Route::get('/api/customer-r2/search', [CustomerR2Controller::class, 'search'])->name('customer-r2.search');
     Route::get('/customer-r2/invoice/{invoice}/preview', [CustomerR2Controller::class, 'previewInvoice'])->name('customer-r2.invoice.preview');
     Route::get('/customer-r2/invoice/{invoice}/pdf', [CustomerR2Controller::class, 'downloadPdf'])->name('customer-r2.invoice.pdf');

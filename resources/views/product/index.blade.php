@@ -83,15 +83,28 @@
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
                                 <div class="flex items-center gap-3">
-                                    <a href="{{ route('product.edit', $product->id) }}" class="text-blue-600 hover:text-blue-800"
+                                    <button @click="$dispatch('open-modal', 'edit-product-{{ $product->id }}')" class="text-blue-600 hover:text-blue-800 cursor-pointer"
                                         title="Edit">
                                         <img src="{{ asset('update-button.svg') }}" alt="Edit" class="inline h-5 w-5">
-                                    </a>
+                                    </button>
 
                                     <x-delete :module="'produk'" :name="$product->name" :action="route('product.destroy', $product->id)" />
                                 </div>
                             </td>
                         </tr>
+
+                        <x-modal name="edit-product-{{ $product->id }}" title="EDIT PRODUK" maxWidth="4xl">
+                            <div class="p-1">
+                                @include('product._form', [
+                                    'action' => route('product.update', $product->id),
+                                    'method' => 'POST',
+                                    'product' => $product,
+                                    'categories' => $categories,
+                                    'isEdit' => true,
+                                    'editModalName' => 'edit-product-' . $product->id
+                                ])
+                            </div>
+                        </x-modal>
                     @empty
                         <tr>
                             <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500 italic">

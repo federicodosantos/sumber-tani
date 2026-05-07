@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "mcp__serena__check_onboarding_performed",
-      "mcp__serena__initial_instructions"
+      "mcp__serena__initial_instructions",
+      "mcp__serena__find_symbol",
+      "mcp__serena__get_symbols_overview"
     ]
   }
 }

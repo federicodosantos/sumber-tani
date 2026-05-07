@@ -5,6 +5,7 @@
     'categories' => [],
     'isEdit' => false,
     'isAjax' => false,
+    'editModalName' => null,
 ])
 
 @php
@@ -21,6 +22,7 @@
     submitForm(e) {
         if (!this.isAjax) return;
         
+        e.preventDefault();
         this.loading = true;
         this.errors = {};
         
@@ -56,7 +58,7 @@
     <x-content.form-card 
         action="{{ $action }}" 
         method="{{ $method }}"
-        @submit.prevent="submitForm($event)"
+        @submit="submitForm($event)"
     >
         @csrf
         @if($isEdit)
@@ -121,8 +123,13 @@
         </x-slot:rightCol>
 
         <x-slot:actions>
-            @if(!$isEdit && (!Request::is('product/create') || $isAjax))
-                {{-- In Modal --}}
+            @if($editModalName)
+                {{-- Edit In Modal --}}
+                <x-button.remove-button x-on:click="$dispatch('close-modal', '{{ $editModalName }}')" type="button">
+                    <span class="font-bold">BATAL</span>
+                </x-button.remove-button>
+            @elseif(!$isEdit && (!Request::is('product/create') || $isAjax))
+                {{-- Create In Modal --}}
                 <x-button.remove-button x-on:click="$dispatch('close-modal', 'create-product')" type="button">
                     <span class="font-bold" x-text="loading ? '...' : 'BATAL'"></span>
                 </x-button.remove-button>

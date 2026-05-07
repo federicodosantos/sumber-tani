@@ -7,9 +7,14 @@ use App\Models\DebtPayment;
 use App\Models\DebtPaymentDetail;
 use App\Models\CustomerProductPrice;
 use App\Models\Invoice;
+use App\Models\ItemCategory;
+use App\Models\Product;
+use App\Models\Transaction;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class CustomerR2Controller extends Controller
@@ -219,6 +224,206 @@ class CustomerR2Controller extends Controller
                 ->back()
                 ->withInput()
                 ->withErrors(['general' => 'Terjadi kesalahan saat memproses pembayaran: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Show the form for adding a manual invoice (historical purchase) for a customer.
+     */
+    public function createInvoice(Customer $customer)
+    {
+        $categories = ItemCategory::all();
+
+        $totalStockSub = DB::table('product_stocks')
+            ->select('product_id', DB::raw('SUM(stock_opname) as total_stock'))
+            ->whereNull('deleted_at')
+            ->groupBy('product_id');
+
+        $latestBatchSub = DB::table('product_stocks as ps1')
+            ->select('ps1.product_id', 'ps1.price_consument', 'ps1.price_r1', 'ps1.price_r2')
+            ->whereNull('ps1.deleted_at')
+            ->whereRaw('ps1.batch = (
+                SELECT MAX(ps2.batch)
+                FROM product_stocks ps2
+                WHERE ps2.product_id = ps1.product_id
+                AND ps2.deleted_at IS NULL
+            )');
+
+        $products = Product::query()
+            ->leftJoinSub($totalStockSub, 'ts', 'ts.product_id', '=', 'products.id')
+            ->leftJoinSub($latestBatchSub, 'lb', 'lb.product_id', '=', 'products.id')
+            ->join('item_categories as ic', 'products.item_category_id', '=', 'ic.id')
+            ->select([
+                'products.id', 'products.name', 'products.item_category_id', 'products.description',
+                'ic.name as category_name',
+                DB::raw('COALESCE(ts.total_stock, 0) as stock_opname'),
+                'lb.price_consument', 'lb.price_r1', 'lb.price_r2',
+            ])
+            ->whereNull('products.deleted_at')
+            ->orderBy('products.name', 'asc')
+            ->get();
+
+        $customPrices = $customer->customProductPrices()
+            ->get(['product_id', 'custom_price'])
+            ->pluck('custom_price', 'product_id');
+
+        return view('customer-r2.invoice-create', compact('customer', 'categories', 'products', 'customPrices'));
+    }
+
+    /**
+     * Store a manual invoice for a customer (does NOT decrement stock).
+     */
+    public function storeInvoice(Request $request, Customer $customer)
+    {
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|integer|exists:products,id',
+            'items.*.price' => 'required|numeric|min:0',
+            'items.*.qty' => 'required|integer|min:1',
+            'items.*.basePrice' => 'nullable|numeric|min:0',
+            'totalQty' => 'required|numeric|min:1',
+            'totalAmount' => 'required|numeric|min:0',
+            'discount' => 'nullable|numeric|min:0',
+            'payment_method' => 'required|string|in:Cash,Kredit,QRIS,Transfer',
+            'is_paid' => 'required|boolean',
+            'cash_received' => 'nullable|numeric|min:0',
+            'change_amount' => 'nullable|numeric',
+            'created_at' => 'required|date|before_or_equal:now',
+            'note' => 'nullable|string|max:1000',
+        ]);
+
+        $transactionDate = Carbon::parse($validated['created_at'])->setTimezone(config('app.timezone'));
+        $items = $validated['items'];
+        $totalAmount = (float) $validated['totalAmount'];
+        $totalQty = (int) $validated['totalQty'];
+        $discount = (float) ($validated['discount'] ?? 0);
+        $isPaid = (bool) $validated['is_paid'];
+
+        $cashReceived = null;
+        $changeAmount = null;
+        if ($validated['payment_method'] === 'Cash') {
+            $cashReceived = isset($validated['cash_received']) ? (float) $validated['cash_received'] : null;
+            $changeAmount = isset($validated['change_amount']) ? (float) $validated['change_amount'] : null;
+
+            if ($isPaid && $cashReceived !== null && $cashReceived < $totalAmount) {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->withErrors(['cash_received' => 'Uang diterima kurang dari total transaksi.']);
+            }
+        }
+
+        try {
+            DB::transaction(function () use ($customer, $items, $totalAmount, $totalQty, $discount, $isPaid, $cashReceived, $changeAmount, $transactionDate, $validated) {
+                $transaction = Transaction::create([
+                    'total_quantity' => $totalQty,
+                    'total_price' => $totalAmount,
+                    'discount' => $discount,
+                    'payment_method' => $validated['payment_method'],
+                    'is_paid' => $isPaid,
+                    'created_at' => $transactionDate,
+                    'updated_at' => $transactionDate,
+                    'cash_received' => $cashReceived,
+                    'change_amount' => $changeAmount,
+                    'is_manual' => true,
+                ]);
+
+                foreach ($items as $item) {
+                    $transaction->transactionDetails()->create([
+                        'product_id' => $item['id'],
+                        'product_stock_id' => null,
+                        'product_price' => $item['price'],
+                        'buying_price' => 0,
+                        'quantity' => $item['qty'],
+                        'total_price' => $item['price'] * $item['qty'],
+                        'created_at' => $transactionDate,
+                        'updated_at' => $transactionDate,
+                    ]);
+                }
+
+                Invoice::create([
+                    'customer_id' => $customer->id,
+                    'transaction_id' => $transaction->id,
+                    'debts' => $isPaid ? 0 : $totalAmount,
+                    'type' => Invoice::TYPE_PURCHASE,
+                    'inv_code' => Invoice::generateInvCode(Invoice::TYPE_PURCHASE),
+                    'note' => $validated['note'] ?? null,
+                    'created_at' => $transactionDate,
+                    'updated_at' => $transactionDate,
+                ]);
+
+                foreach ($items as $item) {
+                    $basePrice = $item['basePrice'] ?? null;
+                    $manualPrice = $item['price'] ?? null;
+
+                    if ($basePrice !== null && $manualPrice !== null && (float) $manualPrice !== (float) $basePrice) {
+                        CustomerProductPrice::updateOrCreate(
+                            [
+                                'customer_id' => $customer->id,
+                                'product_id'  => $item['id'],
+                            ],
+                            [
+                                'custom_price' => (float) $manualPrice,
+                            ]
+                        );
+                    }
+                }
+            });
+
+            return redirect()
+                ->route('customer-r2.show', $customer->id)
+                ->with('success', 'Nota manual berhasil ditambahkan.');
+        } catch (Exception $e) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['general' => 'Terjadi kesalahan saat menyimpan nota: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Store a direct debt entry (no items, no transaction) for a customer.
+     */
+    public function storeDebt(Request $request, Customer $customer)
+    {
+        $validator = Validator::make($request->all(), [
+            'amount' => 'required|numeric|min:1',
+            'note' => 'required|string|max:1000',
+            'created_at' => 'required|date|before_or_equal:now',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors($validator)
+                ->with('open_modal', 'add-debt');
+        }
+
+        $validated = $validator->validated();
+        $debtDate = Carbon::parse($validated['created_at'])->setTimezone(config('app.timezone'));
+
+        try {
+            Invoice::create([
+                'customer_id' => $customer->id,
+                'transaction_id' => null,
+                'debts' => (float) $validated['amount'],
+                'type' => Invoice::TYPE_PURCHASE,
+                'inv_code' => Invoice::generateInvCode(Invoice::TYPE_PURCHASE),
+                'note' => $validated['note'],
+                'created_at' => $debtDate,
+                'updated_at' => $debtDate,
+            ]);
+
+            return redirect()
+                ->route('customer-r2.show', $customer->id)
+                ->with('success', 'Hutang berhasil ditambahkan.');
+        } catch (Exception $e) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['general' => 'Terjadi kesalahan saat menyimpan hutang: ' . $e->getMessage()])
+                ->with('open_modal', 'add-debt');
         }
     }
 

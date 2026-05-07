@@ -28,17 +28,45 @@
         </div>
     </div>
 
+    @php
+        $isManualDebt = $invoice->type === 'purchasement' && !$transaction;
+        $isManualInvoice = $invoice->type === 'purchasement' && $transaction && $transaction->is_manual;
+    @endphp
+
     {{-- Nota Number --}}
     <div class="nota-box flex items-center justify-between border-b border-gray-200 bg-gray-50 px-6 py-3">
         @if ($invoice->type === 'debt_payment')
             <span class="text-sm font-bold text-gray-900">BUKTI PEMBAYARAN HUTANG</span>
+        @elseif ($isManualDebt)
+            <span class="text-sm font-bold text-gray-900">PENCATATAN HUTANG</span>
         @else
-            <span class="text-sm font-bold text-gray-900">NOTA PENJUALAN</span>
+            <span class="text-sm font-bold text-gray-900">NOTA PENJUALAN{{ $isManualInvoice ? ' (MANUAL)' : '' }}</span>
         @endif
         <span class="text-[10px] text-gray-500 uppercase tracking-wider">{{ $invoice->inv_code ?? 'ID: ' . $invoice->id }}</span>
     </div>
 
-    @if ($invoice->type === 'debt_payment')
+    @if ($isManualDebt)
+        {{-- ==============================
+             MANUAL DEBT CONTENT
+             ============================== --}}
+        <div class="invoice-body px-6 py-6 space-y-4">
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <h3 class="text-[9px] font-bold uppercase tracking-widest text-gray-500 mb-1">Keterangan</h3>
+                <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $invoice->note ?: '(tanpa keterangan)' }}</p>
+            </div>
+        </div>
+
+        <div class="invoice-summary flex justify-end px-6 pb-6">
+            <table class="w-[240px] border-collapse">
+                <tr class="total-row border-t border-gray-800">
+                    <td class="p-2 px-2 text-right text-xs font-bold text-gray-900 uppercase">TOTAL HUTANG</td>
+                    <td class="p-2 px-2 text-right text-base font-bold {{ $invoice->debts > 0 ? 'text-red-600' : 'text-green-600' }}">
+                        Rp {{ number_format($invoice->debts, 0, ',', '.') }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    @elseif ($invoice->type === 'debt_payment')
         {{-- ==============================
              DEBT PAYMENT CONTENT
              ============================== --}}
@@ -97,6 +125,14 @@
         {{-- ==============================
              PURCHASE CONTENT (original)
              ============================== --}}
+        @if ($invoice->note)
+            <div class="px-6 pt-4">
+                <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+                    <span class="text-[9px] font-bold uppercase tracking-widest text-amber-700">Catatan</span>
+                    <p class="text-xs text-amber-900 whitespace-pre-wrap">{{ $invoice->note }}</p>
+                </div>
+            </div>
+        @endif
         <div class="invoice-body px-6 py-4">
             <table class="w-full border-collapse">
                 <thead>
