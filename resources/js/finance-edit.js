@@ -5,7 +5,7 @@ export default (config) => ({
     payment_method: config.initial.payment_method || 'Cash',
     is_paid: !!config.initial.is_paid,
     cash_received: config.initial.cash_received,
-    created_at: config.initial.created_at,
+    transaction_date: config.initial.transaction_date,
     submitting: false,
 
     // Per-row product search state
@@ -114,8 +114,8 @@ export default (config) => ({
             payload.append('cash_received', this.cash_received);
             payload.append('change_amount', this.changeAmount);
         }
-        if (this.created_at) {
-            payload.append('created_at', this.created_at.replace('T', ' '));
+        if (this.transaction_date) {
+            payload.append('transaction_date', this.transaction_date.replace('T', ' '));
         }
 
         try {

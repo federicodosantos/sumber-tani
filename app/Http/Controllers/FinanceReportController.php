@@ -117,13 +117,13 @@ class FinanceReportController extends Controller
     private function calculateProfitLoss(Carbon $start, Carbon $end): array
     {
         // Revenue
-        $revenue = Transaction::whereBetween('created_at', [$start, $end])
+        $revenue = Transaction::whereBetween('transaction_date', [$start, $end])
             ->where('is_paid', 1)
             ->sum('total_price');
 
         // COGS (HPP)
         $cogs = TransactionDetail::join('transactions', 'transactions.id', '=', 'transaction_details.transaction_id')
-            ->whereBetween('transactions.created_at', [$start, $end])
+            ->whereBetween('transactions.transaction_date', [$start, $end])
             ->where('transactions.is_paid', 1)
             ->sum(DB::raw('transaction_details.quantity * transaction_details.buying_price'));
 
@@ -139,7 +139,7 @@ class FinanceReportController extends Controller
     private function calculateBalanceSheet(Carbon $end): array
     {
         // Assets
-        $cashIn = Transaction::where('created_at', '<=', $end)
+        $cashIn = Transaction::where('transaction_date', '<=', $end)
             ->where('is_paid', 1)
             ->sum('total_price');
             
@@ -202,28 +202,28 @@ class FinanceReportController extends Controller
         $now = Carbon::now();
 
         // Total penjualan dalam range
-        $rangeSales = Transaction::whereBetween('created_at', [$start, $end])->sum('total_price');
+        $rangeSales = Transaction::whereBetween('transaction_date', [$start, $end])->sum('total_price');
 
         // Periode sebelumnya (same duration, shifted back)
         $diff = $start->diffInDays($end) + 1;
         $prevStart = $start->copy()->subDays($diff);
         $prevEnd   = $start->copy()->subDay()->endOfDay();
-        $prevSales = Transaction::whereBetween('created_at', [$prevStart, $prevEnd])->sum('total_price');
+        $prevSales = Transaction::whereBetween('transaction_date', [$prevStart, $prevEnd])->sum('total_price');
 
         $salesPercentage = $prevSales > 0
             ? round((($rangeSales - $prevSales) / $prevSales) * 100, 1)
             : 0;
 
         // Penjualan hari ini (selalu tetap)
-        $dailySales     = Transaction::whereDate('created_at', $now->toDateString())->sum('total_price');
-        $yesterdaySales = Transaction::whereDate('created_at', $now->copy()->subDay()->toDateString())->sum('total_price');
+        $dailySales     = Transaction::whereDate('transaction_date', $now->toDateString())->sum('total_price');
+        $yesterdaySales = Transaction::whereDate('transaction_date', $now->copy()->subDay()->toDateString())->sum('total_price');
         $dailyPercentage = $yesterdaySales > 0
             ? round((($dailySales - $yesterdaySales) / $yesterdaySales) * 100, 1)
             : 0;
 
         // Total transaksi dalam range
-        $totalTransactions = Transaction::whereBetween('created_at', [$start, $end])->count();
-        $prevTransactions  = Transaction::whereBetween('created_at', [$prevStart, $prevEnd])->count();
+        $totalTransactions = Transaction::whereBetween('transaction_date', [$start, $end])->count();
+        $prevTransactions  = Transaction::whereBetween('transaction_date', [$prevStart, $prevEnd])->count();
         $transactionPercentage = $prevTransactions > 0
             ? round((($totalTransactions - $prevTransactions) / $prevTransactions) * 100, 1)
             : 0;
@@ -255,7 +255,7 @@ class FinanceReportController extends Controller
             $data = collect();
             $cursor = $start->copy();
             while ($cursor->lte($end)) {
-                $total = Transaction::whereDate('created_at', $cursor->toDateString())->sum('total_price');
+                $total = Transaction::whereDate('transaction_date', $cursor->toDateString())->sum('total_price');
                 $data->push([
                     'label' => $cursor->format('d'),
                     'value' => $total,
@@ -266,8 +266,8 @@ class FinanceReportController extends Controller
             $data = collect();
             $cursor = $start->copy()->startOfMonth();
             while ($cursor->lte($end)) {
-                $total = Transaction::whereYear('created_at', $cursor->year)
-                    ->whereMonth('created_at', $cursor->month)
+                $total = Transaction::whereYear('transaction_date', $cursor->year)
+                    ->whereMonth('transaction_date', $cursor->month)
                     ->sum('total_price');
                 $data->push([
                     'label' => $cursor->format('M'),
@@ -295,23 +295,34 @@ class FinanceReportController extends Controller
             case 'trx_id_desc':   $orderBy = ['id', 'desc']; break;
             case 'income_in_asc': $orderBy = ['total_price', 'asc']; break;
             case 'income_in_desc':$orderBy = ['total_price', 'desc']; break;
-            case 'date_old':      $orderBy = ['created_at', 'asc']; break;
+            case 'date_old':      $orderBy = ['transaction_date', 'asc']; break;
             case 'date_new':
-            default:              $orderBy = ['created_at', 'desc']; break;
+            default:              $orderBy = ['transaction_date', 'desc']; break;
         }
 
-        $query = Transaction::whereBetween('created_at', [$start, $end])
-            ->orderBy($orderBy[0], $orderBy[1]);
+        $query = Transaction::with(['invoices.customer'])
+            ->whereBetween('transaction_date', [$start, $end])
+            ->orderBy($orderBy[0], $orderBy[1])
+            ->orderBy('id', $orderBy[1] === 'asc' ? 'asc' : 'desc');
 
         return $query->paginate(25)->withQueryString()->through(function ($t) {
+            $r2Invoice = $t->invoices->first();
+            $r2Customer = $r2Invoice?->customer;
+
             return (object) [
-                'id'              => $t->id,
-                'date'            => $t->created_at,
-                'payment_method'  => $t->payment_method,
-                'discount'        => $t->discount,
-                'is_paid'         => $t->is_paid,
-                'total_items_sold'=> $t->total_quantity,
-                'total_income'    => $t->total_price,
+                'id'               => $t->id,
+                'date'             => $t->transaction_date,
+                'payment_method'   => $t->payment_method,
+                'discount'         => $t->discount,
+                'is_paid'          => $t->is_paid,
+                'total_items_sold' => $t->total_quantity,
+                'total_income'     => $t->total_price,
+                'is_manual'        => (bool) $t->is_manual,
+                'inv_code'         => $r2Invoice?->inv_code,
+                'r2_customer'      => $r2Customer ? (object) [
+                    'id'   => $r2Customer->id,
+                    'name' => $r2Customer->name,
+                ] : null,
             ];
         });
     }
@@ -390,7 +401,7 @@ class FinanceReportController extends Controller
             'is_paid' => 'required|boolean',
             'cash_received' => 'nullable|numeric|min:0',
             'change_amount' => 'nullable|numeric',
-            'created_at' => 'nullable|date',
+            'transaction_date' => 'nullable|date',
         ]);
 
         try {
@@ -418,8 +429,14 @@ class FinanceReportController extends Controller
             return redirect()->back()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('finance.index')
-            ->with('success', 'Transaksi berhasil dihapus dan stok telah dikembalikan.');
+        $redirectTo = request('redirect_to');
+        $message = 'Transaksi berhasil dihapus dan stok telah dikembalikan.';
+
+        if ($redirectTo && str_starts_with($redirectTo, url('/'))) {
+            return redirect()->to($redirectTo)->with('success', $message);
+        }
+
+        return redirect()->route('finance.index')->with('success', $message);
     }
 
     private function authorizeOwner(): void
@@ -467,9 +484,9 @@ class FinanceReportController extends Controller
         }
 
         $periodSelect = match ($request->format_time) {
-            'harian'  => DB::raw('DATE(transactions.created_at) as period'),
-            'bulanan' => DB::raw('DATE_FORMAT(transactions.created_at, "%Y-%m") as period'),
-            'tahunan' => DB::raw('YEAR(transactions.created_at) as period'),
+            'harian'  => DB::raw('DATE(transactions.transaction_date) as period'),
+            'bulanan' => DB::raw('DATE_FORMAT(transactions.transaction_date, "%Y-%m") as period'),
+            'tahunan' => DB::raw('YEAR(transactions.transaction_date) as period'),
         };
 
         $query = DB::table('transactions')
@@ -477,7 +494,7 @@ class FinanceReportController extends Controller
             ->join('products', 'products.id', '=', 'transaction_details.product_id')
             ->leftJoin('item_categories', 'item_categories.id', '=', 'products.item_category_id')
             ->where('transactions.is_paid', 1)
-            ->whereBetween('transactions.created_at', [$startDate, $endDate]);
+            ->whereBetween('transactions.transaction_date', [$startDate, $endDate]);
 
         if ($request->download_by === 'product') {
             $query

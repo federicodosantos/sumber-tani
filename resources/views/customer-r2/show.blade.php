@@ -258,8 +258,9 @@
                                                 @endif
                                             </td>
                                             <td class="px-5 py-3.5 text-right">
+                                                <div class="inline-flex items-center gap-1">
                                                 <button @click="$dispatch('open-modal', 'preview-invoice-{{ $invoice->id }}')"
-                                                    class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-button-main transition-colors cursor-pointer"
+                                                    class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold text-button-main transition-colors cursor-pointer"
                                                     title="Lihat Detail">
                                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                                         stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
@@ -269,6 +270,22 @@
                                                             d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                                     </svg>
                                                 </button>
+                                                @if(auth()->check() && auth()->user()->isOwner() && $invoice->type === 'purchasement' && $invoice->transaction)
+                                                    <a href="{{ route('finance.edit', $invoice->transaction->id) }}"
+                                                        class="inline-flex items-center rounded-lg px-2 py-1.5 text-blue-600 hover:text-blue-800 transition-colors cursor-pointer" title="Edit transaksi">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                        </svg>
+                                                    </a>
+                                                    <button type="button" x-data
+                                                        @click="$dispatch('open-delete-trx-modal', '{{ $invoice->transaction->id }}')"
+                                                        class="inline-flex items-center rounded-lg px-2 py-1.5 text-red-600 hover:text-red-800 transition-colors cursor-pointer" title="Hapus transaksi">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                        </svg>
+                                                    </button>
+                                                @endif
+                                                </div>
 
                                                 <x-modal name="preview-invoice-{{ $invoice->id }}" title="PREVIEW {{ $invoice->inv_code ?? 'NOTA #' . $invoice->id }}" maxWidth="2xl">
                                                     <div class="p-1">
@@ -419,6 +436,48 @@
             @include('customer-r2.partials._payment-form', ['customer' => $customer, 'totalDebt' => $totalDebt, 'isModal' => true])
         </div>
     </x-modal>
+    @if(auth()->check() && auth()->user()->isOwner())
+        {{-- Delete Transaction Modal --}}
+        <div x-data="{ deleteId: '', confirmText: '' }" @open-delete-trx-modal.window="deleteId = $event.detail; confirmText = ''; $dispatch('open-modal', 'delete-trx-modal')">
+            <x-modal name="delete-trx-modal" maxWidth="md">
+                <div class="p-6">
+                    <div class="mb-3 flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900">Hapus Transaksi</h3>
+                    </div>
+                    <p class="mb-3 text-sm text-gray-600">
+                        Transaksi <strong x-text="'#' + deleteId" class="text-gray-900"></strong> akan dihapus permanen.
+                        Stok produk akan dikembalikan, dan invoice serta pembayaran utang yang terkait akan di-reverse.
+                    </p>
+                    <p class="mb-3 text-xs text-red-600">
+                        <strong>Aksi ini tidak bisa dibatalkan.</strong> Ketik <code class="rounded bg-gray-100 px-1 py-0.5">HAPUS</code> untuk konfirmasi.
+                    </p>
+                    <form method="POST" :action="`{{ url('laporan-keuangan') }}/${deleteId}`">
+                        @csrf
+                        @method('DELETE')
+                        <input type="hidden" name="redirect_to" value="{{ url()->full() }}">
+                        <input type="text" x-model="confirmText" placeholder="Ketik HAPUS"
+                            class="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:ring-red-500" />
+                        <div class="flex justify-end gap-2">
+                            <button type="button" @click="$dispatch('close-modal', 'delete-trx-modal')"
+                                class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                                Batal
+                            </button>
+                            <button type="submit" :disabled="confirmText !== 'HAPUS'"
+                                class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300">
+                                Hapus
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </x-modal>
+        </div>
+    @endif
+
     @push('scripts')
         <script src="{{ asset('qz/qz-tray.js') }}"></script>
         <script src="{{ asset('qz/qz-config.js') }}"></script>

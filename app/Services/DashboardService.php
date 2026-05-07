@@ -48,7 +48,7 @@ class DashboardService
             if ($user && $user->isOwner()) {
                 $now = Carbon::now();
 
-                $summary['monthlyIncome'] = Transaction::whereYear('created_at', $now->year)->whereMonth('created_at', $now->month)->sum('total_price');
+                $summary['monthlyIncome'] = Transaction::whereYear('transaction_date', $now->year)->whereMonth('transaction_date', $now->month)->sum('total_price');
             } else {
                 $summary['monthlyIncome'] = null;
             }

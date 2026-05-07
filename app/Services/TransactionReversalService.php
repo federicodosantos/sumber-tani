@@ -50,7 +50,7 @@ class TransactionReversalService
      * $payload structure mirrors the cashier store payload:
      *   items: [{id, price, qty, basePrice?}]
      *   totalQty, totalAmount, discount, payment_method, is_paid,
-     *   cash_received, change_amount, created_at
+     *   cash_received, change_amount, transaction_date
      */
     public function updateTransaction(Transaction $transaction, array $payload): Transaction
     {
@@ -65,10 +65,10 @@ class TransactionReversalService
             // 2. Drop existing details
             $transaction->transactionDetails()->delete();
 
-            // 3. Resolve transaction date
-            $trxDate = !empty($payload['created_at'])
-                ? Carbon::parse($payload['created_at'])->setTimezone(config('app.timezone'))
-                : $transaction->created_at;
+            // 3. Resolve transaction date (the business date, not record creation time)
+            $trxDate = !empty($payload['transaction_date'])
+                ? Carbon::parse($payload['transaction_date'])->setTimezone(config('app.timezone'))
+                : ($transaction->transaction_date ?? $transaction->created_at);
 
             // 4. Apply new items (decrement stock, persist new details)
             foreach ($payload['items'] as $item) {
@@ -100,7 +100,7 @@ class TransactionReversalService
                 $stock->decrement('stock_opname', $item['qty']);
             }
 
-            // 5. Update transaction header
+            // 5. Update transaction header — only transaction_date changes; created_at stays as the original record creation timestamp.
             $transaction->update([
                 'total_quantity' => $payload['totalQty'],
                 'total_price' => $payload['totalAmount'],
@@ -109,7 +109,7 @@ class TransactionReversalService
                 'is_paid' => (bool) $payload['is_paid'],
                 'cash_received' => $payload['cash_received'] ?? null,
                 'change_amount' => $payload['change_amount'] ?? null,
-                'created_at' => $trxDate,
+                'transaction_date' => $trxDate,
                 'updated_at' => Carbon::now(),
             ]);
 
@@ -236,6 +236,7 @@ class TransactionReversalService
             'payment_method' => $transaction->payment_method,
             'is_paid' => (bool) $transaction->is_paid,
             'created_at' => optional($transaction->created_at)->toIso8601String(),
+            'transaction_date' => optional($transaction->transaction_date)->toIso8601String(),
             'items' => $transaction->transactionDetails->map(fn($d) => [
                 'product_id' => $d->product_id,
                 'product_stock_id' => $d->product_stock_id,

@@ -95,6 +95,7 @@ class TransactionController extends Controller
                 'is_paid' => $request->is_paid,
                 'created_at' => $transactionDate,
                 'updated_at' => $transactionDate,
+                'transaction_date' => $transactionDate,
                 'offline_uuid' => $request->offline_uuid,
                 'cash_received' => $cashReceived,
                 'change_amount' => $changeAmount,

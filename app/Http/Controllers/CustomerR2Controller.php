@@ -292,7 +292,10 @@ class CustomerR2Controller extends Controller
             'note' => 'nullable|string|max:1000',
         ]);
 
-        $transactionDate = Carbon::parse($validated['created_at'])->setTimezone(config('app.timezone'));
+        $now = Carbon::now();
+        $transactionDate = Carbon::parse($validated['created_at'])
+            ->setTimezone(config('app.timezone'))
+            ->setTime($now->hour, $now->minute, $now->second);
         $items = $validated['items'];
         $totalAmount = (float) $validated['totalAmount'];
         $totalQty = (int) $validated['totalQty'];
@@ -323,6 +326,7 @@ class CustomerR2Controller extends Controller
                     'is_paid' => $isPaid,
                     'created_at' => $transactionDate,
                     'updated_at' => $transactionDate,
+                    'transaction_date' => $transactionDate,
                     'cash_received' => $cashReceived,
                     'change_amount' => $changeAmount,
                     'is_manual' => true,

@@ -28,7 +28,7 @@ class Transaction extends Model
 
     protected $table = 'transactions';
 
-    protected $fillable = ['total_quantity', 'total_price', 'created_at', 'updated_at', 'offline_uuid', 'discount', 'payment_method', 'is_paid', 'cash_received', 'change_amount', 'is_manual'];
+    protected $fillable = ['total_quantity', 'total_price', 'created_at', 'updated_at', 'offline_uuid', 'discount', 'payment_method', 'is_paid', 'cash_received', 'change_amount', 'is_manual', 'transaction_date'];
 
     protected $casts = [
         'total_price' => 'decimal:2',
@@ -37,6 +37,7 @@ class Transaction extends Model
         'cash_received' => 'decimal:2',
         'change_amount' => 'decimal:2',
         'is_manual' => 'boolean',
+        'transaction_date' => 'datetime',
     ];
 
     public function transactionDetails(): HasMany

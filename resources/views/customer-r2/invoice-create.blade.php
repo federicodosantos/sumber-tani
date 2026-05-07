@@ -183,8 +183,8 @@
                                     <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Keranjang</h2>
                                     <span class="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600 min-w-[20px]" x-text="cart.length"></span>
                                 </div>
-                                <button x-show="cart.length > 0" type="button" @click="if (confirm('Kosongkan keranjang?')) cart = []"
-                                    class="text-[10px] font-semibold uppercase tracking-wider text-gray-400 hover:text-red-600 transition-colors cursor-pointer">
+                                <button x-show="cart.length > 0" type="button" @click="$dispatch('open-modal', 'confirm-clear-cart')"
+                                    class="text-[10px] font-semibold uppercase tracking-wider text-red-400 hover:text-red-600 transition-colors cursor-pointer">
                                     Kosongkan
                                 </button>
                             </div>
@@ -370,6 +370,26 @@
                 </div>
             </form>
         </div>
+
+        {{-- Modal Konfirmasi Kosongkan Keranjang --}}
+        <x-modal name="confirm-clear-cart" title="Kosongkan Keranjang" maxWidth="sm">
+            <div class="p-1">
+                <p class="text-sm text-gray-500">
+                    Apakah Anda yakin ingin menghapus semua item dari keranjang? Tindakan ini tidak dapat dibatalkan.
+                </p>
+            </div>
+
+            <x-slot name="footer">
+                <button type="button" @click="$dispatch('close-modal', 'confirm-clear-cart')"
+                    class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer">
+                    Batal
+                </button>
+                <button type="button" @click="cart = []; $dispatch('close-modal', 'confirm-clear-cart')"
+                    class="rounded-lg bg-red-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-red-700 shadow-sm transition-colors cursor-pointer">
+                    Ya, Kosongkan
+                </button>
+            </x-slot>
+        </x-modal>
     </div>
 
     @push('scripts')

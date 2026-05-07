@@ -12,7 +12,7 @@
         payment_method: @json($transaction->payment_method),
         is_paid: {{ $transaction->is_paid ? 'true' : 'false' }},
         cash_received: {{ $transaction->cash_received !== null ? (float) $transaction->cash_received : 'null' }},
-        created_at: @json(optional($transaction->created_at)->format('Y-m-d\\TH:i'))
+        transaction_date: @json(optional($transaction->transaction_date)->format('Y-m-d\\TH:i'))
       }
     };
   </script>
@@ -227,7 +227,7 @@
             {{-- Date --}}
             <div>
               <label class="mb-1.5 block text-xs font-semibold text-gray-700">Tanggal Transaksi</label>
-              <input type="datetime-local" x-model="created_at"
+              <input type="datetime-local" x-model="transaction_date"
                      class="w-full rounded-lg border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:ring-green-500" />
             </div>
 
