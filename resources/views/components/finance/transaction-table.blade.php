@@ -1,8 +1,15 @@
 @props(['financeReports'])
 
 <div id="transactions" class="rounded-lg border border-gray-200 bg-white shadow">
-  <div class="border-b border-gray-200 px-6 py-4">
+  <div class="border-b border-gray-200 px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
     <h3 class="text-lg font-medium text-gray-700">Riwayat Transaksi</h3>
+    <a href="{{ route('finance.manual.create') }}"
+      class="inline-flex items-center gap-2 rounded-lg bg-white border border-gray-200 px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-700 hover:bg-gray-50 transition-colors shadow-sm cursor-pointer">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 text-amber-600">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487 18.549 2.799a2.121 2.121 0 1 1 3 3L5.12 22.227a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+      </svg>
+      Tambah Manual
+    </a>
   </div>
   
   <x-content.data-table :search="false">

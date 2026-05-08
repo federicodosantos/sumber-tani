@@ -1,16 +1,16 @@
 <x-app-layout>
-    <div x-data="manualInvoiceForm()" class="py-4 lg:py-6 font-mont">
+    <div x-data="manualTrxForm()" class="py-4 lg:py-6 font-mont">
         <div class="mx-auto w-full px-4 sm:px-6 lg:px-8 space-y-6">
 
             {{-- Back Button --}}
             <div>
-                <a href="{{ route('customer-r2.show', $customer->id) }}"
+                <a href="{{ route('finance.index') }}"
                     class="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
                         stroke="currentColor" class="h-4 w-4">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                     </svg>
-                    Kembali ke Detail Pelanggan
+                    Kembali ke Laporan Keuangan
                 </a>
             </div>
 
@@ -24,11 +24,9 @@
                             </svg>
                         </div>
                         <div>
-                            <h1 class="text-xl font-bold text-gray-900">Tambah Nota Manual</h1>
+                            <h1 class="text-xl font-bold text-gray-900">Tambah Transaksi Manual</h1>
                             <p class="mt-1 text-sm text-gray-500 max-w-2xl">
-                                Pencatatan transaksi historis untuk
-                                <span class="font-semibold text-gray-700">{{ $customer->name }}</span>.
-                                Nota manual <span class="font-semibold text-amber-700">tidak mengurangi stok sistem</span>.
+                                Pencatatan transaksi historis. Pilih pelanggan & mode stok sesuai kebutuhan.
                             </p>
                         </div>
                     </div>
@@ -58,7 +56,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('customer-r2.invoice.store', $customer->id) }}" @submit.prevent="confirmSave($event)">
+            <form method="POST" action="{{ route('finance.manual.store') }}" @submit.prevent="confirmSave($event)">
                 @csrf
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -68,7 +66,6 @@
 
                         {{-- Product Picker Card --}}
                         <div class="rounded-2xl bg-white shadow-sm overflow-hidden" style="border: 1px solid #e5e7eb;">
-                            {{-- Toolbar --}}
                             <div class="border-b border-gray-100 p-5 space-y-4">
                                 <div class="flex items-center justify-between gap-3 flex-wrap">
                                     <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Pilih Produk</h2>
@@ -102,19 +99,21 @@
                             <div class="p-5">
                                 <template x-if="paginatedProducts.length === 0">
                                     <div class="py-16 text-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mx-auto h-10 w-10 text-gray-300">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-                                        </svg>
-                                        <p class="mt-3 text-sm text-gray-500">Tidak ada produk yang cocok.</p>
+                                        <p class="text-sm text-gray-500">Tidak ada produk yang cocok.</p>
                                         <button type="button" @click="search = ''; categoryId = null; page = 1" class="mt-2 text-xs font-semibold text-button-main hover:underline cursor-pointer">Reset filter</button>
                                     </div>
                                 </template>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <template x-for="product in paginatedProducts" :key="product.id">
-                                        <button type="button" @click="addToCart(product)"
-                                            :class="cart.some(i => i.id === product.id) ? 'border-button-main bg-button-main/5 ring-1 ring-button-main/30' : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/60'"
-                                            class="group relative text-left rounded-xl border p-3.5 transition-all cursor-pointer">
+                                        <button type="button"
+                                            @click="addToCart(product)"
+                                            :disabled="reduceStock && (Number(product.stock_opname) || 0) <= 0"
+                                            :class="[
+                                                cart.some(i => i.id === product.id) ? 'border-button-main bg-button-main/5 ring-1 ring-button-main/30' : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/60',
+                                                (reduceStock && (Number(product.stock_opname) || 0) <= 0) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                                            ]"
+                                            class="group relative text-left rounded-xl border p-3.5 transition-all">
                                             <div class="flex items-start justify-between gap-2 mb-2">
                                                 <p class="text-sm font-bold text-gray-900 leading-snug" x-text="product.name"></p>
                                                 <p class="text-xs font-bold text-gray-900 whitespace-nowrap shrink-0" x-text="formatRupiah(getBasePrice(product))"></p>
@@ -130,7 +129,8 @@
                                                     </span>
                                                 </template>
                                                 <template x-if="!cart.some(i => i.id === product.id)">
-                                                    <span class="text-gray-400" x-text="'Stok: ' + (product.stock_opname || 0)"></span>
+                                                    <span :class="reduceStock && (Number(product.stock_opname) || 0) <= 0 ? 'text-red-500 font-bold' : 'text-gray-400'"
+                                                        x-text="(reduceStock && (Number(product.stock_opname) || 0) <= 0) ? 'STOK HABIS' : 'Stok: ' + (product.stock_opname || 0)"></span>
                                                 </template>
                                             </div>
                                         </button>
@@ -211,6 +211,9 @@
                                                         <template x-if="Number(item.price) !== Number(item.basePrice)">
                                                             <span class="ml-1 inline-flex items-center rounded bg-amber-50 border border-amber-200 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700">DIUBAH</span>
                                                         </template>
+                                                        <template x-if="reduceStock">
+                                                            <span class="ml-1 text-gray-500">| Stok: <span x-text="item.stockOpname"></span></span>
+                                                        </template>
                                                     </p>
                                                 </td>
                                                 <td class="px-3 py-3 text-right">
@@ -225,9 +228,17 @@
                                                     <div class="inline-flex items-center gap-1">
                                                         <button type="button" @click="item.qty = Math.max(1, (Number(item.qty) || 1) - 1)" class="h-7 w-7 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center cursor-pointer">−</button>
                                                         <input type="number" min="1" step="1" x-model.number="item.qty"
-                                                            class="w-12 rounded-md border border-gray-200 px-1 py-1 text-center text-sm tabular-nums focus:outline-none focus:border-button-main focus:bg-white">
-                                                        <button type="button" @click="item.qty = (Number(item.qty) || 0) + 1" class="h-7 w-7 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center cursor-pointer">+</button>
+                                                            :max="reduceStock ? item.stockOpname : null"
+                                                            :class="reduceStock && Number(item.qty) > Number(item.stockOpname) ? 'border-red-400 bg-red-50' : 'border-gray-200'"
+                                                            class="w-12 rounded-md border px-1 py-1 text-center text-sm tabular-nums focus:outline-none focus:border-button-main focus:bg-white">
+                                                        <button type="button" @click="incrementQty(item)"
+                                                            :disabled="reduceStock && Number(item.qty) >= Number(item.stockOpname)"
+                                                            :class="reduceStock && Number(item.qty) >= Number(item.stockOpname) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50 cursor-pointer'"
+                                                            class="h-7 w-7 rounded-md border border-gray-200 text-gray-600 transition-colors flex items-center justify-center">+</button>
                                                     </div>
+                                                    <template x-if="reduceStock && Number(item.qty) > Number(item.stockOpname)">
+                                                        <p class="mt-1 text-[9px] font-bold text-red-600">Maks: <span x-text="item.stockOpname"></span></p>
+                                                    </template>
                                                 </td>
                                                 <td class="px-4 py-3 text-right font-bold text-gray-900 tabular-nums" x-text="formatRupiah((item.price || 0) * (item.qty || 0))"></td>
                                                 <td class="px-3 py-3 text-center">
@@ -241,10 +252,7 @@
                                         </template>
                                         <tr x-show="cart.length === 0">
                                             <td colspan="5" class="py-12 text-center">
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mx-auto h-8 w-8 text-gray-300">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
-                                                </svg>
-                                                <p class="mt-2 text-sm text-gray-400 italic">Keranjang kosong. Pilih produk di atas.</p>
+                                                <p class="text-sm text-gray-400 italic">Keranjang kosong. Pilih produk di atas.</p>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -256,13 +264,95 @@
                     {{-- RIGHT: Settings & Summary --}}
                     <div class="space-y-5 lg:sticky lg:top-4 lg:self-start">
 
+                        {{-- Stock Mode (TOP — paling penting, agar user langsung tahu) --}}
+                        <div :class="reduceStock ? 'border-green-200 bg-green-50/60' : 'border-amber-200 bg-amber-50/60'"
+                            class="rounded-2xl border-2 p-4 shadow-sm transition-colors">
+                            <div class="flex items-center justify-between gap-3 flex-wrap">
+                                <div class="flex items-center gap-3">
+                                    <div :class="reduceStock ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'"
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                                        <template x-if="reduceStock">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+                                            </svg>
+                                        </template>
+                                        <template x-if="!reduceStock">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                            </svg>
+                                        </template>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Mode Stok</p>
+                                        <p :class="reduceStock ? 'text-green-700' : 'text-amber-700'" class="text-base font-bold leading-tight">
+                                            <span x-text="reduceStock ? 'KURANGI STOK' : 'TIDAK KURANGI STOK'"></span>
+                                        </p>
+                                    </div>
+                                </div>
+                                {{-- iOS-style toggle --}}
+                                <button type="button" @click="reduceStock = !reduceStock"
+                                    role="switch" :aria-checked="reduceStock"
+                                    :class="reduceStock ? 'bg-green-500' : 'bg-amber-400'"
+                                    class="relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+                                    :title="reduceStock ? 'Klik untuk matikan' : 'Klik untuk aktifkan'">
+                                    <span :class="reduceStock ? 'translate-x-5' : 'translate-x-0.5'"
+                                        class="inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform self-center"></span>
+                                </button>
+                            </div>
+                            <p class="mt-2 text-[10px] text-gray-600 leading-relaxed pl-12">
+                                <template x-if="reduceStock">
+                                    <span>Stok produk akan berkurang otomatis (Dari batch terlama).</span>
+                                </template>
+                                <template x-if="!reduceStock">
+                                    <span>Pencatatan historis murni — stok produk tidak akan berubah.</span>
+                                </template>
+                            </p>
+                        </div>
+
+                        {{-- Customer Selector (cashier-style: 2 buttons + modal) --}}
+                        <div class="rounded-2xl bg-white p-5 shadow-sm space-y-3" style="border: 1px solid #e5e7eb;">
+                            <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Pelanggan</h2>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button" @click="setPriceMode('consument')"
+                                    :class="priceMode === 'consument' ? 'bg-button-main text-white shadow-md border-button-hover' : 'bg-white hover:bg-gray-100 border-button-hover text-gray-700'"
+                                    class="rounded-lg border-2 px-3 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer">
+                                    Konsumen
+                                </button>
+                                <button type="button" @click="openCustomerModal(); $dispatch('open-modal', 'manual-customer')"
+                                    :class="(priceMode === 'r1' || priceMode === 'r2') ? 'bg-button-main text-white shadow-md border-button-hover' : 'bg-white hover:bg-gray-100 border-button-hover text-gray-700'"
+                                    class="rounded-lg border-2 px-3 py-1.5 text-xs font-bold transition-all duration-200 cursor-pointer">
+                                    Pelanggan R1/R2
+                                </button>
+                            </div>
+
+                            {{-- Selected Customer Badge --}}
+                            <template x-if="selectedCustomer">
+                                <div class="flex items-center gap-2 rounded-lg border-2 border-button-main/50 bg-button-main/10 px-3 py-2">
+                                    <svg class="h-4 w-4 text-button-hover shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                    <span class="rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider"
+                                        :class="(selectedCustomer.type || 'r2') === 'r1' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'"
+                                        x-text="(selectedCustomer.type || 'r2').toUpperCase()"></span>
+                                    <span class="text-sm font-semibold text-gray-800 truncate" x-text="selectedCustomer.name"></span>
+                                    <button @click="removeCustomer(); $dispatch('open-modal', 'manual-customer')" type="button"
+                                        class="ml-auto text-gray-400 hover:text-red-500 transition-colors cursor-pointer" title="Ganti / Hapus Pelanggan">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                            <template x-if="!selectedCustomer && priceMode === 'consument'">
+                                <p class="text-[10px] text-gray-400 italic">Transaksi tercatat tanpa pelanggan terdaftar (walk-in).</p>
+                            </template>
+                        </div>
+
                         {{-- Date --}}
                         <div class="rounded-2xl bg-white p-5 shadow-sm space-y-3" style="border: 1px solid #e5e7eb;">
                             <div class="flex items-center justify-between">
                                 <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Tanggal Nota</h2>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 text-gray-400">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-                                </svg>
                             </div>
                             <input type="date" x-model="createdAt" :max="maxDate"
                                 @click="$el.showPicker()"
@@ -283,7 +373,6 @@
                                 </template>
                             </div>
 
-                            {{-- Lunas Toggle --}}
                             <div class="flex items-center justify-between pt-3 border-t border-gray-100">
                                 <div>
                                     <p class="text-sm font-bold text-gray-900">Status</p>
@@ -296,11 +385,10 @@
                                 </button>
                             </div>
 
-                            {{-- Cash specific fields --}}
                             <template x-if="paymentMethod === 'Cash' && isPaid">
                                 <div class="space-y-2 pt-3 border-t border-gray-100">
-                                    <x-input-rupiah 
-                                        label="Uang Diterima" 
+                                    <x-input-rupiah
+                                        label="Uang Diterima"
                                         value="{{ old('cash_received', 0) }}"
                                         @rupiah-change="cashReceived = $event.detail.value"
                                         placeholder="0"
@@ -313,8 +401,8 @@
                         {{-- Discount & Note --}}
                         <div class="rounded-2xl bg-white p-5 shadow-sm space-y-3" style="border: 1px solid #e5e7eb;">
                             <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wider">Lainnya</h2>
-                            <x-input-rupiah 
-                                label="Diskon (Rp)" 
+                            <x-input-rupiah
+                                label="Diskon (Rp)"
                                 value="{{ old('discount', 0) }}"
                                 @rupiah-change="discount = $event.detail.value"
                                 placeholder="0"
@@ -365,60 +453,149 @@
                                             <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
                                         </svg>
                                     </template>
-                                    <span x-text="submitting ? 'MENYIMPAN...' : 'SIMPAN NOTA'"></span>
+                                    <span x-text="submitting ? 'MENYIMPAN...' : 'SIMPAN TRANSAKSI'"></span>
                                 </button>
                                 <p x-show="cart.length === 0" class="mt-2 text-center text-[10px] text-gray-400 italic">Tambahkan minimal 1 produk.</p>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                {{-- Confirmation Modal --}}
+                <x-modal name="confirm-save-trx" title="KONFIRMASI SIMPAN TRANSAKSI" maxWidth="md">
+                    <div class="p-6 space-y-3">
+                        <div class="space-y-2.5 text-sm">
+                            <div class="flex justify-between gap-4">
+                                <span class="text-gray-500">Pelanggan</span>
+                                <span class="font-semibold text-gray-900 text-right">
+                                    <template x-if="!selectedCustomer">
+                                        <span>Konsumen Biasa</span>
+                                    </template>
+                                    <template x-if="selectedCustomer">
+                                        <span>
+                                            <span x-text="selectedCustomer.name"></span>
+                                            <span :class="(selectedCustomer.type || 'r2') === 'r1' ? 'bg-sky-50 text-sky-700' : 'bg-emerald-50 text-emerald-700'"
+                                                class="ml-1 inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase"
+                                                x-text="(selectedCustomer.type || 'r2').toUpperCase()"></span>
+                                        </span>
+                                    </template>
+                                </span>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <span class="text-gray-500">Tanggal Nota</span>
+                                <span class="font-semibold text-gray-900" x-text="formatDate(createdAt)"></span>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <span class="text-gray-500">Item</span>
+                                <span class="font-semibold text-gray-900"><span x-text="cart.length"></span> jenis (<span x-text="totalQty"></span> qty)</span>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <span class="text-gray-500">Total</span>
+                                <span class="font-bold text-gray-900 text-lg tabular-nums" x-text="formatRupiah(grandTotal)"></span>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <span class="text-gray-500">Metode</span>
+                                <span class="font-semibold text-gray-900" x-text="paymentMethod"></span>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <span class="text-gray-500">Status</span>
+                                <span :class="isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                                    x-text="isPaid ? 'LUNAS' : 'BELUM LUNAS'"></span>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <span class="text-gray-500">Mode Stok</span>
+                                <span :class="reduceStock ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'"
+                                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                                    x-text="reduceStock ? 'MENGURANGI STOK' : 'TIDAK KURANGI'"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+                        <button type="button" @click="$dispatch('close-modal', 'confirm-save-trx')"
+                            class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 hover:bg-gray-50 cursor-pointer">
+                            Batal
+                        </button>
+                        <button type="button" @click="actuallySubmit()"
+                            class="rounded-lg bg-button-main hover:bg-button-hover px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-900 shadow-sm cursor-pointer">
+                            Ya, Simpan
+                        </button>
+                    </div>
+                </x-modal>
             </form>
         </div>
 
-        {{-- Modal Konfirmasi Simpan Nota --}}
-        <x-modal name="confirm-save-trx" title="KONFIRMASI SIMPAN NOTA" maxWidth="md">
-            <div class="p-6 space-y-3">
-                <div class="space-y-2.5 text-sm">
-                    <div class="flex justify-between gap-4">
-                        <span class="text-gray-500">Pelanggan</span>
-                        <span class="font-semibold text-gray-900 text-right">
-                            {{ $customer->name }}
-                            <span class="ml-1 inline-flex items-center rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-700">{{ strtoupper($customer->type ?? 'r2') }}</span>
-                        </span>
-                    </div>
-                    <div class="flex justify-between gap-4">
-                        <span class="text-gray-500">Tanggal Nota</span>
-                        <span class="font-semibold text-gray-900" x-text="formatDate(createdAt)"></span>
-                    </div>
-                    <div class="flex justify-between gap-4">
-                        <span class="text-gray-500">Item</span>
-                        <span class="font-semibold text-gray-900"><span x-text="cart.length"></span> jenis (<span x-text="totalQty"></span> qty)</span>
-                    </div>
-                    <div class="flex justify-between gap-4">
-                        <span class="text-gray-500">Total</span>
-                        <span class="font-bold text-gray-900 text-lg tabular-nums" x-text="formatRupiah(grandTotal)"></span>
-                    </div>
-                    <div class="flex justify-between gap-4">
-                        <span class="text-gray-500">Metode</span>
-                        <span class="font-semibold text-gray-900" x-text="paymentMethod"></span>
-                    </div>
-                    <div class="flex justify-between gap-4">
-                        <span class="text-gray-500">Status</span>
-                        <span :class="isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-                            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-                            x-text="isPaid ? 'LUNAS' : 'BELUM LUNAS'"></span>
+        {{-- Modal Cari Pelanggan R1/R2 --}}
+        <x-modal name="manual-customer" title="Cari Pelanggan R1/R2" maxWidth="2xl">
+            <div class="p-1">
+                {{-- Type filter chips --}}
+                <div class="mb-3 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+                    <template x-for="opt in [{key:'all',label:'Semua'},{key:'r1',label:'R1'},{key:'r2',label:'R2'}]" :key="opt.key">
+                        <button type="button" @click="setCustomerTypeFilter(opt.key)"
+                            :class="customerTypeFilter === opt.key ? 'bg-button-main text-white shadow-sm' : 'text-gray-600 hover:bg-white'"
+                            class="rounded-md px-3 py-1 text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
+                            x-text="opt.label"></button>
+                    </template>
+                </div>
+
+                {{-- Search Input --}}
+                <div class="mb-4">
+                    <div class="relative">
+                        <svg class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" x-model="r2SearchQuery" @input.debounce.300ms="searchR2Customers()"
+                            placeholder="Cari nama, nomor HP, atau alamat..."
+                            class="w-full rounded-lg border-2 border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-button-main focus:outline-none focus:ring-2 focus:ring-button-main/20">
                     </div>
                 </div>
-            </div>
-            <div class="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
-                <button type="button" @click="$dispatch('close-modal', 'confirm-save-trx')"
-                    class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 hover:bg-gray-50 cursor-pointer">
-                    Batal
-                </button>
-                <button type="button" @click="actuallySubmit()"
-                    class="rounded-lg bg-button-main hover:bg-button-hover px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-900 shadow-sm cursor-pointer">
-                    Ya, Simpan
-                </button>
+
+                {{-- Results --}}
+                <div class="max-h-72 overflow-y-auto">
+                    <div x-show="isSearchingR2" class="py-8 text-center text-gray-400">
+                        <svg class="mx-auto h-6 w-6 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="mt-2 text-sm">Mencari...</p>
+                    </div>
+
+                    <div x-show="!isSearchingR2 && r2SearchResults.length === 0" class="py-8 text-center text-gray-400">
+                        <p class="text-sm">Pelanggan tidak ditemukan</p>
+                    </div>
+
+                    <table x-show="!isSearchingR2 && r2SearchResults.length > 0" class="w-full text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2.5 text-left font-semibold text-gray-600">Nama</th>
+                                <th class="px-4 py-2.5 text-left font-semibold text-gray-600">Tipe</th>
+                                <th class="px-4 py-2.5 text-left font-semibold text-gray-600">Kontak</th>
+                                <th class="px-4 py-2.5 text-left font-semibold text-gray-600">Alamat</th>
+                                <th class="px-4 py-2.5 text-center font-semibold text-gray-600">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="cust in r2SearchResults" :key="cust.id">
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                    <td class="px-4 py-3 font-medium text-gray-900" x-text="cust.name"></td>
+                                    <td class="px-4 py-3">
+                                        <span class="inline-flex rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider"
+                                            :class="(cust.type || 'r2') === 'r1' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'"
+                                            x-text="(cust.type || 'r2').toUpperCase()"></span>
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600" x-text="cust.phone_number || '-'"></td>
+                                    <td class="px-4 py-3 text-gray-600 max-w-[200px] truncate" x-text="cust.address || '-'"></td>
+                                    <td class="px-4 py-3 text-center">
+                                        <button @click="selectCustomer(cust); $dispatch('close-modal', 'manual-customer')" type="button"
+                                            class="rounded-lg bg-button-main px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-button-hover transition-colors active:scale-95 cursor-pointer">
+                                            Pilih
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </x-modal>
 
@@ -445,10 +622,19 @@
 
     @push('scripts')
         <script>
-            function manualInvoiceForm() {
+            function manualTrxForm() {
                 return {
                     products: @json($products),
-                    customPrices: @json($customPrices),
+                    priceMode: 'consument',
+                    selectedCustomer: null,
+                    customerTypeFilter: 'all',
+                    r2SearchQuery: '',
+                    r2SearchResults: [],
+                    isSearchingR2: false,
+                    customPrices: {},
+
+                    reduceStock: true,
+
                     search: '',
                     categoryId: null,
                     page: 1,
@@ -462,8 +648,6 @@
                     discount: 0,
                     note: '',
                     submitting: false,
-                    _formAction: '',
-                    _csrfToken: '',
 
                     get filteredProducts() {
                         const s = this.search.trim().toLowerCase();
@@ -473,38 +657,96 @@
                             return true;
                         });
                     },
-
-                    get totalPages() {
-                        return Math.max(1, Math.ceil(this.filteredProducts.length / this.perPage));
-                    },
-
+                    get totalPages() { return Math.max(1, Math.ceil(this.filteredProducts.length / this.perPage)); },
                     get paginatedProducts() {
                         if (this.page > this.totalPages) this.page = this.totalPages;
                         const start = (this.page - 1) * this.perPage;
                         return this.filteredProducts.slice(start, start + this.perPage);
                     },
+                    get rangeStart() { return this.filteredProducts.length === 0 ? 0 : (this.page - 1) * this.perPage + 1; },
+                    get rangeEnd() { return Math.min(this.page * this.perPage, this.filteredProducts.length); },
 
-                    get rangeStart() {
-                        if (this.filteredProducts.length === 0) return 0;
-                        return (this.page - 1) * this.perPage + 1;
+                    setPriceMode(mode) {
+                        if (this.priceMode === mode) return;
+                        this.priceMode = mode;
+                        if (mode === 'consument') {
+                            this.selectedCustomer = null;
+                            this.customPrices = {};
+                        }
+                        this.recomputeCartPrices();
                     },
 
-                    get rangeEnd() {
-                        return Math.min(this.page * this.perPage, this.filteredProducts.length);
+                    setCustomerTypeFilter(key) {
+                        this.customerTypeFilter = key;
+                        this.searchR2Customers();
+                    },
+
+                    openCustomerModal() {
+                        this.r2SearchQuery = '';
+                        this.searchR2Customers();
+                    },
+
+                    async searchR2Customers() {
+                        this.isSearchingR2 = true;
+                        try {
+                            const params = new URLSearchParams();
+                            if (this.r2SearchQuery) params.set('q', this.r2SearchQuery);
+                            if (this.customerTypeFilter !== 'all') params.set('type', this.customerTypeFilter);
+                            const res = await fetch(`/api/customer-r2/search?${params.toString()}`, {
+                                headers: { 'Accept': 'application/json' },
+                            });
+                            this.r2SearchResults = res.ok ? await res.json() : [];
+                        } catch (e) {
+                            console.error('Search error:', e);
+                            this.r2SearchResults = [];
+                        } finally {
+                            this.isSearchingR2 = false;
+                        }
+                    },
+
+                    async selectCustomer(customer) {
+                        this.selectedCustomer = customer;
+                        this.priceMode = (customer.type === 'r1') ? 'r1' : 'r2';
+                        try {
+                            const res = await fetch(`/api/customer-r2/${customer.id}/custom-prices`, {
+                                headers: { 'Accept': 'application/json' },
+                            });
+                            this.customPrices = res.ok ? await res.json() : {};
+                        } catch (e) {
+                            console.error('Failed to load custom prices:', e);
+                            this.customPrices = {};
+                        }
+                        this.recomputeCartPrices();
+                    },
+
+                    removeCustomer() {
+                        this.selectedCustomer = null;
+                        this.customPrices = {};
+                        this.priceMode = 'consument';
+                        this.recomputeCartPrices();
+                    },
+
+                    recomputeCartPrices() {
+                        this.cart.forEach(item => {
+                            const product = this.products.find(p => p.id === item.id);
+                            if (product) item.basePrice = this.getBasePrice(product);
+                        });
                     },
 
                     getBasePrice(product) {
-                        const customId = product.id;
-                        if (this.customPrices && this.customPrices[customId]) {
-                            return Number(this.customPrices[customId]);
+                        if (this.customPrices && this.customPrices[product.id]) {
+                            return Number(this.customPrices[product.id]);
                         }
-                        return Number(product.price_r2 || product.price_r1 || product.price_consument || 0);
+                        if (this.priceMode === 'r1') return Number(product.price_r1 || product.price_consument || 0);
+                        if (this.priceMode === 'r2') return Number(product.price_r2 || product.price_r1 || product.price_consument || 0);
+                        return Number(product.price_consument || 0);
                     },
 
                     addToCart(product) {
+                        if (this.reduceStock && (Number(product.stock_opname) || 0) <= 0) return;
                         const existing = this.cart.find(i => i.id === product.id);
                         if (existing) {
-                            existing.qty = (Number(existing.qty) || 0) + 1;
+                            this.incrementQty(existing);
                             return;
                         }
                         const basePrice = this.getBasePrice(product);
@@ -514,29 +756,23 @@
                             basePrice: basePrice,
                             price: basePrice,
                             qty: 1,
+                            stockOpname: Number(product.stock_opname) || 0,
                         });
                     },
 
-                    removeFromCart(idx) {
-                        this.cart.splice(idx, 1);
+                    incrementQty(item) {
+                        const next = (Number(item.qty) || 0) + 1;
+                        if (this.reduceStock && next > Number(item.stockOpname)) return;
+                        item.qty = next;
                     },
 
-                    get subtotal() {
-                        return this.cart.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 0), 0);
-                    },
+                    removeFromCart(idx) { this.cart.splice(idx, 1); },
 
-                    get grandTotal() {
-                        return Math.max(0, this.subtotal - (Number(this.discount) || 0));
-                    },
+                    get subtotal() { return this.cart.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 0), 0); },
+                    get grandTotal() { return Math.max(0, this.subtotal - (Number(this.discount) || 0)); },
+                    get totalQty() { return this.cart.reduce((sum, i) => sum + (Number(i.qty) || 0), 0); },
 
-                    get totalQty() {
-                        return this.cart.reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
-                    },
-
-                    formatRupiah(n) {
-                        return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
-                    },
-
+                    formatRupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); },
                     formatDate(s) {
                         if (!s) return '-';
                         const [y, m, d] = s.split('-');
@@ -546,12 +782,21 @@
 
                     confirmSave(e) {
                         if (this.cart.length === 0 || this.submitting) return;
+                        if ((this.priceMode === 'r1' || this.priceMode === 'r2') && !this.selectedCustomer) {
+                            alert('Pilih pelanggan terlebih dahulu.');
+                            return;
+                        }
+                        if (this.reduceStock) {
+                            const overStock = this.cart.find(i => Number(i.qty) > Number(i.stockOpname));
+                            if (overStock) {
+                                alert(`Qty "${overStock.name}" (${overStock.qty}) melebihi stok (${overStock.stockOpname}).`);
+                                return;
+                            }
+                        }
                         if (this.paymentMethod === 'Cash' && this.isPaid && Number(this.cashReceived || 0) < this.grandTotal) {
                             alert('Uang diterima kurang dari total transaksi.');
                             return;
                         }
-                        this._formAction = e.target.action;
-                        this._csrfToken = e.target.querySelector('input[name="_token"]').value;
                         this.$dispatch('open-modal', 'confirm-save-trx');
                     },
 
@@ -559,6 +804,8 @@
                         this.$dispatch('close-modal', 'confirm-save-trx');
                         this.submitting = true;
 
+                        const csrfInput = document.querySelector('input[name="_token"]');
+                        const action = '{{ route('finance.manual.store') }}';
                         const append = (f, name, value) => {
                             const inp = document.createElement('input');
                             inp.type = 'hidden';
@@ -569,8 +816,14 @@
 
                         const f = document.createElement('form');
                         f.method = 'POST';
-                        f.action = this._formAction;
-                        append(f, '_token', this._csrfToken);
+                        f.action = action;
+                        append(f, '_token', csrfInput.value);
+                        const customerKind = this.selectedCustomer ? (this.selectedCustomer.type || 'r2') : 'guest';
+                        append(f, 'customer_kind', customerKind);
+                        if (this.selectedCustomer) {
+                            append(f, 'customer_id', this.selectedCustomer.id);
+                        }
+                        append(f, 'reduce_stock', this.reduceStock ? 1 : 0);
                         this.cart.forEach((it, i) => {
                             append(f, `items[${i}][id]`, it.id);
                             append(f, `items[${i}][price]`, Number(it.price) || 0);

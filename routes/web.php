@@ -75,6 +75,8 @@ Route::middleware('auth')->group(function () {
     // FINANCE REPORT ROUTE
     Route::get('/laporan-keuangan', [FinanceReportController::class, 'index'])->name('finance.index');
     Route::post('/laporan-keuangan/download', [FinanceReportController::class, 'download'])->name('finance.download');
+    Route::get('/laporan-keuangan/manual/create', [FinanceReportController::class, 'createManual'])->name('finance.manual.create');
+    Route::post('/laporan-keuangan/manual', [FinanceReportController::class, 'storeManual'])->name('finance.manual.store');
     Route::get('/laporan-keuangan/{transaction}/edit', [FinanceReportController::class, 'edit'])->name('finance.edit');
     Route::get('/laporan-keuangan/{transaction}/pdf-invoice', [FinanceReportController::class, 'downloadInvoicePdf'])->name('finance.pdf.invoice');
     Route::put('/laporan-keuangan/{transaction}', [FinanceReportController::class, 'update'])->name('finance.update');

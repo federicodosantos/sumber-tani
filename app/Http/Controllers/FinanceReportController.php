@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
+use App\Models\CustomerProductPrice;
 use App\Models\Invoice;
 use App\Models\ItemCategory;
 use App\Models\Product;
@@ -12,6 +14,7 @@ use App\Models\TransactionDetail;
 use App\Services\TransactionReversalService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -443,6 +446,204 @@ class FinanceReportController extends Controller
     {
         if (! auth()->check() || ! auth()->user()->isOwner()) {
             abort(403, 'Hanya pemilik yang bisa mengubah/menghapus transaksi.');
+        }
+    }
+
+    /* ================================================================
+       MANUAL TRANSACTION — create form (with optional R1/R2 customer)
+    ================================================================ */
+    public function createManual()
+    {
+        $categories = ItemCategory::all();
+
+        $totalStockSub = DB::table('product_stocks')
+            ->select('product_id', DB::raw('SUM(stock_opname) as total_stock'))
+            ->whereNull('deleted_at')
+            ->groupBy('product_id');
+
+        $latestBatchSub = DB::table('product_stocks as ps1')
+            ->select('ps1.product_id', 'ps1.price_consument', 'ps1.price_r1', 'ps1.price_r2')
+            ->whereNull('ps1.deleted_at')
+            ->whereRaw('ps1.batch = (
+                SELECT MAX(ps2.batch)
+                FROM product_stocks ps2
+                WHERE ps2.product_id = ps1.product_id
+                AND ps2.deleted_at IS NULL
+            )');
+
+        $products = Product::query()
+            ->leftJoinSub($totalStockSub, 'ts', 'ts.product_id', '=', 'products.id')
+            ->leftJoinSub($latestBatchSub, 'lb', 'lb.product_id', '=', 'products.id')
+            ->join('item_categories as ic', 'products.item_category_id', '=', 'ic.id')
+            ->select([
+                'products.id', 'products.name', 'products.item_category_id', 'products.description',
+                'ic.name as category_name',
+                DB::raw('COALESCE(ts.total_stock, 0) as stock_opname'),
+                'lb.price_consument', 'lb.price_r1', 'lb.price_r2',
+            ])
+            ->whereNull('products.deleted_at')
+            ->orderBy('products.name', 'asc')
+            ->get();
+
+        return view('finance.manual-create', compact('categories', 'products'));
+    }
+
+    /* ================================================================
+       MANUAL TRANSACTION — store (handles guest / R1 / R2, optional stock reduction)
+    ================================================================ */
+    public function storeManual(Request $request)
+    {
+        $validated = $request->validate([
+            'customer_kind'     => 'required|in:guest,r1,r2',
+            'customer_id'       => 'required_unless:customer_kind,guest|nullable|integer|exists:customers,id',
+            'reduce_stock'      => 'required|boolean',
+            'items'             => 'required|array|min:1',
+            'items.*.id'        => 'required|integer|exists:products,id',
+            'items.*.price'     => 'required|numeric|min:0',
+            'items.*.qty'       => 'required|integer|min:1',
+            'items.*.basePrice' => 'nullable|numeric|min:0',
+            'totalQty'          => 'required|numeric|min:1',
+            'totalAmount'       => 'required|numeric|min:0',
+            'discount'          => 'nullable|numeric|min:0',
+            'payment_method'    => 'required|in:Cash,Kredit,QRIS,Transfer',
+            'is_paid'           => 'required|boolean',
+            'cash_received'     => 'nullable|numeric|min:0',
+            'change_amount'     => 'nullable|numeric',
+            'created_at'        => 'required|date|before_or_equal:now',
+            'note'              => 'nullable|string|max:1000',
+        ]);
+
+        $customerKind = $validated['customer_kind'];
+        $customer = null;
+        if ($customerKind !== 'guest') {
+            $customer = Customer::where('id', $validated['customer_id'])
+                ->where('type', $customerKind)
+                ->first();
+            if (! $customer) {
+                return redirect()->back()->withInput()->withErrors([
+                    'customer_id' => 'Pelanggan tidak ditemukan atau tipe tidak cocok.',
+                ]);
+            }
+        }
+
+        $reduceStock = (bool) $validated['reduce_stock'];
+        $items = $validated['items'];
+        $totalAmount = (float) $validated['totalAmount'];
+        $totalQty = (int) $validated['totalQty'];
+        $discount = (float) ($validated['discount'] ?? 0);
+        $isPaid = (bool) $validated['is_paid'];
+
+        if ($reduceStock) {
+            $stockErrors = [];
+            foreach ($items as $idx => $item) {
+                $available = (int) ProductStock::where('product_id', $item['id'])
+                    ->whereNull('deleted_at')
+                    ->sum('stock_opname');
+                if ($available < (int) $item['qty']) {
+                    $name = Product::where('id', $item['id'])->value('name') ?? "Produk #{$item['id']}";
+                    $stockErrors["items.$idx.qty"] = "Stok '{$name}' hanya {$available}, tidak cukup untuk {$item['qty']}.";
+                }
+            }
+            if (! empty($stockErrors)) {
+                return redirect()->back()->withInput()->withErrors($stockErrors);
+            }
+        }
+
+        $cashReceived = null;
+        $changeAmount = null;
+        if ($validated['payment_method'] === 'Cash') {
+            $cashReceived = isset($validated['cash_received']) ? (float) $validated['cash_received'] : null;
+            $changeAmount = isset($validated['change_amount']) ? (float) $validated['change_amount'] : null;
+
+            if ($isPaid && $cashReceived !== null && $cashReceived < $totalAmount) {
+                return redirect()->back()->withInput()->withErrors([
+                    'cash_received' => 'Uang diterima kurang dari total transaksi.',
+                ]);
+            }
+        }
+
+        $now = Carbon::now();
+        $transactionDate = Carbon::parse($validated['created_at'])
+            ->setTimezone(config('app.timezone'))
+            ->setTime($now->hour, $now->minute, $now->second);
+
+        try {
+            DB::transaction(function () use (
+                $customer, $customerKind, $reduceStock, $items, $totalAmount, $totalQty,
+                $discount, $isPaid, $cashReceived, $changeAmount, $transactionDate, $validated
+            ) {
+                $transaction = Transaction::create([
+                    'total_quantity'    => $totalQty,
+                    'total_price'       => $totalAmount,
+                    'discount'          => $discount,
+                    'payment_method'    => $validated['payment_method'],
+                    'is_paid'           => $isPaid,
+                    'created_at'        => $transactionDate,
+                    'updated_at'        => $transactionDate,
+                    'transaction_date'  => $transactionDate,
+                    'cash_received'     => $cashReceived,
+                    'change_amount'     => $changeAmount,
+                    'is_manual'         => true,
+                ]);
+
+                foreach ($items as $item) {
+                    $productStock = null;
+                    $buyingPrice = 0;
+                    if ($reduceStock) {
+                        $productStock = ProductStock::where('product_id', $item['id'])
+                            ->whereNull('deleted_at')
+                            ->where('stock_opname', '>', 0)
+                            ->orderBy('created_at', 'asc')
+                            ->first();
+                        $buyingPrice = $productStock ? (float) $productStock->unit_price : 0;
+                    }
+
+                    $transaction->transactionDetails()->create([
+                        'product_id'       => $item['id'],
+                        'product_stock_id' => $productStock?->id,
+                        'product_price'    => $item['price'],
+                        'buying_price'     => $buyingPrice,
+                        'quantity'         => $item['qty'],
+                        'total_price'      => $item['price'] * $item['qty'],
+                        'created_at'       => $transactionDate,
+                        'updated_at'       => $transactionDate,
+                    ]);
+
+                    if ($reduceStock && $productStock) {
+                        $productStock->decrement('stock_opname', $item['qty']);
+                    }
+                }
+
+                if ($customer) {
+                    Invoice::create([
+                        'customer_id'    => $customer->id,
+                        'transaction_id' => $transaction->id,
+                        'debts'          => $isPaid ? 0 : $totalAmount,
+                        'type'           => Invoice::TYPE_PURCHASE,
+                        'inv_code'       => Invoice::generateInvCode(Invoice::TYPE_PURCHASE),
+                        'note'           => $validated['note'] ?? null,
+                        'created_at'     => $transactionDate,
+                        'updated_at'     => $transactionDate,
+                    ]);
+
+                    foreach ($items as $item) {
+                        $basePrice = $item['basePrice'] ?? null;
+                        $manualPrice = $item['price'] ?? null;
+                        if ($basePrice !== null && $manualPrice !== null && (float) $manualPrice !== (float) $basePrice) {
+                            CustomerProductPrice::updateOrCreate(
+                                ['customer_id' => $customer->id, 'product_id' => $item['id']],
+                                ['custom_price' => (float) $manualPrice],
+                            );
+                        }
+                    }
+                }
+            });
+
+            return redirect()->route('finance.index')->with('success', 'Transaksi manual berhasil disimpan.');
+        } catch (Exception $e) {
+            return redirect()->back()->withInput()->withErrors([
+                'general' => 'Terjadi kesalahan saat menyimpan transaksi: ' . $e->getMessage(),
+            ]);
         }
     }
 
