@@ -196,7 +196,7 @@
                         x-transition:leave-end="opacity-0 -translate-y-2"
                         class="mt-1 space-y-1 ml-4">
 
-                        {{-- Pelanggan R2 --}}
+                        {{-- Pelanggan R1/R2 --}}
                         <li>
                             <a href="{{ url('customer-r2') }}"
                                 class="flex items-stretch flex-row transition-colors duration-200 rounded-lg group
@@ -204,7 +204,7 @@
                                 <div class="bg-white w-10"></div>
                                 <div
                                     class="{{ request()->is('customer-r2*') ? 'bg-button-main text-white tracking-wide font-extrabold shadow-sm' : '' }} flex items-center w-full px-4 py-2 rounded-lg">
-                                    <span x-show="!effectiveSidebarCollapsed" x-cloak class="text-sm">Pelanggan R2</span>
+                                    <span x-show="!effectiveSidebarCollapsed" x-cloak class="text-sm">Pelanggan R1/R2</span>
                                 </div>
                             </a>
                         </li>

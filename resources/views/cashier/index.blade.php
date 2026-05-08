@@ -81,36 +81,29 @@
                 Konsumen
             </button>
 
-            <button @click="setPriceMode('r1')"
+            <button @click="openCustomerModal(); $dispatch('open-modal', 'r2-customer')"
                 :class="[
-                    priceMode === 'r1' ?
+                    (priceMode === 'r1' || priceMode === 'r2') ?
                     'bg-button-main text-white shadow-md' :
                     'bg-white hover:bg-gray-100'
                 ]"
                 class="mode-btn border-button-hover rounded-lg border-2 px-3 py-1 text-sm font-medium transition-all duration-200 cursor-pointer">
-                R1
+                Pelanggan R1/R2
             </button>
 
-            <button @click="openR2Modal(); $dispatch('open-modal', 'r2-customer')"
-                :class="[
-                    priceMode === 'r2' ?
-                    'bg-button-main text-white shadow-md' :
-                    'bg-white hover:bg-gray-100'
-                ]"
-                class="mode-btn border-button-hover rounded-lg border-2 px-3 py-1 text-sm font-medium transition-all duration-200 cursor-pointer">
-                R2
-            </button>
-
-            {{-- Selected R2 Customer Badge --}}
+            {{-- Selected Customer Badge --}}
             <template x-if="selectedCustomer">
                 <div class="flex items-center gap-2 ml-2 rounded-lg border-2 border-button-main/50 bg-button-main/10 px-3 py-1">
                     <svg class="h-4 w-4 text-button-hover shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
-                    <span class="text-sm font-semibold text-gray-800" x-text="'R2 — ' + selectedCustomer.name"></span>
-                    <button @click="removeR2Customer(); $dispatch('open-modal', 'r2-customer')" type="button"
-                        class="text-gray-400 hover:text-red-500 transition-colors" title="Hapus Pelanggan R2">
+                    <span class="rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider"
+                        :class="selectedCustomer.type === 'r1' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'"
+                        x-text="(selectedCustomer.type || 'r2').toUpperCase()"></span>
+                    <span class="text-sm font-semibold text-gray-800" x-text="selectedCustomer.name"></span>
+                    <button @click="removeCustomer(); $dispatch('open-modal', 'r2-customer')" type="button"
+                        class="text-gray-400 hover:text-red-500 transition-colors" title="Hapus Pelanggan">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M6 18L18 6M6 6l12 12" />
@@ -143,12 +136,29 @@
                     ]"
                     class="group relative w-full rounded-2xl border-2 p-4 text-left transition-all">
 
-                    <div class="mb-3 flex items-start justify-between">
+                    <div class="mb-3 flex items-start justify-between gap-2">
                         <h3 class="text-lg font-bold leading-tight text-gray-900" x-text="product.name"></h3>
 
-                        <p class="whitespace-nowrap text-lg font-bold text-gray-900"
-                            x-text="formatRupiah(getPrice(product))">
-                        </p>
+                        <div class="flex shrink-0 flex-col items-end gap-0.5">
+                            <div class="flex items-center gap-1.5">
+                                <template x-if="hasCustomR2Price(product)">
+                                    <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] text-amber-700 ring-1 ring-amber-200">
+                                        Khusus
+                                    </span>
+                                </template>
+                                <p class="whitespace-nowrap text-lg font-bold tabular-nums"
+                                    :class="hasCustomR2Price(product) ? 'text-amber-700' : 'text-gray-900'"
+                                    x-text="formatRupiah(getPrice(product))">
+                                </p>
+                            </div>
+                            <template x-if="hasCustomR2Price(product)">
+                                <p class="text-[10px] font-medium text-gray-400" title="Harga sistem default untuk tipe pelanggan ini">
+                                    <span x-text="'Default ' + (priceMode === 'r1' ? 'R1' : 'R2') + ':'"></span>
+                                    <span class="line-through tabular-nums"
+                                        x-text="formatRupiah(priceMode === 'r1' ? product.price_r1 : product.price_r2)"></span>
+                                </p>
+                            </template>
+                        </div>
                     </div>
 
                     <p class="mb-4 truncate text-xs leading-relaxed text-gray-700" x-text="product.description || '-'">

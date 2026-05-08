@@ -55,19 +55,20 @@
                         <label for="ppnInput" class="text-xs font-bold text-gray-600">PPN</label>
                         <div class="flex gap-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200">
                             {{-- Percent Mode --}}
-                            <input x-show="type === 'percent'" type="number" 
-                                name="ppn" 
-                                id="ppnInput"
-                                class="w-full border-none bg-transparent py-2.5 pl-3 text-sm focus:ring-0"
-                                placeholder="0" min="0" step="0.001" 
-                                value="{{ old('ppn_type', $purchase?->ppn_type) == 'percent' || !old('ppn_type') ? old('ppn', $purchase?->ppn_percent !== null ? round($purchase->ppn_percent, 3) : '') : '' }}"
-                                @input="if($el.value.includes('.')) { 
-                                    const parts = $el.value.split('.'); 
-                                    if(parts[1].length > 3) { 
-                                        $el.value = parts[0] + '.' + parts[1].slice(0, 3); 
-                                    } 
-                                }"
-                                x-bind:disabled="type !== 'percent'">
+                            {{-- Percent Mode --}}
+                            <div x-show="type === 'percent'" class="w-full" x-data="{ 
+                                val: '{{ (old('ppn_type', $purchase?->ppn_type) == 'percent' || !old('ppn_type')) ? str_replace('.', ',', old('ppn', $purchase?->ppn_percent !== null ? round($purchase->ppn_percent, 3) : '')) : '' }}' 
+                            }">
+                                <input type="text" 
+                                    x-model="val"
+                                    id="ppnInput"
+                                    class="w-full border-none bg-transparent py-2.5 pl-3 text-sm focus:ring-0"
+                                    placeholder="0"
+                                    inputmode="decimal"
+                                    @input="val = $el.value.replace(/[^0-9,]/g, ''); let parts = val.split(','); if(parts.length > 2) val = parts[0] + ',' + parts.slice(1).join(''); if(parts[1] && parts[1].length > 3) val = parts[0] + ',' + parts[1].slice(0, 3);"
+                                    x-bind:disabled="type !== 'percent'">
+                                <input type="hidden" name="ppn" :value="val.replace(',', '.')" x-bind:disabled="type !== 'percent'">
+                            </div>
 
                             {{-- Nominal Mode --}}
                             <div x-show="type === 'nominal'" class="w-full">
@@ -102,19 +103,20 @@
                         <label for="globalDiscount" class="text-xs font-bold text-gray-600">Diskon Global</label>
                         <div class="flex gap-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-200">
                             {{-- Percent Mode --}}
-                            <input x-show="type === 'percent'" type="number" 
-                                name="discount" 
-                                id="globalDiscount"
-                                class="w-full border-none bg-transparent py-2.5 pl-3 text-sm focus:ring-0"
-                                placeholder="0" min="0" step="0.001"
-                                value="{{ old('discount_type', $purchase?->discount_type) == 'percent' || !old('discount_type') ? old('discount', $purchase?->discount_percent !== null ? round($purchase->discount_percent, 3) : '') : '' }}"
-                                @input="if($el.value.includes('.')) { 
-                                    const parts = $el.value.split('.'); 
-                                    if(parts[1].length > 3) { 
-                                        $el.value = parts[0] + '.' + parts[1].slice(0, 3); 
-                                    } 
-                                }"
-                                x-bind:disabled="type !== 'percent'">
+                            {{-- Percent Mode --}}
+                            <div x-show="type === 'percent'" class="w-full" x-data="{ 
+                                val: '{{ (old('discount_type', $purchase?->discount_type) == 'percent' || !old('discount_type')) ? str_replace('.', ',', old('discount', $purchase?->discount_percent !== null ? round($purchase->discount_percent, 3) : '')) : '' }}' 
+                            }">
+                                <input type="text" 
+                                    x-model="val"
+                                    id="globalDiscount"
+                                    class="w-full border-none bg-transparent py-2.5 pl-3 text-sm focus:ring-0"
+                                    placeholder="0"
+                                    inputmode="decimal"
+                                    @input="val = $el.value.replace(/[^0-9,]/g, ''); let parts = val.split(','); if(parts.length > 2) val = parts[0] + ',' + parts.slice(1).join(''); if(parts[1] && parts[1].length > 3) val = parts[0] + ',' + parts[1].slice(0, 3);"
+                                    x-bind:disabled="type !== 'percent'">
+                                <input type="hidden" name="discount" :value="val.replace(',', '.')" x-bind:disabled="type !== 'percent'">
+                            </div>
 
                             {{-- Nominal Mode --}}
                             <div x-show="type === 'nominal'" class="w-full">

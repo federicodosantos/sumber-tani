@@ -40,6 +40,10 @@
 }" 
 class="relative w-full" 
 @combobox-reset.window="if($event.detail.name === '{{ $name }}') { value = ''; search = ''; }"
+@combobox-set.window="if($event.detail.name === '{{ $name }}') { 
+    const opt = options.find(o => o.id == $event.detail.value);
+    if(opt) select(opt);
+}"
 @item-created.window="if(type && $event.detail.type === type) { 
     const newItem = $event.detail.item;
     // Check if item already exists to avoid duplicates

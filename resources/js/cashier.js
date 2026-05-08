@@ -17,7 +17,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         isPanelResizing: false,
         leftSidebarCollapsed: false,
 
-        // R2 Modal state (not per tab)
+        // Customer Modal state (not per tab)
         showR2Modal: false,
         r2SearchQuery: '',
         r2SearchResults: [],
@@ -25,6 +25,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         isCheckoutExpanded: true,
         isSearchingR2: false,
         r2SearchTimeout: null,
+        customerTypeFilter: 'all',
 
         // Tracks any globally-opened <x-modal> by name to disable cashier shortcuts while open
         openModals: [],
@@ -237,7 +238,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     
                     if (results.length > 0 && this.r2HighlightedIndex >= 0 && this.r2HighlightedIndex < results.length) {
                         e.preventDefault();
-                        this.selectR2Customer(results[this.r2HighlightedIndex]);
+                        this.selectCustomer(results[this.r2HighlightedIndex]);
                         this.$dispatch('close-modal', 'r2-customer');
                     }
                     return;
@@ -375,32 +376,40 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         },
 
         cyclePriceMode(direction) {
-            const modes = ['consument', 'r1', 'r2'];
-            const currentIndex = modes.indexOf(this.priceMode);
+            // Two visible cashier modes: 'consument' and a customer mode (R1 or R2 driven by selected customer).
+            const inCustomerMode = this.priceMode === 'r1' || this.priceMode === 'r2';
 
-            let nextIndex = currentIndex + direction;
-            if (nextIndex < 0) nextIndex = modes.length - 1;
-            if (nextIndex >= modes.length) nextIndex = 0;
+            if (inCustomerMode) {
+                this.setPriceMode('consument');
+                return;
+            }
 
-            const targetMode = modes[nextIndex];
-            this.setPriceMode(targetMode);
-
-            // If switching to r2 via shortcut and no customer selected, open modal
-            if (targetMode === 'r2' && !this.selectedCustomer) {
-                this.openR2Modal();
+            // Switching to customer mode: open modal so cashier can pick R1 or R2.
+            if (this.selectedCustomer) {
+                this.priceMode = this.selectedCustomer.type === 'r1' ? 'r1' : 'r2';
+                this.syncCartPricesToMode();
+            } else {
+                this.openCustomerModal();
                 this.$dispatch('open-modal', 'r2-customer');
             }
         },
 
-        openR2Modal() {
+        openCustomerModal() {
             this.showR2Modal = true;
             this.r2SearchQuery = '';
             this.r2SearchResults = [];
             this.fetchR2Customers();
         },
+        // Backward-compatible alias
+        openR2Modal() { this.openCustomerModal(); },
 
         closeR2Modal() {
             this.showR2Modal = false;
+        },
+
+        setCustomerTypeFilter(type) {
+            this.customerTypeFilter = ['r1', 'r2'].includes(type) ? type : 'all';
+            this.fetchR2Customers();
         },
 
         searchR2Customers() {
@@ -410,24 +419,32 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             }, 300);
         },
 
+        _localFilterCustomers(rows) {
+            const q = (this.r2SearchQuery || '').toLowerCase();
+            const typeFilter = this.customerTypeFilter;
+            return rows.filter(c => {
+                const type = c.type || 'r2';
+                if (typeFilter !== 'all' && type !== typeFilter) return false;
+                if (!q) return true;
+                return (
+                    c.name.toLowerCase().includes(q) ||
+                    (c.phone_number && c.phone_number.includes(q)) ||
+                    (c.address && c.address.toLowerCase().includes(q))
+                );
+            });
+        },
+
         async fetchR2Customers() {
             this.isSearchingR2 = true;
             try {
                 if (this.isOffline) {
-                    let results = await db.customers_r2.toArray();
-                    if (this.r2SearchQuery) {
-                        const q = this.r2SearchQuery.toLowerCase();
-                        results = results.filter(c => 
-                            c.name.toLowerCase().includes(q) ||
-                            (c.phone_number && c.phone_number.includes(q)) ||
-                            (c.address && c.address.toLowerCase().includes(q))
-                        );
-                    }
+                    let results = this._localFilterCustomers(await db.customers_r2.toArray());
                     results.sort((a, b) => a.name.localeCompare(b.name));
-                    this.r2SearchResults = results.slice(0, 20);
+                    this.r2SearchResults = results.slice(0, 50);
                 } else {
                     const params = new URLSearchParams();
                     if (this.r2SearchQuery) params.set('q', this.r2SearchQuery);
+                    if (this.customerTypeFilter !== 'all') params.set('type', this.customerTypeFilter);
                     const res = await fetch(`/api/customer-r2/search?${params.toString()}`, {
                         headers: { 'Accept': 'application/json' },
                     });
@@ -436,19 +453,11 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     }
                 }
             } catch (e) {
-                console.error('Gagal mencari pelanggan R2:', e);
+                console.error('Gagal mencari pelanggan:', e);
                 try {
-                    let results = await db.customers_r2.toArray();
-                    if (this.r2SearchQuery) {
-                        const q = this.r2SearchQuery.toLowerCase();
-                        results = results.filter(c => 
-                            c.name.toLowerCase().includes(q) ||
-                            (c.phone_number && c.phone_number.includes(q)) ||
-                            (c.address && c.address.toLowerCase().includes(q))
-                        );
-                    }
+                    let results = this._localFilterCustomers(await db.customers_r2.toArray());
                     results.sort((a, b) => a.name.localeCompare(b.name));
-                    this.r2SearchResults = results.slice(0, 20);
+                    this.r2SearchResults = results.slice(0, 50);
                 } catch (err) {
                     console.error('Fallback lokal gagal:', err);
                 }
@@ -457,20 +466,24 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             }
         },
 
-        selectR2Customer(customer) {
+        selectCustomer(customer) {
             this.selectedCustomer = customer;
             this.showR2Modal = false;
-            this.customerCustomPrices = {}; // clear while loading
-            this.setPriceMode('r2');
+            this.customerCustomPrices = {};
+            this.priceMode = (customer.type === 'r1') ? 'r1' : 'r2';
             this.fetchCustomPricesForCustomer(customer.id);
         },
+        // Backward-compatible alias
+        selectR2Customer(customer) { this.selectCustomer(customer); },
 
-        removeR2Customer() {
+        removeCustomer() {
             this.selectedCustomer = null;
             this.setPriceMode('consument');
-            this.openR2Modal();
+            this.openCustomerModal();
             this.customerCustomPrices = {};
         },
+        // Backward-compatible alias
+        removeR2Customer() { this.removeCustomer(); },
 
         async fetchCustomPricesForCustomer(customerId) {
             try {
@@ -536,9 +549,9 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         getPrice(product) {
             let p = 0;
             if (this.priceMode === 'r1') {
-                p = product.price_r1;
+                const customPrice = this.customerCustomPrices[product.id];
+                p = (customPrice !== undefined && customPrice !== null) ? customPrice : product.price_r1;
             } else if (this.priceMode === 'r2') {
-                // Use the customer-specific price if available, otherwise fall back to system r2 price
                 const customPrice = this.customerCustomPrices[product.id];
                 p = (customPrice !== undefined && customPrice !== null) ? customPrice : product.price_r2;
             } else {
@@ -546,6 +559,16 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             }
 
             return Number(p) || 0;
+        },
+
+        // True when the active customer (R1 or R2) has a custom price that differs from the system base price.
+        hasCustomR2Price(product) {
+            if (!this.selectedCustomer) return false;
+            if (this.priceMode !== 'r1' && this.priceMode !== 'r2') return false;
+            const cp = this.customerCustomPrices[product.id];
+            if (cp === undefined || cp === null) return false;
+            const base = this.priceMode === 'r1' ? product.price_r1 : product.price_r2;
+            return Number(cp) !== Number(base);
         },
 
         setPaymentMethod(method) {

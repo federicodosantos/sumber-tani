@@ -88,6 +88,7 @@ class="{{ $containerClass }}"
             placeholder="{{ $placeholder }}"
             @focus="setTimeout(() => $el.setSelectionRange($el.value.length, $el.value.length), 10)"
             @click="setTimeout(() => $el.setSelectionRange($el.value.length, $el.value.length), 10)"
+            @keydown="if (!/[0-9]/.test($event.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'].includes($event.key) && !($event.ctrlKey || $event.metaKey)) $event.preventDefault()"
             {{ $attributes->merge([
                 'class' => 'block w-full rounded-md border border-gray-300 focus:border-button-hover pl-8 pr-3 py-2 text-sm focus:outline-none transition-all duration-100 text-right font-semibold text-gray-900' . ($attributes->has('disabled') ? ' bg-gray-100 cursor-not-allowed' : ' bg-white')
             ])->whereStartsWith(['disabled', 'readonly', 'required', 'autofocus', 'class']) }}>

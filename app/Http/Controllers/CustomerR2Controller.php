@@ -24,7 +24,10 @@ class CustomerR2Controller extends Controller
      */
     public function index(Request $request)
     {
-        $query = Customer::query();
+        $type = $request->input('type', 'all');
+        $type = in_array($type, ['r1', 'r2'], true) ? $type : 'all';
+
+        $query = Customer::query()->ofType($type === 'all' ? null : $type);
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -55,7 +58,7 @@ class CustomerR2Controller extends Controller
 
         $customers = $query->paginate(10)->withQueryString();
 
-        return view('customer-r2.index', compact('customers'));
+        return view('customer-r2.index', compact('customers', 'type'));
     }
 
     /**
@@ -73,6 +76,7 @@ class CustomerR2Controller extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'type' => 'required|in:r1,r2',
             'phone_number' => 'required|string|max:15',
             'address' => 'required|string|max:255',
         ]);
@@ -80,12 +84,48 @@ class CustomerR2Controller extends Controller
         try {
             Customer::create($validated);
 
-            return redirect()->route('customer-r2.index')->with('success', 'Pelanggan R2 berhasil ditambahkan.');
+            $label = strtoupper($validated['type']);
+            return redirect()->route('customer-r2.index')->with('success', "Pelanggan {$label} berhasil ditambahkan.");
         } catch (Exception $e) {
             return redirect()
                 ->back()
                 ->withInput()
                 ->withErrors(['general' => 'Terjadi kesalahan saat menambahkan pelanggan.']);
+        }
+    }
+
+    /**
+     * Update an existing customer's profile (name, type, phone, address).
+     */
+    public function update(Request $request, Customer $customer)
+    {
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'type' => 'required|in:r1,r2',
+            'phone_number' => 'required|string|max:15',
+            'address' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()
+                ->back()
+                ->withErrors($validator)
+                ->withInput()
+                ->with('open_modal', 'edit-customer');
+        }
+
+        try {
+            $customer->update($validator->validated());
+
+            return redirect()
+                ->route('customer-r2.show', $customer->id)
+                ->with('success', 'Data pelanggan berhasil diperbarui.');
+        } catch (Exception $e) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['general' => 'Terjadi kesalahan saat memperbarui pelanggan: ' . $e->getMessage()])
+                ->with('open_modal', 'edit-customer');
         }
     }
 
@@ -436,7 +476,8 @@ class CustomerR2Controller extends Controller
      */
     public function search(Request $request)
     {
-        $query = Customer::query();
+        $type = $request->input('type');
+        $query = Customer::query()->ofType($type);
 
         if ($request->filled('q')) {
             $search = $request->input('q');
@@ -447,7 +488,7 @@ class CustomerR2Controller extends Controller
             });
         }
 
-        $customers = $query->orderBy('name', 'asc')->limit(20)->get(['id', 'name', 'phone_number', 'address']);
+        $customers = $query->orderBy('name', 'asc')->limit(50)->get(['id', 'name', 'type', 'phone_number', 'address']);
 
         return response()->json($customers);
     }

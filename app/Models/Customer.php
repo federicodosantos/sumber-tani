@@ -13,7 +13,15 @@ class Customer extends Model
 
     protected $table = 'customers';
 
-    protected $fillable = ['name', 'phone_number', 'address'];
+    protected $fillable = ['name', 'type', 'phone_number', 'address'];
+
+    public function scopeOfType($query, ?string $type)
+    {
+        if ($type && in_array($type, ['r1', 'r2'], true)) {
+            return $query->where('type', $type);
+        }
+        return $query;
+    }
 
     public function invoices()
     {

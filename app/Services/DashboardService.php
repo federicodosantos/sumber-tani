@@ -43,7 +43,10 @@ class DashboardService
                     return $item;
                 });
 
-            $summary = compact('totalProducts', 'totalStock', 'fiveLowest', 'totalCategories', 'mostItemCategory', 'leastItemCategory', 'nearestExpiredStocks');
+            $products = Product::whereNull('deleted_at')->get();
+            $categories = ItemCategory::all();
+
+            $summary = compact('totalProducts', 'totalStock', 'fiveLowest', 'totalCategories', 'mostItemCategory', 'leastItemCategory', 'nearestExpiredStocks', 'products', 'categories');
 
             if ($user && $user->isOwner()) {
                 $now = Carbon::now();

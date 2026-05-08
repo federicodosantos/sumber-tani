@@ -196,9 +196,10 @@
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr class="text-sm text-gray-600">
-                        <th class="px-6 py-3 text-left font-medium">ID</th>
-                        <th class="px-6 py-3 text-left font-medium">Nama Produk</th>
-                        <th class="px-6 py-3 text-left font-medium">Stok</th>
+                        <th class="px-6 py-3 text-left font-medium text-gray-600">ID</th>
+                        <th class="px-6 py-3 text-left font-medium text-gray-600">Nama Produk</th>
+                        <th class="px-6 py-3 text-center font-medium text-gray-600">Stok</th>
+                        <th class="px-6 py-3 text-center font-medium text-gray-600">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -206,16 +207,26 @@
                         <tr class="transition-colors hover:bg-gray-50">
                             <td class="px-6 py-3 text-sm text-gray-600">{{ $p->id }}</td>
                             <td class="px-6 py-3 text-sm font-medium text-gray-800">{{ $p->name }}</td>
-                            <td class="px-6 py-3">
+                            <td class="px-6 py-3 text-center">
                                 <span
                                     class="{{ $p->stock_opname < 10 ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800' }} inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
                                     {{ $p->stock_opname }}
                                 </span>
                             </td>
+                            <td class="px-6 py-3 text-center">
+                                <button type="button"
+                                    @click="restock({{ $p->id }})"
+                                    class="inline-flex items-center rounded-lg bg-button-main px-3 py-1.5 text-xs font-bold text-gray-900/80 transition-colors hover:bg-button-hover cursor-pointer">
+                                    <svg class="mr-1 h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    RESTOCK
+                                </button>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="3" class="py-8 text-center text-gray-500">
+                            <td colspan="4" class="py-8 text-center text-gray-500">
                                 <svg class="mx-auto mb-2 h-12 w-12 text-gray-300" fill="none"
                                     stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -230,4 +241,38 @@
         </div>
     </div>
     </div>
+
+    {{-- Restock Modal --}}
+    <x-modal name="create-purchase" title="TAMBAH PEMBELIAN PRODUK (RESTOCK)" maxWidth="full">
+        <div class="">
+            @include('product-purchase._form', [
+                'action' => route('purchase.store'), 
+                'method' => 'POST', 
+                'products' => $products,
+                'categories' => $categories
+            ])
+        </div>
+    </x-modal>
+
+    @push('scripts')
+        @include('product-purchase._form-script')
+        <script>
+            function restock(productId) {
+                // Ensure form is fresh
+                if (window.resetPurchaseForm) {
+                    window.resetPurchaseForm();
+                }
+                
+                // Open modal
+                window.dispatchEvent(new CustomEvent('open-modal', { detail: 'create-purchase' }));
+                
+                // Set product in the first row after a short delay to let Alpine init
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('combobox-set', { 
+                        detail: { name: 'products[0][product_id]', value: productId } 
+                    }));
+                }, 200);
+            }
+        </script>
+    @endpush
 </x-app-layout>

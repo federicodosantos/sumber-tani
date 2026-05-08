@@ -97,8 +97,8 @@
             ? document.getElementById('ppnInput') 
             : document.getElementById('ppnInputNominal_value');
 
-        const discountInputValue = parseFloat(discountInputEl?.value) || 0;
-        const ppnInputValue = parseFloat(ppnInputEl?.value) || 0;
+        const discountInputValue = parseCurrency(discountInputEl?.value);
+        const ppnInputValue = parseCurrency(ppnInputEl?.value);
 
         let discountValue = 0;
         if (discountType === 'percent') {

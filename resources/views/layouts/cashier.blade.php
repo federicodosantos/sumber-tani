@@ -1,4 +1,16 @@
-@props(['categories', 'products' => [], 'customers_r2' => [], 'r2_custom_prices' => []])
+@props([
+    'categories',
+    'products' => [],
+    'customers_r2' => [],
+    'r2_custom_prices' => [],
+    'customers' => null,
+    'custom_prices' => null,
+])
+
+@php
+    $customersForJs = $customers ?? $customers_r2;
+    $customPricesForJs = $custom_prices ?? $r2_custom_prices;
+@endphp
 
 <!DOCTYPE html>
 <html lang="id">
@@ -36,7 +48,7 @@
 </head>
 
 <body class="antialiased font-mont">
-    <div class="flex h-screen flex-col overflow-hidden bg-gray-50" x-data="cashierHandler({{ Js::from($products) }}, {{ Js::from($categories) }}, {{ Js::from($customers_r2) }}, {{ Js::from($r2_custom_prices) }})">
+    <div class="flex h-screen flex-col overflow-hidden bg-gray-50" x-data="cashierHandler({{ Js::from($products) }}, {{ Js::from($categories) }}, {{ Js::from($customersForJs) }}, {{ Js::from($customPricesForJs) }})">
         <!-- WARNING BANNER OFFLINE -->
         <div x-data="{
                 count: 0,
@@ -214,6 +226,7 @@
                 </div>
                 <template x-for="item in cart" :key="item.id">
                     <div x-data="{ isEditingPrice: false }"
+                        @click.outside="isEditingPrice = false"
                         class="group rounded-xl border bg-white p-3.5 transition-all duration-200"
                         :class="item.isManualPrice
                             ? 'border-amber-300 bg-amber-50/40 shadow-[0_1px_0_0_rgba(217,119,6,0.04)]'
@@ -553,7 +566,7 @@
                                             class="ml-1 font-bold text-red-500">(Manual)</span>
                                     </p>
 
-                                    <div x-data="{ isEditing: false }" class="relative">
+                                    <div x-data="{ isEditing: false }" @click.outside="isEditing = false" class="relative">
                                         <div x-show="!isEditing" class="group flex items-center justify-end gap-2">
                                             <p class="text-xl font-black text-gray-900" x-text="formatRupiah(totalPrice)"></p>
 
@@ -621,8 +634,18 @@
         </aside>
 
         {{-- R2 Customer Selection Modal --}}
-        <x-modal name="r2-customer" title="Cari Pelanggan R2" maxWidth="2xl" zIndex="z-[100]"
+        <x-modal name="r2-customer" title="Cari Pelanggan R1/R2" maxWidth="2xl" zIndex="z-[100]"
             x-on:modal-closed.window="if ($event.detail === 'r2-customer') closeR2Modal()">
+
+            {{-- Type filter chips --}}
+            <div class="mb-3 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+                <template x-for="opt in [{key:'all',label:'Semua'},{key:'r1',label:'R1'},{key:'r2',label:'R2'}]" :key="opt.key">
+                    <button type="button" @click="setCustomerTypeFilter(opt.key)"
+                        :class="customerTypeFilter === opt.key ? 'bg-button-main text-white shadow-sm' : 'text-gray-600 hover:bg-white'"
+                        class="rounded-md px-3 py-1 text-xs font-bold uppercase tracking-wide transition-colors"
+                        x-text="opt.label"></button>
+                </template>
+            </div>
 
             {{-- Search Input --}}
             <div class="mb-4">
@@ -661,6 +684,7 @@
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-4 py-2.5 text-left font-semibold text-gray-600">Nama</th>
+                            <th class="px-4 py-2.5 text-left font-semibold text-gray-600">Tipe</th>
                             <th class="px-4 py-2.5 text-left font-semibold text-gray-600">Kontak</th>
                             <th class="px-4 py-2.5 text-left font-semibold text-gray-600">Alamat</th>
                             <th class="px-4 py-2.5 text-center font-semibold text-gray-600">Aksi</th>
@@ -668,14 +692,19 @@
                     </thead>
                     <tbody>
                         <template x-for="(cust, index) in r2SearchResults" :key="cust.id">
-                            <tr :id="'r2-row-' + index" 
+                            <tr :id="'r2-row-' + index"
                                 :class="{ 'bg-button-main/10 ring-2 ring-button-main ring-inset': r2HighlightedIndex === index }"
                                 class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                                 <td class="px-4 py-3 font-medium text-gray-900" x-text="cust.name"></td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider"
+                                        :class="(cust.type || 'r2') === 'r1' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'"
+                                        x-text="(cust.type || 'r2').toUpperCase()"></span>
+                                </td>
                                 <td class="px-4 py-3 text-gray-600" x-text="cust.phone_number"></td>
                                 <td class="px-4 py-3 text-gray-600" x-text="cust.address"></td>
                                 <td class="px-4 py-3 text-center">
-                                    <button @click="selectR2Customer(cust); $dispatch('close-modal', 'r2-customer')" type="button"
+                                    <button @click="selectCustomer(cust); $dispatch('close-modal', 'r2-customer')" type="button"
                                         class="rounded-lg bg-button-main px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-button-hover transition-colors active:scale-95">
                                         Pilih
                                     </button>

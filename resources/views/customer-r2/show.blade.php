@@ -16,7 +16,13 @@
 
             {{-- Success Message --}}
             @if (session('success'))
-                <div class="rounded-xl border border-green-200 bg-green-50 p-4">
+                <div x-data="{ show: true }" 
+                     x-show="show" 
+                     x-init="setTimeout(() => show = false, 3000)"
+                     x-transition:leave="transition ease-in duration-500"
+                     x-transition:leave-start="opacity-100 transform scale-100"
+                     x-transition:leave-end="opacity-0 transform scale-95"
+                     class="rounded-xl border border-green-200 bg-green-50 p-4">
                     <div class="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5 text-green-500 shrink-0">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -41,26 +47,62 @@
 
                         {{-- Customer Details --}}
                         <div>
-                            <h2 class="text-xl font-bold text-gray-900">{{ $customer->name }}</h2>
-                            <div class="mt-2 space-y-1">
-                                <div class="flex items-center gap-2 text-sm text-gray-600">
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-xl font-bold text-gray-900">{{ $customer->name }}</h2>
+                                @php $isR1Type = ($customer->type ?? 'r2') === 'r1'; @endphp
+                                <span class="inline-flex rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider
+                                    {{ $isR1Type ? 'bg-sky-100 text-sky-700 ring-1 ring-sky-200' : 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200' }}">
+                                    {{ strtoupper($customer->type ?? 'r2') }}
+                                </span>
+                                <button type="button" @click="$dispatch('open-modal', 'edit-customer')"
+                                    class="ml-1 inline-flex items-center justify-center rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-blue-600 cursor-pointer"
+                                    title="Edit Pelanggan">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                        stroke-width="1.5" stroke="currentColor" class="h-4 w-4 text-gray-400">
+                                        stroke-width="2" stroke="currentColor" class="h-4 w-4">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="mt-2 space-y-1">
+                                <a href="https://www.google.com/maps/search/?api=1&query={{ urlencode($customer->address) }}" 
+                                   target="_blank" 
+                                   class="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors group">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="1.5" stroke="currentColor" class="h-4 w-4 text-gray-400 group-hover:text-blue-500 transition-colors">
                                         <path stroke-linecap="round" stroke-linejoin="round"
                                             d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                         <path stroke-linecap="round" stroke-linejoin="round"
                                             d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
                                     </svg>
                                     {{ $customer->address }}
-                                </div>
-                                <div class="flex items-center gap-2 text-sm text-gray-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                        stroke-width="1.5" stroke="currentColor" class="h-4 w-4 text-gray-400">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
-                                    </svg>
-                                    {{ $customer->phone_number }}
-                                </div>
+                                </a>
+                                @if($customer->phone_number)
+                                    @php
+                                        $whatsappNumber = preg_replace('/[^0-9]/', '', $customer->phone_number);
+                                        if (str_starts_with($whatsappNumber, '0')) {
+                                            $whatsappNumber = '62' . substr($whatsappNumber, 1);
+                                        }
+                                    @endphp
+                                    <a href="https://wa.me/{{ $whatsappNumber }}" target="_blank" 
+                                       class="flex items-center gap-2 text-sm text-gray-600 hover:text-green-600 transition-colors group">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor" class="h-4 w-4 text-gray-400 group-hover:text-green-500 transition-colors">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                                        </svg>
+                                        <span class="font-medium">{{ $customer->phone_number }}</span>
+                                    </a>
+                                @else
+                                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor" class="h-4 w-4 text-gray-400">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                                        </svg>
+                                        -
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -415,14 +457,26 @@
     </x-modal>
 
     {{-- Pay Debt Modal --}}
-    <x-modal name="pay-debt" title="PEMBAYARAN HUTANG PELANGGAN" maxWidth="xl" x-init="if ($errors->any() && '{{ session('open_modal') }}' !== 'add-debt') $dispatch('open-modal', 'pay-debt')">
+    <x-modal name="pay-debt" title="PEMBAYARAN HUTANG PELANGGAN" maxWidth="xl" x-init="if ($errors->any() && !['add-debt','edit-customer'].includes('{{ session('open_modal') }}')) $dispatch('open-modal', 'pay-debt')">
         <div class="p-6">
             {{-- Customer Summary Info within Modal --}}
             <div class="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-5">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-semibold text-gray-900">{{ $customer->name }}</p>
-                        <p class="mt-0.5 text-xs text-gray-500">{{ $customer->phone_number }}</p>
+                        @if($customer->phone_number)
+                            @php
+                                $whatsappNumberModal = preg_replace('/[^0-9]/', '', $customer->phone_number);
+                                if (str_starts_with($whatsappNumberModal, '0')) {
+                                    $whatsappNumberModal = '62' . substr($whatsappNumberModal, 1);
+                                }
+                            @endphp
+                            <a href="https://wa.me/{{ $whatsappNumberModal }}" target="_blank" class="mt-0.5 block text-xs text-gray-500 hover:text-green-600 transition-colors">
+                                {{ $customer->phone_number }}
+                            </a>
+                        @else
+                            <p class="mt-0.5 text-xs text-gray-500">-</p>
+                        @endif
                     </div>
                     <div class="text-right">
                         <p class="text-xs font-medium uppercase tracking-wider text-gray-500">Total Hutang</p>
@@ -477,6 +531,20 @@
             </x-modal>
         </div>
     @endif
+
+    {{-- Edit Customer Modal --}}
+    <x-modal name="edit-customer" title="EDIT DATA PELANGGAN" maxWidth="4xl"
+        x-init="if ('{{ session('open_modal') }}' === 'edit-customer') $dispatch('open-modal', 'edit-customer')">
+        <div class="p-1">
+            @include('customer-r2._form', [
+                'action' => route('customer-r2.update', $customer->id),
+                'method' => 'POST',
+                'customer' => $customer,
+                'isEdit' => true,
+                'modalName' => 'edit-customer',
+            ])
+        </div>
+    </x-modal>
 
     @push('scripts')
         <script src="{{ asset('qz/qz-tray.js') }}"></script>
