@@ -137,7 +137,11 @@ class CustomerR2Controller extends Controller
         $totalDebt = $customer->invoices()->where('type', Invoice::TYPE_PURCHASE)->sum('debts');
 
         $invoicesQuery = $customer->invoices()
-            ->with(['transaction.transactionDetails.product', 'debtPayment.details.invoice'])
+            ->with([
+                'transaction.transactionDetails.product',
+                'debtPayment.details.invoice',
+                'debtPaymentDetails.debtPayment.paymentInvoice',
+            ])
             ->orderBy('created_at', 'desc');
 
         if ($request->filled('type') && in_array($request->type, [Invoice::TYPE_PURCHASE, Invoice::TYPE_DEBT_PAYMENT])) {
@@ -169,11 +173,26 @@ class CustomerR2Controller extends Controller
      */
     public function processPayment(Request $request, Customer $customer)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'amount' => 'required|numeric|min:1',
             'payment_method' => 'required|string|in:Cash,Transfer,QRIS',
+        ], [
+            'amount.required' => 'Nominal pembayaran wajib diisi.',
+            'amount.numeric' => 'Nominal pembayaran harus berupa angka.',
+            'amount.min' => 'Nominal pembayaran minimal Rp 1.',
+            'payment_method.required' => 'Metode pembayaran wajib dipilih.',
+            'payment_method.in' => 'Metode pembayaran tidak valid.',
         ]);
 
+        if ($validator->fails()) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors($validator)
+                ->with('open_modal', 'pay-debt');
+        }
+
+        $validated = $validator->validated();
         $amount = (float) $validated['amount'];
         $paymentMethod = $validated['payment_method'];
 
@@ -187,7 +206,11 @@ class CustomerR2Controller extends Controller
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['amount' => 'Nominal pembayaran melebihi total hutang (Rp ' . number_format($totalDebt, 0, ',', '.') . ').']);
+                ->withErrors([
+                    'amount' => 'Nominal pembayaran (Rp ' . number_format($amount, 0, ',', '.')
+                        . ') melebihi total hutang (Rp ' . number_format($totalDebt, 0, ',', '.') . ').',
+                ])
+                ->with('open_modal', 'pay-debt');
         }
 
         try {
@@ -263,7 +286,8 @@ class CustomerR2Controller extends Controller
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['general' => 'Terjadi kesalahan saat memproses pembayaran: ' . $e->getMessage()]);
+                ->withErrors(['general' => 'Terjadi kesalahan saat memproses pembayaran: ' . $e->getMessage()])
+                ->with('open_modal', 'pay-debt');
         }
     }
 
@@ -434,6 +458,15 @@ class CustomerR2Controller extends Controller
             'amount' => 'required|numeric|min:1',
             'note' => 'required|string|max:1000',
             'created_at' => 'required|date|before_or_equal:now',
+        ], [
+            'amount.required' => 'Nominal hutang wajib diisi.',
+            'amount.numeric' => 'Nominal hutang harus berupa angka.',
+            'amount.min' => 'Nominal hutang minimal Rp 1.',
+            'note.required' => 'Keterangan wajib diisi.',
+            'note.max' => 'Keterangan maksimal 1000 karakter.',
+            'created_at.required' => 'Tanggal wajib diisi.',
+            'created_at.date' => 'Format tanggal tidak valid.',
+            'created_at.before_or_equal' => 'Tanggal tidak boleh di masa depan.',
         ]);
 
         if ($validator->fails()) {
@@ -445,7 +478,7 @@ class CustomerR2Controller extends Controller
         }
 
         $validated = $validator->validated();
-        $debtDate = Carbon::parse($validated['created_at'])->setTimezone(config('app.timezone'));
+        $debtDate = $this->dateWithCurrentTime($validated['created_at']);
 
         try {
             Invoice::create([
@@ -468,6 +501,296 @@ class CustomerR2Controller extends Controller
                 ->withInput()
                 ->withErrors(['general' => 'Terjadi kesalahan saat menyimpan hutang: ' . $e->getMessage()])
                 ->with('open_modal', 'add-debt');
+        }
+    }
+
+    /**
+     * Combine a user-picked date with the current time so records keep
+     * a meaningful timestamp instead of falling to 00:00:00.
+     */
+    private function dateWithCurrentTime(string $date): Carbon
+    {
+        $now = Carbon::now(config('app.timezone'));
+
+        return Carbon::parse($date, config('app.timezone'))
+            ->setTime($now->hour, $now->minute, $now->second);
+    }
+
+    /**
+     * Update a manual debt invoice (purchasement type, no transaction).
+     * OWNER only. Blocked entirely if any debt_payment_details reference this invoice.
+     */
+    public function updateDebt(Request $request, Invoice $invoice)
+    {
+        $this->ownerOnly();
+
+        if ($invoice->type !== Invoice::TYPE_PURCHASE || $invoice->transaction_id !== null) {
+            abort(404, 'Bukan hutang manual.');
+        }
+
+        $alreadyPaid = (float) DB::table('debt_payment_details')
+            ->where('invoice_id', $invoice->id)
+            ->sum('amount_paid');
+
+        if ($alreadyPaid > 0) {
+            return redirect()->back()
+                ->withErrors([
+                    'general' => 'Hutang ini sudah memiliki pembayaran terkait sebesar Rp '
+                        . number_format($alreadyPaid, 0, ',', '.')
+                        . '. Hapus pembayaran tersebut dulu sebelum mengedit hutang.',
+                ])
+                ->with('open_modal', 'edit-debt-' . $invoice->id);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'amount' => 'required|numeric|min:1',
+            'note' => 'required|string|max:1000',
+            'created_at' => 'required|date|before_or_equal:now',
+        ], [
+            'amount.required' => 'Nominal hutang wajib diisi.',
+            'amount.numeric' => 'Nominal hutang harus berupa angka.',
+            'amount.min' => 'Nominal hutang minimal Rp 1.',
+            'note.required' => 'Keterangan wajib diisi.',
+            'note.max' => 'Keterangan maksimal 1000 karakter.',
+            'created_at.required' => 'Tanggal wajib diisi.',
+            'created_at.date' => 'Format tanggal tidak valid.',
+            'created_at.before_or_equal' => 'Tanggal tidak boleh di masa depan.',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withInput()->withErrors($validator)
+                ->with('open_modal', 'edit-debt-' . $invoice->id);
+        }
+
+        $validated = $validator->validated();
+
+        try {
+            $debtDate = $this->dateWithCurrentTime($validated['created_at']);
+            $invoice->update([
+                'debts' => (float) $validated['amount'],
+                'note' => $validated['note'],
+                'created_at' => $debtDate,
+                'updated_at' => $debtDate,
+            ]);
+
+            return redirect()->route('customer-r2.show', $invoice->customer_id)
+                ->with('success', 'Hutang manual berhasil diperbarui.');
+        } catch (Exception $e) {
+            return redirect()->back()->withInput()
+                ->withErrors(['general' => 'Gagal memperbarui hutang: ' . $e->getMessage()])
+                ->with('open_modal', 'edit-debt-' . $invoice->id);
+        }
+    }
+
+    /**
+     * Delete a manual debt invoice. Blocked if it has any payment allocations.
+     * OWNER only.
+     */
+    public function destroyDebt(Invoice $invoice)
+    {
+        $this->ownerOnly();
+
+        if ($invoice->type !== Invoice::TYPE_PURCHASE || $invoice->transaction_id !== null) {
+            abort(404, 'Bukan hutang manual.');
+        }
+
+        $alreadyPaid = (float) DB::table('debt_payment_details')
+            ->where('invoice_id', $invoice->id)
+            ->sum('amount_paid');
+
+        if ($alreadyPaid > 0) {
+            return redirect()->back()->withErrors([
+                'general' => 'Hutang ini sudah dibayar sebagian (Rp ' . number_format($alreadyPaid, 0, ',', '.') . '). Hapus pembayaran terkait dulu sebelum menghapus hutang.',
+            ]);
+        }
+
+        $customerId = $invoice->customer_id;
+
+        try {
+            $invoice->delete();
+            return redirect()->route('customer-r2.show', $customerId)
+                ->with('success', 'Hutang manual berhasil dihapus.');
+        } catch (Exception $e) {
+            return redirect()->back()->withErrors(['general' => 'Gagal menghapus hutang: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Update a debt payment (PAY...) by rolling back details and re-FIFO distributing.
+     * OWNER only.
+     */
+    public function updateDebtPayment(Request $request, Invoice $invoice)
+    {
+        $this->ownerOnly();
+
+        if ($invoice->type !== Invoice::TYPE_DEBT_PAYMENT) {
+            abort(404, 'Bukan invoice pembayaran hutang.');
+        }
+
+        // Allow caller to override which modal re-opens on validation error
+        // (e.g., when editing from inside an edit-debt modal across pagination).
+        $errorModalKey = (string) $request->input('open_modal_on_error', 'edit-payment-' . $invoice->id);
+
+        $debtPayment = $invoice->debtPayment;
+        if (! $debtPayment) {
+            return redirect()->back()->withErrors(['general' => 'Data pembayaran tidak ditemukan.']);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'amount' => 'required|numeric|min:1',
+            'payment_method' => 'required|string|in:Cash,Transfer,QRIS',
+            'created_at' => 'required|date|before_or_equal:now',
+        ], [
+            'amount.required' => 'Nominal pembayaran wajib diisi.',
+            'amount.numeric' => 'Nominal pembayaran harus berupa angka.',
+            'amount.min' => 'Nominal pembayaran minimal Rp 1.',
+            'payment_method.required' => 'Metode pembayaran wajib dipilih.',
+            'payment_method.in' => 'Metode pembayaran tidak valid.',
+            'created_at.required' => 'Tanggal wajib diisi.',
+            'created_at.date' => 'Format tanggal tidak valid.',
+            'created_at.before_or_equal' => 'Tanggal tidak boleh di masa depan.',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withInput()->withErrors($validator)
+                ->with('open_modal', $errorModalKey);
+        }
+
+        $validated = $validator->validated();
+
+        // Pre-validate: new amount must not exceed (current total debt + amount being rolled back)
+        $rollbackAmount = (float) $debtPayment->details()->sum('amount_paid');
+        $currentTotalDebt = (float) $invoice->customer->invoices()
+            ->where('type', Invoice::TYPE_PURCHASE)
+            ->where('debts', '>', 0)
+            ->sum('debts');
+        $effectiveAvailable = $currentTotalDebt + $rollbackAmount;
+        $newAmountCheck = (float) $validated['amount'];
+
+        if ($newAmountCheck > $effectiveAvailable) {
+            return redirect()->back()->withInput()
+                ->withErrors([
+                    'amount' => 'Nominal pembayaran (Rp ' . number_format($newAmountCheck, 0, ',', '.')
+                        . ') melebihi total hutang yang tersedia (Rp ' . number_format($effectiveAvailable, 0, ',', '.') . ').',
+                ])
+                ->with('open_modal', $errorModalKey);
+        }
+
+        try {
+            DB::transaction(function () use ($validated, $invoice, $debtPayment) {
+                $customer = $invoice->customer;
+
+                // Step 1: rollback all details (restore debts on source invoices)
+                foreach ($debtPayment->details()->get() as $detail) {
+                    $sourceInvoice = $detail->invoice()->first();
+                    if ($sourceInvoice) {
+                        $sourceInvoice->update(['debts' => $sourceInvoice->debts + $detail->amount_paid]);
+                        if ($sourceInvoice->transaction) {
+                            $sourceInvoice->transaction->update(['is_paid' => false]);
+                        }
+                    }
+                    $detail->delete();
+                }
+
+                $newAmount = (float) $validated['amount'];
+
+                // Step 3: re-FIFO
+                $remaining = $newAmount;
+                $sourceInvoices = $customer->invoices()
+                    ->where('type', Invoice::TYPE_PURCHASE)
+                    ->where('debts', '>', 0)
+                    ->orderBy('created_at', 'asc')
+                    ->get();
+
+                foreach ($sourceInvoices as $src) {
+                    if ($remaining <= 0) break;
+                    $debtBefore = $src->debts;
+                    $payForThis = min($remaining, $src->debts);
+
+                    $src->update(['debts' => $src->debts - $payForThis]);
+                    $remaining -= $payForThis;
+
+                    if ($src->fresh()->debts == 0 && $src->transaction) {
+                        $src->transaction->update(['is_paid' => true]);
+                    }
+
+                    DebtPaymentDetail::create([
+                        'debt_payment_id' => $debtPayment->id,
+                        'invoice_id' => $src->id,
+                        'amount_paid' => $payForThis,
+                        'debt_before' => $debtBefore,
+                        'debt_after' => $src->fresh()->debts,
+                    ]);
+                }
+
+                // Step 4: update parent records
+                $newDate = $this->dateWithCurrentTime($validated['created_at']);
+                $debtPayment->update([
+                    'amount' => $newAmount,
+                    'payment_method' => $validated['payment_method'],
+                    'payment_date' => $newDate,
+                ]);
+                $invoice->update([
+                    'created_at' => $newDate,
+                    'updated_at' => $newDate,
+                ]);
+            });
+
+            return redirect()->route('customer-r2.show', $invoice->customer_id)
+                ->with('success', 'Pembayaran hutang berhasil diperbarui.');
+        } catch (Exception $e) {
+            return redirect()->back()->withInput()
+                ->withErrors(['general' => 'Gagal memperbarui pembayaran: ' . $e->getMessage()])
+                ->with('open_modal', $errorModalKey);
+        }
+    }
+
+    /**
+     * Delete a debt payment, restoring debts on each source invoice.
+     * OWNER only.
+     */
+    public function destroyDebtPayment(Invoice $invoice)
+    {
+        $this->ownerOnly();
+
+        if ($invoice->type !== Invoice::TYPE_DEBT_PAYMENT) {
+            abort(404, 'Bukan invoice pembayaran hutang.');
+        }
+
+        $customerId = $invoice->customer_id;
+
+        try {
+            DB::transaction(function () use ($invoice) {
+                $debtPayment = $invoice->debtPayment;
+
+                if ($debtPayment) {
+                    foreach ($debtPayment->details()->get() as $detail) {
+                        $sourceInvoice = $detail->invoice()->first();
+                        if ($sourceInvoice) {
+                            $sourceInvoice->update(['debts' => $sourceInvoice->debts + $detail->amount_paid]);
+                            if ($sourceInvoice->transaction) {
+                                $sourceInvoice->transaction->update(['is_paid' => false]);
+                            }
+                        }
+                        $detail->delete();
+                    }
+                    $debtPayment->delete();
+                }
+
+                $invoice->delete();
+            });
+
+            return redirect()->route('customer-r2.show', $customerId)
+                ->with('success', 'Pembayaran hutang berhasil dibatalkan dan hutang dipulihkan.');
+        } catch (Exception $e) {
+            return redirect()->back()->withErrors(['general' => 'Gagal membatalkan pembayaran: ' . $e->getMessage()]);
+        }
+    }
+
+    private function ownerOnly(): void
+    {
+        if (! auth()->check() || ! auth()->user()->isOwner()) {
+            abort(403, 'Hanya OWNER yang dapat melakukan aksi ini.');
         }
     }
 

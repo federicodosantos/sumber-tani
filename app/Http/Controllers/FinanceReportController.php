@@ -67,6 +67,28 @@ class FinanceReportController extends Controller
     }
 
     /**
+     * Build query params for finance.index that will include the given date in the listing.
+     */
+    private function buildRangeFilterFor(Carbon $date): array
+    {
+        $now = Carbon::now();
+
+        if ($date->isSameMonth($now)) {
+            return ['range_filter' => 'this_month'];
+        }
+
+        if ($date->isSameMonth($now->copy()->subMonth())) {
+            return ['range_filter' => 'last_month'];
+        }
+
+        return [
+            'range_filter' => 'custom',
+            'start_date'   => $date->copy()->startOfDay()->toDateString(),
+            'end_date'     => $date->copy()->endOfDay()->toDateString(),
+        ];
+    }
+
+    /**
      * Human-readable label for the chosen range.
      */
     private function getRangeLabel(string $key, Carbon $start, Carbon $end): string
@@ -639,7 +661,10 @@ class FinanceReportController extends Controller
                 }
             });
 
-            return redirect()->route('finance.index')->with('success', 'Transaksi manual berhasil disimpan.');
+            $redirectParams = $this->buildRangeFilterFor($transactionDate);
+
+            return redirect()->route('finance.index', $redirectParams)
+                ->with('success', 'Transaksi manual berhasil disimpan.');
         } catch (Exception $e) {
             return redirect()->back()->withInput()->withErrors([
                 'general' => 'Terjadi kesalahan saat menyimpan transaksi: ' . $e->getMessage(),

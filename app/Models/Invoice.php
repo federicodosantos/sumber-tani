@@ -58,6 +58,14 @@ class Invoice extends Model
     }
 
     /**
+     * Payment-detail rows that reference this invoice as a paid-off source.
+     */
+    public function debtPaymentDetails()
+    {
+        return $this->hasMany(DebtPaymentDetail::class, 'invoice_id', 'id');
+    }
+
+    /**
      * Generate a unique inv_code with daily-reset numbering.
      *
      * @param string $type 'purchasement' or 'debt_payment'

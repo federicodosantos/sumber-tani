@@ -14,6 +14,29 @@
                 </a>
             </div>
 
+            {{-- Top-level Error Banner (for destroy operations / general errors not owned by a modal) --}}
+            @if ($errors->any() && ! session('open_modal'))
+                <div x-data="{ show: true }" x-show="show"
+                     class="rounded-xl border border-red-200 bg-red-50 p-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-5 w-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                        </svg>
+                        <div class="flex-1">
+                            <p class="text-xs font-bold uppercase tracking-wider text-red-700 mb-1">Terjadi Kesalahan</p>
+                            <ul class="text-xs text-red-700 space-y-0.5">
+                                @foreach($errors->all() as $err)
+                                    <li>&bull; {{ $err }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                        <button @click="show = false" class="text-red-400 hover:text-red-600 cursor-pointer">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+            @endif
+
             {{-- Success Message --}}
             @if (session('success'))
                 <div x-data="{ show: true }" 
@@ -312,20 +335,65 @@
                                                             d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                                     </svg>
                                                 </button>
-                                                @if(auth()->check() && auth()->user()->isOwner() && $invoice->type === 'purchasement' && $invoice->transaction)
-                                                    <a href="{{ route('finance.edit', $invoice->transaction->id) }}"
-                                                        class="inline-flex items-center rounded-lg px-2 py-1.5 text-blue-600 hover:text-blue-800 transition-colors cursor-pointer" title="Edit transaksi">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                                                        </svg>
-                                                    </a>
-                                                    <button type="button" x-data
-                                                        @click="$dispatch('open-delete-trx-modal', '{{ $invoice->transaction->id }}')"
-                                                        class="inline-flex items-center rounded-lg px-2 py-1.5 text-red-600 hover:text-red-800 transition-colors cursor-pointer" title="Hapus transaksi">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                                                        </svg>
-                                                    </button>
+                                                @if(auth()->check() && auth()->user()->isOwner())
+                                                    @if($invoice->type === 'purchasement' && $invoice->transaction)
+                                                        {{-- Edit/Delete transaksi --}}
+                                                        <a href="{{ route('finance.edit', $invoice->transaction->id) }}"
+                                                            class="inline-flex items-center rounded-lg px-2 py-1.5 text-blue-600 hover:text-blue-800 transition-colors cursor-pointer" title="Edit transaksi">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                            </svg>
+                                                        </a>
+                                                        <button type="button" x-data
+                                                            @click="$dispatch('open-delete-trx-modal', '{{ $invoice->transaction->id }}')"
+                                                            class="inline-flex items-center rounded-lg px-2 py-1.5 text-red-600 hover:text-red-800 transition-colors cursor-pointer" title="Hapus transaksi">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                            </svg>
+                                                        </button>
+                                                    @elseif($isManualDebt)
+                                                        @php
+                                                            $debtHasPayments = ($invoice->debtPaymentDetails ?? collect())->isNotEmpty();
+                                                        @endphp
+                                                        {{-- Edit hutang (always available; modal locks form when has payments) --}}
+                                                        <button type="button" @click="$dispatch('open-modal', 'edit-debt-{{ $invoice->id }}')"
+                                                            class="inline-flex items-center rounded-lg px-2 py-1.5 {{ $debtHasPayments ? 'text-gray-400 hover:text-gray-600' : 'text-blue-600 hover:text-blue-800' }} transition-colors cursor-pointer"
+                                                            title="{{ $debtHasPayments ? 'Lihat pembayaran terkait' : 'Edit hutang' }}">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                            </svg>
+                                                        </button>
+                                                        @if(! $debtHasPayments)
+                                                            <button type="button" x-data
+                                                                @click="$dispatch('open-delete-debt-modal', { id: '{{ $invoice->id }}', code: '{{ $invoice->inv_code ?? '#' . $invoice->id }}' })"
+                                                                class="inline-flex items-center rounded-lg px-2 py-1.5 text-red-600 hover:text-red-800 transition-colors cursor-pointer" title="Hapus hutang">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                                </svg>
+                                                            </button>
+                                                        @else
+                                                            <span class="inline-flex items-center rounded-lg px-2 py-1.5 text-gray-300 cursor-not-allowed" title="Tidak bisa dihapus: ada pembayaran terkait">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                                                </svg>
+                                                            </span>
+                                                        @endif
+                                                    @elseif($invoice->type === 'debt_payment' && $invoice->debtPayment)
+                                                        {{-- Edit/Delete pembayaran hutang --}}
+                                                        <button type="button" @click="$dispatch('open-modal', 'edit-payment-{{ $invoice->id }}')"
+                                                            class="inline-flex items-center rounded-lg px-2 py-1.5 text-blue-600 hover:text-blue-800 transition-colors cursor-pointer" title="Edit pembayaran">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                            </svg>
+                                                        </button>
+                                                        <button type="button" x-data
+                                                            @click="$dispatch('open-delete-payment-modal', { id: '{{ $invoice->id }}', code: '{{ $invoice->inv_code ?? '#' . $invoice->id }}' })"
+                                                            class="inline-flex items-center rounded-lg px-2 py-1.5 text-red-600 hover:text-red-800 transition-colors cursor-pointer" title="Batalkan pembayaran">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                            </svg>
+                                                        </button>
+                                                    @endif
                                                 @endif
                                                 </div>
 
@@ -374,6 +442,460 @@
                                                         @endunless
                                                     </div>
                                                 </x-modal>
+
+                                                @if(auth()->check() && auth()->user()->isOwner() && $isManualDebt)
+                                                    @php
+                                                        $relatedPayments = $invoice->debtPaymentDetails ?? collect();
+                                                        $alreadyPaidForDebt = (float) $relatedPayments->sum('amount_paid');
+                                                        $hasPayments = $alreadyPaidForDebt > 0;
+                                                        $modalKey = 'edit-debt-' . $invoice->id;
+                                                        $isCurrentModal = session('open_modal') === $modalKey;
+                                                    @endphp
+                                                    {{-- Edit Manual Debt Modal --}}
+                                                    <x-modal name="{{ $modalKey }}" title="EDIT HUTANG MANUAL" maxWidth="lg"
+                                                        x-init="if ('{{ session('open_modal') }}' === '{{ $modalKey }}') $dispatch('open-modal', '{{ $modalKey }}')">
+
+                                                        {{-- Validation error banner (only when this modal owns the error state) --}}
+                                                        @if($isCurrentModal && $errors->any())
+                                                            <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4">
+                                                                <div class="flex items-start gap-3">
+                                                                    <svg class="h-5 w-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                                                                    </svg>
+                                                                    <div class="flex-1">
+                                                                        <p class="text-xs font-bold uppercase tracking-wider text-red-700 mb-1">Gagal Menyimpan</p>
+                                                                        <ul class="text-xs text-red-700 space-y-0.5">
+                                                                            @foreach($errors->all() as $err)
+                                                                                <li>&bull; {{ $err }}</li>
+                                                                            @endforeach
+                                                                        </ul>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+
+                                                        {{-- Invoice header --}}
+                                                        <div class="mb-4 rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 flex items-center justify-between">
+                                                            <div>
+                                                                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Invoice</p>
+                                                                <p class="text-sm font-bold text-gray-900">{{ $invoice->inv_code ?? '#' . $invoice->id }}</p>
+                                                            </div>
+                                                            <div class="text-right">
+                                                                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Sisa Hutang</p>
+                                                                <p class="text-sm font-bold {{ $invoice->debts > 0 ? 'text-red-600' : 'text-green-600' }}">Rp {{ number_format($invoice->debts, 0, ',', '.') }}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        {{-- Related Payments Section --}}
+                                                        <div class="mb-4">
+                                                            <p class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Pembayaran Terkait</p>
+                                                            @if($hasPayments)
+                                                                <div class="space-y-1.5">
+                                                                    @foreach($relatedPayments as $detail)
+                                                                        @php
+                                                                            $payment = $detail->debtPayment;
+                                                                            $payInv = $payment?->paymentInvoice;
+                                                                            $payInvId = $payInv?->id;
+                                                                            $payInvCode = $payInv?->inv_code ?? '#PAY-' . ($payment?->id ?? '?');
+                                                                            $inlineEditKey = 'edit-payment-inline-' . $invoice->id . '-' . ($payInvId ?? 0);
+                                                                            $inlineIsCurrent = session('open_modal') === $inlineEditKey;
+                                                                        @endphp
+                                                                        <div class="flex items-center justify-between gap-3 rounded-lg border border-blue-100 bg-blue-50/50 px-3 py-2 transition-colors hover:bg-blue-50">
+                                                                            <div class="flex min-w-0 items-center gap-2">
+                                                                                <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                                                                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25" />
+                                                                                    </svg>
+                                                                                </span>
+                                                                                <div class="min-w-0">
+                                                                                    <p class="text-xs font-bold text-gray-900 truncate">{{ $payInvCode }}</p>
+                                                                                    <p class="text-[10px] text-gray-500 truncate">
+                                                                                        {{ $payment ? $payment->payment_method : '-' }}
+                                                                                        @if($payInv) &middot; {{ $payInv->created_at->translatedFormat('d M Y') }} @endif
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="flex items-center gap-2 shrink-0">
+                                                                                <p class="text-xs font-bold text-blue-700 whitespace-nowrap">Rp {{ number_format($detail->amount_paid, 0, ',', '.') }}</p>
+                                                                                @if($payInvId && $payment)
+                                                                                    <div class="flex items-center gap-0.5 border-l border-blue-200/60 pl-2">
+                                                                                        <button type="button"
+                                                                                            @click="$dispatch('close-modal', '{{ $modalKey }}'); setTimeout(() => $dispatch('open-modal', '{{ $inlineEditKey }}'), 220)"
+                                                                                            class="inline-flex h-7 w-7 items-center justify-center rounded-md text-blue-600 hover:bg-blue-100 hover:text-blue-800 transition-colors cursor-pointer"
+                                                                                            title="Edit pembayaran">
+                                                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="h-4 w-4">
+                                                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                                                            </svg>
+                                                                                        </button>
+                                                                                        <button type="button"
+                                                                                            @click="$dispatch('close-modal', '{{ $modalKey }}'); setTimeout(() => $dispatch('open-delete-payment-modal', { id: '{{ $payInvId }}', code: '{{ $payInvCode }}' }), 220)"
+                                                                                            class="inline-flex h-7 w-7 items-center justify-center rounded-md text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
+                                                                                            title="Hapus pembayaran">
+                                                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="h-4 w-4">
+                                                                                                <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                                                            </svg>
+                                                                                        </button>
+                                                                                    </div>
+                                                                                @endif
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {{-- Inline Edit-Payment Modal (pagination-independent, teleported to <body> to escape parent display:none) --}}
+                                                                        @if($payInvId && $payment)
+                                                                            <template x-teleport="body">
+                                                                            <x-modal name="{{ $inlineEditKey }}" title="EDIT PEMBAYARAN HUTANG" maxWidth="md"
+                                                                                x-init="if ('{{ session('open_modal') }}' === '{{ $inlineEditKey }}') $dispatch('open-modal', '{{ $inlineEditKey }}')">
+                                                                                @if($inlineIsCurrent && $errors->any())
+                                                                                    <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4">
+                                                                                        <div class="flex items-start gap-3">
+                                                                                            <svg class="h-5 w-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                                                                                            </svg>
+                                                                                            <div class="flex-1">
+                                                                                                <p class="text-xs font-bold uppercase tracking-wider text-red-700 mb-1">Gagal Menyimpan</p>
+                                                                                                <ul class="text-xs text-red-700 space-y-0.5">
+                                                                                                    @foreach($errors->all() as $err)
+                                                                                                        <li>&bull; {{ $err }}</li>
+                                                                                                    @endforeach
+                                                                                                </ul>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                @endif
+
+                                                                                @php
+                                                                                    $inlineMaxAllowed = (float) $totalDebt + (float) $payment->amount;
+                                                                                    $inlineRupiahName = 'amount';
+                                                                                @endphp
+                                                                                <form method="POST" action="{{ route('customer-r2.debt-payment.update', $payInvId) }}" class="space-y-4"
+                                                                                    x-data="{
+                                                                                        maxAmount: {{ $inlineMaxAllowed }},
+                                                                                        originalAmount: {{ (float) $payment->amount }},
+                                                                                        originalMethod: '{{ $payment->payment_method }}',
+                                                                                        originalDate: '{{ $payInv->created_at->format('Y-m-d') }}',
+                                                                                        currentAmount: {{ (float) old('amount', $payment->amount) }},
+                                                                                        formatRp(n) { return Number(n||0).toLocaleString('id-ID'); },
+                                                                                        get exceedsLimit() { return Number(this.currentAmount||0) > Number(this.maxAmount||0); },
+                                                                                        resetToOriginal() {
+                                                                                            this.currentAmount = this.originalAmount;
+                                                                                            this.$dispatch('update-rupiah-value', { name: 'amount', value: String(this.originalAmount) });
+                                                                                            this.$el.querySelectorAll('input[name=payment_method]').forEach(r => { r.checked = (r.value === this.originalMethod); });
+                                                                                            const d = this.$el.querySelector('input[type=date][name=created_at]');
+                                                                                            if (d) d.value = this.originalDate;
+                                                                                        }
+                                                                                    }"
+                                                                                    @rupiah-change="if ($event.detail.name === 'amount') currentAmount = parseFloat($event.detail.value) || 0"
+                                                                                    @submit="if (exceedsLimit) { $event.preventDefault(); }"
+                                                                                    @modal-closed.window="if ($event.detail === '{{ $inlineEditKey }}') resetToOriginal()">
+                                                                                    @csrf
+                                                                                    @method('PUT')
+                                                                                    <input type="hidden" name="open_modal_on_error" value="{{ $inlineEditKey }}">
+
+                                                                                    <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                                                                        <p class="text-xs text-amber-800">
+                                                                                            Mengubah pembayaran akan rollback alokasi lama lalu re-distribusi via FIFO ke invoice tertua.
+                                                                                            Berpengaruh ke kas, piutang, dan status lunas invoice terkait.
+                                                                                            <br>Maks pembayaran: <strong>Rp {{ number_format($inlineMaxAllowed, 0, ',', '.') }}</strong> (sisa hutang + nominal pembayaran ini).
+                                                                                        </p>
+                                                                                    </div>
+
+                                                                                    {{-- Real-time client-side validation banner --}}
+                                                                                    <template x-if="exceedsLimit">
+                                                                                        <div class="rounded-xl border border-red-300 bg-red-50 p-3">
+                                                                                            <div class="flex items-start gap-2">
+                                                                                                <svg class="h-4 w-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                                                                                                </svg>
+                                                                                                <p class="text-xs text-red-700 leading-relaxed">
+                                                                                                    Nominal pembayaran (Rp <span x-text="formatRp(currentAmount)"></span>) melebihi total hutang yang tersedia (Rp <span x-text="formatRp(maxAmount)"></span>).
+                                                                                                </p>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </template>
+
+                                                                                    <div class="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 flex items-center justify-between">
+                                                                                        <div>
+                                                                                            <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Invoice Pembayaran</p>
+                                                                                            <p class="text-sm font-bold text-gray-900">{{ $payInvCode }}</p>
+                                                                                        </div>
+                                                                                        <div class="text-right">
+                                                                                            <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Untuk Hutang</p>
+                                                                                            <p class="text-sm font-bold text-gray-900">{{ $invoice->inv_code ?? '#' . $invoice->id }}</p>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    <x-input-rupiah
+                                                                                        name="amount"
+                                                                                        label="Nominal Pembayaran"
+                                                                                        id="inline-amt-{{ $invoice->id }}-{{ $payInvId }}"
+                                                                                        required
+                                                                                        value="{{ old('amount', $payment->amount) }}"
+                                                                                    />
+
+                                                                                    <div>
+                                                                                        <label class="text-xs font-bold uppercase tracking-wider text-gray-700">Metode Pembayaran</label>
+                                                                                        <div class="mt-1 grid grid-cols-3 gap-2">
+                                                                                            @foreach (['Cash', 'Transfer', 'QRIS'] as $pm)
+                                                                                                <label class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 transition-colors has-[:checked]:border-button-main has-[:checked]:bg-button-main/20 has-[:checked]:text-gray-900">
+                                                                                                    <input type="radio" name="payment_method" value="{{ $pm }}" required
+                                                                                                        {{ old('payment_method', $payment->payment_method) === $pm ? 'checked' : '' }}
+                                                                                                        class="sr-only">
+                                                                                                    {{ strtoupper($pm) }}
+                                                                                                </label>
+                                                                                            @endforeach
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    <div>
+                                                                                        <label class="text-xs font-bold uppercase tracking-wider text-gray-700">Tanggal Pembayaran</label>
+                                                                                        <input type="date" name="created_at" required
+                                                                                            value="{{ old('created_at', $payInv->created_at->format('Y-m-d')) }}"
+                                                                                            max="{{ now()->format('Y-m-d') }}"
+                                                                                            @click="$el.showPicker()"
+                                                                                            onkeydown="return false"
+                                                                                            class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-button-main cursor-pointer">
+                                                                                    </div>
+
+                                                                                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                                                                                        <button type="button" @click="$dispatch('close-modal', '{{ $inlineEditKey }}')"
+                                                                                            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer">
+                                                                                            BATAL
+                                                                                        </button>
+                                                                                        <button type="submit"
+                                                                                            :disabled="exceedsLimit"
+                                                                                            :class="exceedsLimit
+                                                                                                ? 'inline-flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2 text-sm font-bold text-gray-400 cursor-not-allowed'
+                                                                                                : 'inline-flex items-center gap-2 rounded-lg bg-button-main px-4 py-2 text-sm font-bold text-gray-900 hover:bg-button-hover transition-colors shadow-sm cursor-pointer'">
+                                                                                            SIMPAN PERUBAHAN
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </form>
+                                                                            </x-modal>
+                                                                            </template>
+                                                                        @endif
+                                                                    @endforeach
+                                                                </div>
+                                                            @else
+                                                                <div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-3 text-center">
+                                                                    <p class="text-[11px] italic text-gray-400">Belum ada pembayaran terkait. Hutang aman untuk diedit/dihapus.</p>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+
+                                                        @if($hasPayments)
+                                                            {{-- Locked state --}}
+                                                            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                                                                <div class="flex items-start gap-3">
+                                                                    <svg class="h-5 w-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                                                    </svg>
+                                                                    <div>
+                                                                        <p class="text-xs font-bold uppercase tracking-wider text-amber-700 mb-1">Tidak Bisa Diedit / Dihapus</p>
+                                                                        <p class="text-xs text-amber-800 leading-relaxed">
+                                                                            Hutang ini sudah memiliki pembayaran terkait sebesar
+                                                                            <strong>Rp {{ number_format($alreadyPaidForDebt, 0, ',', '.') }}</strong>.
+                                                                            Hapus dulu pembayaran di atas (klik tombol PAY... di tabel) sebelum mengedit hutang ini.
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex items-center justify-end gap-2 pt-4 mt-4 border-t border-gray-100">
+                                                                <button type="button" @click="$dispatch('close-modal', '{{ $modalKey }}')"
+                                                                    class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer">
+                                                                    Tutup
+                                                                </button>
+                                                            </div>
+                                                        @else
+                                                            {{-- Editable form --}}
+                                                            <form method="POST" action="{{ route('customer-r2.debt.update', $invoice->id) }}" class="space-y-4"
+                                                                x-data="{
+                                                                    originalAmount: {{ (float) $invoice->debts }},
+                                                                    originalNote: @js($invoice->note ?? ''),
+                                                                    originalDate: '{{ $invoice->created_at->format('Y-m-d') }}',
+                                                                    resetToOriginal() {
+                                                                        this.$dispatch('update-rupiah-value', { name: 'amount', value: String(this.originalAmount) });
+                                                                        const t = this.$el.querySelector('textarea[name=note]');
+                                                                        if (t) t.value = this.originalNote;
+                                                                        const d = this.$el.querySelector('input[type=date][name=created_at]');
+                                                                        if (d) d.value = this.originalDate;
+                                                                    }
+                                                                }"
+                                                                @modal-closed.window="if ($event.detail === '{{ $modalKey }}') resetToOriginal()">
+                                                                @csrf
+                                                                @method('PUT')
+
+                                                                <x-input-rupiah
+                                                                    name="amount"
+                                                                    label="Nominal Hutang"
+                                                                    id="edit-debt-amount-{{ $invoice->id }}"
+                                                                    required
+                                                                    value="{{ old('amount', $invoice->debts) }}"
+                                                                />
+
+                                                                <div>
+                                                                    <label class="text-xs font-bold uppercase tracking-wider text-gray-700">Tanggal</label>
+                                                                    <input type="date" name="created_at" required
+                                                                        value="{{ old('created_at', $invoice->created_at->format('Y-m-d')) }}"
+                                                                        max="{{ now()->format('Y-m-d') }}"
+                                                                        @click="$el.showPicker()"
+                                                                        onkeydown="return false"
+                                                                        class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-button-main cursor-pointer">
+                                                                    @error('created_at')
+                                                                        <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                                                                    @enderror
+                                                                </div>
+
+                                                                <div>
+                                                                    <label class="text-xs font-bold uppercase tracking-wider text-gray-700">Keterangan</label>
+                                                                    <textarea name="note" rows="3" required
+                                                                        class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-button-main">{{ old('note', $invoice->note) }}</textarea>
+                                                                    @error('note')
+                                                                        <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                                                                    @enderror
+                                                                </div>
+
+                                                                <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                                                                    <button type="button" @click="$dispatch('close-modal', '{{ $modalKey }}')"
+                                                                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer">
+                                                                        BATAL
+                                                                    </button>
+                                                                    <button type="submit"
+                                                                        class="inline-flex items-center gap-2 rounded-lg bg-button-main px-4 py-2 text-sm font-bold text-gray-900 hover:bg-button-hover transition-colors shadow-sm cursor-pointer">
+                                                                        SIMPAN PERUBAHAN
+                                                                    </button>
+                                                                </div>
+                                                            </form>
+                                                        @endif
+                                                    </x-modal>
+                                                @endif
+
+                                                @if(auth()->check() && auth()->user()->isOwner() && $invoice->type === 'debt_payment' && $invoice->debtPayment)
+                                                    @php
+                                                        $payModalKey = 'edit-payment-' . $invoice->id;
+                                                        $payIsCurrent = session('open_modal') === $payModalKey;
+                                                    @endphp
+                                                    {{-- Edit Debt Payment Modal --}}
+                                                    <x-modal name="{{ $payModalKey }}" title="EDIT PEMBAYARAN HUTANG" maxWidth="md"
+                                                        x-init="if ('{{ session('open_modal') }}' === '{{ $payModalKey }}') $dispatch('open-modal', '{{ $payModalKey }}')">
+
+                                                        @if($payIsCurrent && $errors->any())
+                                                            <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4">
+                                                                <div class="flex items-start gap-3">
+                                                                    <svg class="h-5 w-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                                                                    </svg>
+                                                                    <div class="flex-1">
+                                                                        <p class="text-xs font-bold uppercase tracking-wider text-red-700 mb-1">Gagal Menyimpan</p>
+                                                                        <ul class="text-xs text-red-700 space-y-0.5">
+                                                                            @foreach($errors->all() as $err)
+                                                                                <li>&bull; {{ $err }}</li>
+                                                                            @endforeach
+                                                                        </ul>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+
+                                                        @php
+                                                            $standaloneMaxAllowed = (float) $totalDebt + (float) $invoice->debtPayment->amount;
+                                                        @endphp
+                                                        <form method="POST" action="{{ route('customer-r2.debt-payment.update', $invoice->id) }}" class="space-y-4"
+                                                            x-data="{
+                                                                maxAmount: {{ $standaloneMaxAllowed }},
+                                                                originalAmount: {{ (float) $invoice->debtPayment->amount }},
+                                                                originalMethod: '{{ $invoice->debtPayment->payment_method }}',
+                                                                originalDate: '{{ $invoice->created_at->format('Y-m-d') }}',
+                                                                currentAmount: {{ (float) old('amount', $invoice->debtPayment->amount) }},
+                                                                formatRp(n) { return Number(n||0).toLocaleString('id-ID'); },
+                                                                get exceedsLimit() { return Number(this.currentAmount||0) > Number(this.maxAmount||0); },
+                                                                resetToOriginal() {
+                                                                    this.currentAmount = this.originalAmount;
+                                                                    this.$dispatch('update-rupiah-value', { name: 'amount', value: String(this.originalAmount) });
+                                                                    this.$el.querySelectorAll('input[name=payment_method]').forEach(r => { r.checked = (r.value === this.originalMethod); });
+                                                                    const d = this.$el.querySelector('input[type=date][name=created_at]');
+                                                                    if (d) d.value = this.originalDate;
+                                                                }
+                                                            }"
+                                                            @rupiah-change="if ($event.detail.name === 'amount') currentAmount = parseFloat($event.detail.value) || 0"
+                                                            @submit="if (exceedsLimit) { $event.preventDefault(); }"
+                                                            @modal-closed.window="if ($event.detail === '{{ $payModalKey }}') resetToOriginal()">
+                                                            @csrf
+                                                            @method('PUT')
+
+                                                            <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                                                <p class="text-xs text-amber-800">
+                                                                    Mengubah pembayaran akan rollback alokasi lama lalu re-distribusi via FIFO ke invoice tertua.
+                                                                    Berpengaruh ke kas, piutang, dan status lunas invoice terkait.
+                                                                    <br>Maks pembayaran: <strong>Rp {{ number_format($standaloneMaxAllowed, 0, ',', '.') }}</strong> (sisa hutang + nominal pembayaran ini).
+                                                                </p>
+                                                            </div>
+
+                                                            {{-- Real-time client-side validation banner --}}
+                                                            <template x-if="exceedsLimit">
+                                                                <div class="rounded-xl border border-red-300 bg-red-50 p-3">
+                                                                    <div class="flex items-start gap-2">
+                                                                        <svg class="h-4 w-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                                                                        </svg>
+                                                                        <p class="text-xs text-red-700 leading-relaxed">
+                                                                            Nominal pembayaran (Rp <span x-text="formatRp(currentAmount)"></span>) melebihi total hutang yang tersedia (Rp <span x-text="formatRp(maxAmount)"></span>).
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </template>
+
+                                                            <div>
+                                                                <label class="text-xs font-bold uppercase tracking-wider text-gray-700">Invoice Pembayaran</label>
+                                                                <p class="mt-1 text-sm font-semibold text-gray-900">{{ $invoice->inv_code ?? '#' . $invoice->id }}</p>
+                                                            </div>
+
+                                                            <x-input-rupiah
+                                                                name="amount"
+                                                                label="Nominal Pembayaran"
+                                                                id="edit-payment-amount-{{ $invoice->id }}"
+                                                                required
+                                                                value="{{ old('amount', $invoice->debtPayment->amount) }}"
+                                                            />
+
+                                                            <div>
+                                                                <label class="text-xs font-bold uppercase tracking-wider text-gray-700">Metode Pembayaran</label>
+                                                                <div class="mt-1 grid grid-cols-3 gap-2">
+                                                                    @foreach (['Cash', 'Transfer', 'QRIS'] as $pm)
+                                                                        <label class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 transition-colors has-[:checked]:border-button-main has-[:checked]:bg-button-main/20 has-[:checked]:text-gray-900">
+                                                                            <input type="radio" name="payment_method" value="{{ $pm }}" required
+                                                                                {{ old('payment_method', $invoice->debtPayment->payment_method) === $pm ? 'checked' : '' }}
+                                                                                class="sr-only">
+                                                                            {{ strtoupper($pm) }}
+                                                                        </label>
+                                                                    @endforeach
+                                                                </div>
+                                                            </div>
+
+                                                            <div>
+                                                                <label class="text-xs font-bold uppercase tracking-wider text-gray-700">Tanggal Pembayaran</label>
+                                                                <input type="date" name="created_at" required
+                                                                    value="{{ old('created_at', $invoice->created_at->format('Y-m-d')) }}"
+                                                                    max="{{ now()->format('Y-m-d') }}"
+                                                                    @click="$el.showPicker()"
+                                                                    onkeydown="return false"
+                                                                    class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-button-main cursor-pointer">
+                                                            </div>
+
+                                                            <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                                                                <x-button.remove-button x-on:click="$dispatch('close-modal', 'edit-payment-{{ $invoice->id }}')" type="button">
+                                                                    <span class="font-bold text-gray-800">BATAL</span>
+                                                                </x-button.remove-button>
+                                                                <button type="submit"
+                                                                    :disabled="exceedsLimit"
+                                                                    :class="exceedsLimit
+                                                                        ? 'inline-flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2 text-sm font-bold text-gray-400 cursor-not-allowed'
+                                                                        : 'inline-flex items-center gap-2 rounded-lg bg-button-main px-4 py-2 text-sm font-bold text-gray-900 hover:bg-button-hover transition-colors shadow-sm cursor-pointer'">
+                                                                    SIMPAN PERUBAHAN
+                                                                </button>
+                                                            </div>
+                                                        </form>
+                                                    </x-modal>
+                                                @endif
                                             </td>
                                         </tr>
                                     @endforeach
@@ -399,7 +921,24 @@
 
     {{-- Add Direct Debt Modal --}}
     <x-modal name="add-debt" title="TAMBAH HUTANG LANGSUNG" maxWidth="md" x-init="if ('{{ session('open_modal') }}' === 'add-debt') $dispatch('open-modal', 'add-debt')">
-        <form method="POST" action="{{ route('customer-r2.debt.store', $customer->id) }}" class="p-6 space-y-4">
+        @if(session('open_modal') === 'add-debt' && $errors->any())
+            <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4">
+                <div class="flex items-start gap-3">
+                    <svg class="h-5 w-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                    </svg>
+                    <div class="flex-1">
+                        <p class="text-xs font-bold uppercase tracking-wider text-red-700 mb-1">Gagal Menyimpan</p>
+                        <ul class="text-xs text-red-700 space-y-0.5">
+                            @foreach($errors->all() as $err)
+                                <li>&bull; {{ $err }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        @endif
+        <form method="POST" action="{{ route('customer-r2.debt.store', $customer->id) }}" class="space-y-4">
             @csrf
 
             <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -457,8 +996,28 @@
     </x-modal>
 
     {{-- Pay Debt Modal --}}
-    <x-modal name="pay-debt" title="PEMBAYARAN HUTANG PELANGGAN" maxWidth="xl" x-init="if ($errors->any() && !['add-debt','edit-customer'].includes('{{ session('open_modal') }}')) $dispatch('open-modal', 'pay-debt')">
-        <div class="p-6">
+    <x-modal name="pay-debt" title="PEMBAYARAN HUTANG PELANGGAN" maxWidth="xl" x-init="if ($errors->any() && (!'{{ session('open_modal') }}' || '{{ session('open_modal') }}' === 'pay-debt')) $dispatch('open-modal', 'pay-debt')">
+        <div>
+            @php
+                $payDebtIsCurrent = $errors->any() && (! session('open_modal') || session('open_modal') === 'pay-debt');
+            @endphp
+            @if($payDebtIsCurrent)
+                <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-5 w-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                        </svg>
+                        <div class="flex-1">
+                            <p class="text-xs font-bold uppercase tracking-wider text-red-700 mb-1">Gagal Memproses Pembayaran</p>
+                            <ul class="text-xs text-red-700 space-y-0.5">
+                                @foreach($errors->all() as $err)
+                                    <li>&bull; {{ $err }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            @endif
             {{-- Customer Summary Info within Modal --}}
             <div class="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-5">
                 <div class="flex items-center justify-between">
@@ -525,6 +1084,78 @@
                                 class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300">
                                 Hapus
                             </button>
+                        </div>
+                    </form>
+                </div>
+            </x-modal>
+        </div>
+
+        {{-- Delete Manual Debt Modal --}}
+        <div x-data="{ deleteId: '', deleteCode: '', confirmText: '' }"
+             @open-delete-debt-modal.window="deleteId = $event.detail.id; deleteCode = $event.detail.code; confirmText = ''; $dispatch('open-modal', 'delete-debt-modal')">
+            <x-modal name="delete-debt-modal" maxWidth="md">
+                <div class="p-6">
+                    <div class="mb-3 flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900">Hapus Hutang Manual</h3>
+                    </div>
+                    <p class="mb-3 text-sm text-gray-600">
+                        Hutang <strong x-text="deleteCode" class="text-gray-900"></strong> akan dihapus permanen.
+                        Total piutang & ekuitas akan ikut berkurang.
+                    </p>
+                    <p class="mb-3 text-xs text-red-600">
+                        <strong>Aksi tidak bisa dibatalkan.</strong> Ketik <code class="rounded bg-gray-100 px-1 py-0.5">HAPUS</code> untuk konfirmasi.
+                    </p>
+                    <form method="POST" :action="`{{ url('customer-r2/debt') }}/${deleteId}`">
+                        @csrf
+                        @method('DELETE')
+                        <input type="text" x-model="confirmText" placeholder="Ketik HAPUS"
+                            class="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:ring-red-500" />
+                        <div class="flex justify-end gap-2">
+                            <button type="button" @click="$dispatch('close-modal', 'delete-debt-modal')"
+                                class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Batal</button>
+                            <button type="submit" :disabled="confirmText !== 'HAPUS'"
+                                class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300">Hapus</button>
+                        </div>
+                    </form>
+                </div>
+            </x-modal>
+        </div>
+
+        {{-- Delete Debt Payment Modal --}}
+        <div x-data="{ deleteId: '', deleteCode: '', confirmText: '' }"
+             @open-delete-payment-modal.window="deleteId = $event.detail.id; deleteCode = $event.detail.code; confirmText = ''; $dispatch('open-modal', 'delete-payment-modal')">
+            <x-modal name="delete-payment-modal" maxWidth="md">
+                <div class="p-6">
+                    <div class="mb-3 flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900">Batalkan Pembayaran Hutang</h3>
+                    </div>
+                    <p class="mb-3 text-sm text-gray-600">
+                        Pembayaran <strong x-text="deleteCode" class="text-gray-900"></strong> akan dihapus dan hutang pada invoice yang dibayar akan dipulihkan.
+                        Kas berkurang, piutang bertambah, status lunas invoice terkait akan dicabut.
+                    </p>
+                    <p class="mb-3 text-xs text-red-600">
+                        <strong>Aksi tidak bisa dibatalkan.</strong> Ketik <code class="rounded bg-gray-100 px-1 py-0.5">HAPUS</code> untuk konfirmasi.
+                    </p>
+                    <form method="POST" :action="`{{ url('customer-r2/debt-payment') }}/${deleteId}`">
+                        @csrf
+                        @method('DELETE')
+                        <input type="text" x-model="confirmText" placeholder="Ketik HAPUS"
+                            class="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:ring-red-500" />
+                        <div class="flex justify-end gap-2">
+                            <button type="button" @click="$dispatch('close-modal', 'delete-payment-modal')"
+                                class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Batal</button>
+                            <button type="submit" :disabled="confirmText !== 'HAPUS'"
+                                class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300">Hapus</button>
                         </div>
                     </form>
                 </div>
