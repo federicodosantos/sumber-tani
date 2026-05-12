@@ -163,15 +163,15 @@
 
         <div id="rowsContainer">
             {{-- Header Row - Hidden on Mobile --}}
-            <div class="mb-3 hidden lg:grid lg:grid-cols-[2fr_0.7fr_1fr_1.5fr_1.5fr_1.5fr_1.5fr_1.5fr_10px] gap-3 px-3 text-sm font-semibold text-gray-700">
+            <div class="mb-3 hidden lg:grid lg:grid-cols-[2fr_0.7fr_1fr_1.5fr_1.5fr_1.5fr_1.5fr_1.5fr_30px] gap-3 px-4 border border-transparent text-sm font-semibold text-gray-700">
                 <div>Produk</div>
-                <div class="text-center">Jumlah</div>
-                <div class="text-center">Satuan</div>
-                <div class="text-center">HET Price</div>
-                <div class="text-center">Basic Disc</div>
-                <div class="text-center">Add Disc</div>
-                <div class="text-center">Net Price</div>
-                <div class="text-center">Sub Total</div>
+                <div>Jumlah</div>
+                <div>Satuan</div>
+                <div>HET Price</div>
+                <div>Basic Disc</div>
+                <div>Add Disc</div>
+                <div>Net Price</div>
+                <div>Sub Total</div>
                 <div></div>
             </div>
 
@@ -179,9 +179,9 @@
             @for($i = 0; $i < $rowCount; $i++)
                 @php $detail = $isEdit ? $purchase->details[$i] : null; @endphp
                 <div class="product-row mb-3 rounded-lg border border-gray-200 p-3 sm:p-4">
-                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[2fr_0.7fr_1fr_1.5fr_1.5fr_1.5fr_1.5fr_1.5fr_10px] lg:items-start lg:gap-3">
+                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[2fr_0.7fr_1fr_1.5fr_1.5fr_1.5fr_1.5fr_1.5fr_30px] lg:items-start lg:gap-3">
                         {{-- Product Selector --}}
-                        <div>
+                        <div class="min-w-0">
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Produk</label>
                             <x-content.combobox 
                                 name="products[{{ $i }}][product_id]"
@@ -195,7 +195,7 @@
                                 required />
                         </div>
 
-                        <div>
+                        <div class="min-w-0">
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Jumlah</label>
                             <input type="number" name="products[{{ $i }}][quantity]"
                                 value="{{ old('products.' . $i . '.quantity', $detail?->quantity ?? 1) }}"
@@ -203,7 +203,7 @@
                                 placeholder="10" required min="1">
                         </div>
 
-                        <div>
+                        <div class="min-w-0">
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Satuan</label>
                             <input type="text" name="products[{{ $i }}][unit]"
                                 value="{{ old('products.' . $i . '.unit', $detail?->unit ?? 'PCS') }}"
@@ -211,7 +211,7 @@
                                 placeholder="PCS" required>
                         </div>
 
-                        <div>
+                        <div class="min-w-0">
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">HET Price</label>
                             <x-input-rupiah 
                                 name="products[{{ $i }}][het_price]"
@@ -222,7 +222,7 @@
                                 required />
                         </div>
 
-                        <div>
+                        <div class="min-w-0">
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Basic Disc</label>
                             <x-input-rupiah 
                                 name="products[{{ $i }}][basic_discount]"
@@ -232,7 +232,7 @@
                                 :value="old('products.' . $i . '.basic_discount', $detail?->basic_discount ?? '')" />
                         </div>
 
-                        <div>
+                        <div class="min-w-0">
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Add Disc</label>
                             <x-input-rupiah 
                                 name="products[{{ $i }}][additional_discount]"
@@ -242,7 +242,7 @@
                                 :value="old('products.' . $i . '.additional_discount', $detail?->additional_discount ?? '')" />
                         </div>
 
-                        <div>
+                        <div class="min-w-0">
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Net Price</label>
                             <x-input-rupiah 
                                 name="products[{{ $i }}][net_price]"
@@ -253,7 +253,7 @@
                                 readonly />
                         </div>
 
-                        <div>
+                        <div class="min-w-0">
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Sub Total</label>
                             <x-input-rupiah 
                                 name="products[{{ $i }}][subtotal]"

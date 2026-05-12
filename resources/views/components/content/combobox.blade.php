@@ -62,6 +62,7 @@ class="relative w-full"
     {{-- Selected Label Display & Search Input --}}
     <div class="relative">
         <div @click="if ($event.target === $refs.searchInput) return; open = !open; if(open) $nextTick(() => $refs.searchInput.focus())"
+             :title="value ? selectedLabel : ''"
              :class="open ? 'border-button-hover ring-2 ring-button-main/10 bg-white' : 'border-gray-200 bg-white'"
              class="flex w-full cursor-pointer items-center justify-between rounded-md border px-3 py-2 text-sm transition-all hover:border-button-hover shadow-sm">
             
