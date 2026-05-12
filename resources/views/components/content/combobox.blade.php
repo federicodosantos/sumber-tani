@@ -13,6 +13,14 @@
     open: false,
     search: '',
     value: '{{ $value }}',
+    componentName: '{{ $name }}',
+    getComponentName() {
+        const hiddenInput = this.$el.querySelector('input[type=hidden][name]');
+        if (hiddenInput && hiddenInput.name) {
+            this.componentName = hiddenInput.name;
+        }
+        return this.componentName;
+    },
     options: {{ json_encode($options) }},
     selectedIndex: -1,
     type: '{{ $type }}',
@@ -39,8 +47,8 @@
     }
 }" 
 class="relative w-full" 
-@combobox-reset.window="if($event.detail.name === '{{ $name }}') { value = ''; search = ''; }"
-@combobox-set.window="if($event.detail.name === '{{ $name }}') { 
+@combobox-reset.window="if(getComponentName() && $event.detail.name === getComponentName()) { value = ''; search = ''; }"
+@combobox-set.window="if(getComponentName() && $event.detail.name === getComponentName()) { 
     const opt = options.find(o => o.id == $event.detail.value);
     if(opt) select(opt);
 }"

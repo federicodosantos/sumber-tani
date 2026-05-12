@@ -3,6 +3,15 @@
 <div x-data="{
     displayAmount: '',
     rawAmount: '',
+    componentName: '{{ $name }}',
+    getComponentName() {
+        // Dynamically resolve name from the hidden input (handles cloned rows)
+        const hiddenInput = this.$el.querySelector('input[type=hidden][name]');
+        if (hiddenInput && hiddenInput.name) {
+            this.componentName = hiddenInput.name;
+        }
+        return this.componentName;
+    },
     formatNumber(value) {
         if (value === null || value === undefined || value === '') return '';
         
@@ -22,10 +31,11 @@
         return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     },
     updateValues(val) {
+        const currentName = this.getComponentName();
         if (val === null || val === undefined || val === '') {
             this.rawAmount = '';
             this.displayAmount = '';
-            this.$dispatch('rupiah-change', { value: '', name: '{{ $name }}' });
+            this.$dispatch('rupiah-change', { value: '', name: currentName });
             return;
         }
 
@@ -46,7 +56,7 @@
         this.displayAmount = (numeric === '0' || numeric === '') ? '' : this.formatNumber(numeric);
         
         this.$nextTick(() => {
-            this.$dispatch('rupiah-change', { value: numeric, name: '{{ $name }}' });
+            this.$dispatch('rupiah-change', { value: numeric, name: currentName });
         });
     },
     init() {
@@ -60,7 +70,7 @@
         });
     }
 }" 
-@update-rupiah-value.window="if('{{ $name }}' && $event.detail.name === '{{ $name }}') updateValues($event.detail.value)"
+@update-rupiah-value.window="if(getComponentName() && $event.detail.name === getComponentName()) updateValues($event.detail.value)"
 @update-rupiah-value="updateValues($event.detail.value)"
 class="{{ $containerClass }}"
 {{ $attributes->whereDoesntStartWith('class')->whereDoesntStartWith('value')->whereDoesntStartWith('placeholder') }}>
@@ -86,11 +96,17 @@ class="{{ $containerClass }}"
             x-model="displayAmount" 
             inputmode="numeric"
             placeholder="{{ $placeholder }}"
+            @if($attributes->has('readonly'))
+            @keydown.prevent
+            @paste.prevent
+            tabindex="-1"
+            @else
             @focus="setTimeout(() => $el.setSelectionRange($el.value.length, $el.value.length), 10)"
             @click="setTimeout(() => $el.setSelectionRange($el.value.length, $el.value.length), 10)"
             @keydown="if (!/[0-9]/.test($event.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'].includes($event.key) && !($event.ctrlKey || $event.metaKey)) $event.preventDefault()"
+            @endif
             {{ $attributes->merge([
-                'class' => 'block w-full rounded-md border border-gray-300 focus:border-button-hover pl-8 pr-3 py-2 text-sm focus:outline-none transition-all duration-100 text-right font-semibold text-gray-900' . ($attributes->has('disabled') ? ' bg-gray-100 cursor-not-allowed' : ' bg-white')
+                'class' => 'block w-full rounded-md border border-gray-300 focus:border-button-hover pl-8 pr-3 py-2 text-sm focus:outline-none transition-all duration-100 text-right font-semibold text-gray-900' . ($attributes->has('disabled') ? ' bg-gray-100 cursor-not-allowed' : ($attributes->has('readonly') ? ' bg-gray-50 cursor-not-allowed text-gray-500' : ' bg-white'))
             ])->whereStartsWith(['disabled', 'readonly', 'required', 'autofocus', 'class']) }}>
     </div>
 

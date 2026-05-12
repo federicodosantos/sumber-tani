@@ -2,27 +2,12 @@
     let rowIndex = parseInt('{{ $rowIndex ?? 1 }}');
     let systemCalculatedPrice = 0;
     let isManualPriceActive = false;
+    // Track the currently active form context (the form that is visible/being interacted with)
+    let activeFormContext = null;
 
     function setRowIndex(val) {
         rowIndex = val;
     }
-
-    /* =========================
-       DISCOUNT TYPE TOGGLE
-    ========================= */
-    /* =========================
-       CALCULATION TRIGGER
-    ========================= */
-    window.addEventListener('rupiah-change', function() {
-        calculateGrandTotal();
-    });
-
-    // Reset form when modal is closed (X button, backdrop, or Batal)
-    window.addEventListener('modal-closed', (e) => {
-        if (e.detail === 'create-purchase' || e.detail === 'edit-purchase') {
-            window.resetPurchaseForm();
-        }
-    });
 
     /* =========================
        UTIL
@@ -37,6 +22,48 @@
             str.toString().replace(/[^0-9,-]/g, '').replace(',', '.')
         ) || 0;
     }
+
+    /**
+     * Get the form context (closest form or form-card container) from an element.
+     * This ensures we scope all queries to the correct form when multiple forms exist.
+     */
+    function getFormContext(element) {
+        if (!element) return document;
+        return element.closest('form') || element.closest('[id="rowsContainer"]')?.parentElement || document;
+    }
+
+    /**
+     * Find an element by ID within a specific form context.
+     * Falls back to document if the element isn't found in the form context.
+     */
+    function findInContext(ctx, id) {
+        if (ctx && ctx !== document) {
+            const el = ctx.querySelector('#' + CSS.escape(id));
+            if (el) return el;
+        }
+        return document.getElementById(id);
+    }
+
+    /* =========================
+       CALCULATION TRIGGER
+    ========================= */
+    window.addEventListener('rupiah-change', function(e) {
+        // Determine which form context the change came from
+        const sourceEl = e.target || e.srcElement;
+        if (sourceEl && sourceEl !== window) {
+            const ctx = getFormContext(sourceEl);
+            calculateGrandTotal(ctx);
+        } else if (activeFormContext) {
+            calculateGrandTotal(activeFormContext);
+        }
+    });
+
+    // Reset form when modal is closed (X button, backdrop, or Batal)
+    window.addEventListener('modal-closed', (e) => {
+        if (e.detail === 'create-purchase' || e.detail === 'edit-purchase') {
+            window.resetPurchaseForm();
+        }
+    });
 
     /* =========================
        CALCULATION
@@ -65,37 +92,41 @@
 
         // Update display inputs of input-rupiah via custom event
         const namePrefix = hetInput?.name.split('[')[0]; // products
-        const rowIndex = hetInput?.name.match(/\[(\d+)\]/)[1];
+        const currentRowIndex = hetInput?.name.match(/\[(\d+)\]/)[1];
         
         window.dispatchEvent(new CustomEvent('update-rupiah-value', { 
-            detail: { name: `products[${rowIndex}][net_price]`, value: netPrice } 
+            detail: { name: `products[${currentRowIndex}][net_price]`, value: netPrice } 
         }));
         
         window.dispatchEvent(new CustomEvent('update-rupiah-value', { 
-            detail: { name: `products[${rowIndex}][subtotal]`, value: subtotal } 
+            detail: { name: `products[${currentRowIndex}][subtotal]`, value: subtotal } 
         }));
 
-        calculateGrandTotal();
+        // Calculate grand total scoped to the correct form
+        const ctx = getFormContext(row);
+        calculateGrandTotal(ctx);
     }
 
-    function calculateGrandTotal() {
+    function calculateGrandTotal(ctx) {
+        if (!ctx) ctx = activeFormContext || document;
+
         let total = 0;
 
-        document.querySelectorAll('.product-row').forEach(row => {
+        ctx.querySelectorAll('.product-row').forEach(row => {
             const subtotalHidden = row.querySelector('input[name$="[subtotal]"][type="hidden"]');
             total += parseFloat(subtotalHidden?.value) || 0;
         });
 
-        const discountType = document.getElementById('discountTypeInput')?.value || 'percent';
-        const ppnType = document.getElementById('ppnTypeInput')?.value || 'percent';
+        const discountType = findInContext(ctx, 'discountTypeInput')?.value || 'percent';
+        const ppnType = findInContext(ctx, 'ppnTypeInput')?.value || 'percent';
 
         const discountInputEl = discountType === 'percent' 
-            ? document.getElementById('globalDiscount') 
-            : document.getElementById('globalDiscountNominal_value');
+            ? findInContext(ctx, 'globalDiscount') 
+            : findInContext(ctx, 'globalDiscountNominal_value');
         
         const ppnInputEl = ppnType === 'percent' 
-            ? document.getElementById('ppnInput') 
-            : document.getElementById('ppnInputNominal_value');
+            ? findInContext(ctx, 'ppnInput') 
+            : findInContext(ctx, 'ppnInputNominal_value');
 
         const discountInputValue = parseCurrency(discountInputEl?.value);
         const ppnInputValue = parseCurrency(ppnInputEl?.value);
@@ -117,50 +148,74 @@
         systemCalculatedPrice = grandTotal;
 
         // Update display
-        document.getElementById('totalDisplay').innerText =
-            'Rp ' + formatCurrency(total);
-        document.getElementById('discountDisplay').innerText =
-            '- Rp ' + formatCurrency(discountValue);
-        document.getElementById('ppnDisplay').innerText =
-            '+ Rp ' + formatCurrency(ppnValue);
+        const totalDisplay = findInContext(ctx, 'totalDisplay');
+        const discountDisplay = findInContext(ctx, 'discountDisplay');
+        const ppnDisplay = findInContext(ctx, 'ppnDisplay');
+        
+        if (totalDisplay) totalDisplay.innerText = 'Rp ' + formatCurrency(total);
+        if (discountDisplay) discountDisplay.innerText = '- Rp ' + formatCurrency(discountValue);
+        if (ppnDisplay) ppnDisplay.innerText = '+ Rp ' + formatCurrency(ppnValue);
 
         // Tampilkan/sembunyikan manual price section
-        const manualSection = document.getElementById('manualPriceSection');
+        const manualSection = findInContext(ctx, 'manualPriceSection');
         if (grandTotal > 0) {
             manualSection?.classList.remove('hidden');
         } else {
             manualSection?.classList.add('hidden');
-            isManualPriceActive = false;
-            document.getElementById('systemPriceInfo')?.classList.add('hidden');
+            const manualInput = findInContext(ctx, 'manualGrandTotal');
+            if (!manualInput || parseCurrency(manualInput.value) <= 0) {
+                isManualPriceActive = false;
+                findInContext(ctx, 'systemPriceInfo')?.classList.add('hidden');
+            }
         }
 
         // Update grand total display
-        updateGrandTotalDisplay();
+        updateGrandTotalDisplay(ctx);
     }
 
     /* =========================
        MANUAL PRICE HANDLING
     ========================= */
-    function updateGrandTotalDisplay() {
+    function updateGrandTotalDisplay(ctx) {
+        if (!ctx) ctx = activeFormContext || document;
+        
+        const grandTotalDisplay = findInContext(ctx, 'grandTotalDisplay');
+        const manualGrandTotalValue = findInContext(ctx, 'manualGrandTotalValue');
+        const systemInfo = findInContext(ctx, 'systemPriceInfo');
+        const systemValue = findInContext(ctx, 'systemPriceValue');
+        const resetBtn = findInContext(ctx, 'resetManualPrice');
+
+        const manualInput = findInContext(ctx, 'manualGrandTotal');
+        const manualPrice = parseCurrency(manualInput?.value);
+        if (manualPrice > 0) {
+            isManualPriceActive = true;
+        }
+
         if (isManualPriceActive) {
-            const manualPrice = parseCurrency(document.getElementById('manualGrandTotal')?.value);
-            document.getElementById('grandTotalDisplay').innerText =
-                'Rp ' + formatCurrency(manualPrice);
-            document.getElementById('manualGrandTotalValue').value = manualPrice;
+            if (grandTotalDisplay) grandTotalDisplay.innerText = 'Rp ' + formatCurrency(manualPrice);
+            if (manualGrandTotalValue) manualGrandTotalValue.value = manualPrice;
+            
+            if (systemInfo) systemInfo.classList.remove('hidden');
+            if (systemValue) systemValue.textContent = 'Rp ' + formatCurrency(systemCalculatedPrice);
+            if (resetBtn) resetBtn.disabled = false;
         } else {
-            document.getElementById('grandTotalDisplay').innerText =
-                'Rp ' + formatCurrency(systemCalculatedPrice);
-            document.getElementById('manualGrandTotalValue').value = '';
+            if (grandTotalDisplay) grandTotalDisplay.innerText = 'Rp ' + formatCurrency(systemCalculatedPrice);
+            if (manualGrandTotalValue) manualGrandTotalValue.value = '';
+            
+            if (systemInfo) systemInfo.classList.add('hidden');
+            if (resetBtn) resetBtn.disabled = true;
         }
     }
 
-    function initManualPriceHandlers() {
-        const manualInput = document.getElementById('manualGrandTotal');
-        const resetBtn = document.getElementById('resetManualPrice');
-        const systemInfo = document.getElementById('systemPriceInfo');
-        const systemValue = document.getElementById('systemPriceValue');
-        const grandDisplay = document.getElementById('grandTotalDisplay');
-        const manualValueHidden = document.getElementById('manualGrandTotalValue');
+    function initManualPriceHandlers(ctx) {
+        if (!ctx) ctx = document;
+        
+        const manualInput = findInContext(ctx, 'manualGrandTotal');
+        const resetBtn = findInContext(ctx, 'resetManualPrice');
+        const systemInfo = findInContext(ctx, 'systemPriceInfo');
+        const systemValue = findInContext(ctx, 'systemPriceValue');
+        const grandDisplay = findInContext(ctx, 'grandTotalDisplay');
+        const manualValueHidden = findInContext(ctx, 'manualGrandTotalValue');
 
         manualInput?.addEventListener('input', function(e) {
             let value = e.target.value;
@@ -221,25 +276,23 @@
         comboboxHidden?.addEventListener('combobox-change', function(e) {
             const data = e.detail.selected;
             if (data) {
-                // Auto-fill unit if available (optional enhancement)
-                // const unitInput = row.querySelector('input[name*="[unit]"]');
-                // if (unitInput && !unitInput.value) unitInput.value = data.unit || 'PCS';
-                
                 calculateSubtotal(row);
             }
         });
 
         if (removeBtn) {
             removeBtn.addEventListener('click', function () {
+                const ctx = getFormContext(row);
                 row.remove();
-                updateRemoveButtons();
-                calculateGrandTotal();
+                updateRemoveButtons(ctx);
+                calculateGrandTotal(ctx);
             });
         }
     }
 
-    function updateRemoveButtons() {
-        const rows = document.querySelectorAll('.product-row');
+    function updateRemoveButtons(ctx) {
+        if (!ctx) ctx = activeFormContext || document;
+        const rows = ctx.querySelectorAll('.product-row');
         rows.forEach(row => {
             const btn = row.querySelector('.remove-row');
             if (btn) btn.disabled = rows.length === 1;
@@ -249,72 +302,137 @@
     /* =========================
        ADD ROW
     ========================= */
-    document.getElementById('addRow')?.addEventListener('click', function () {
-        const container = document.getElementById('rowsContainer');
-        const firstRow = container.querySelector('.product-row');
-        const newRow = firstRow.cloneNode(true);
-
-        // CLEANUP: Remove Alpine-rendered artifacts to prevent duplication
-        // Alpine 3 renders elements as siblings of the template tags.
-        // We must remove these clones before Alpine.initTree re-renders them.
-        newRow.querySelectorAll('template').forEach(t => {
-            while (t.nextSibling && (t.nextSibling.nodeType === 1) && t.nextSibling.tagName !== 'TEMPLATE' && !t.nextSibling.hasAttribute('x-data')) {
-                t.nextSibling.remove();
-            }
-        });
-
-        newRow.querySelectorAll('[id]').forEach(el => {
-            const id = el.getAttribute('id');
-            if (id) {
-                el.setAttribute('id', id.replace(/_\d+_/, `_${rowIndex}_`));
-            }
-        });
-
-        newRow.querySelectorAll('input, select').forEach(el => {
-            const name = el.getAttribute('name');
-            if (name) {
-                el.setAttribute(
-                    'name',
-                    name.replace(/\[\d+]/, `[${rowIndex}]`)
-                );
-            }
-
-            if (el.tagName === 'SELECT') {
-                el.selectedIndex = 0;
-            } else {
-                el.value = '';
-            }
-        });
-
-        container.appendChild(newRow);
+    function initAddRowButton(ctx) {
+        if (!ctx) ctx = document;
         
-        // Re-initialize Alpine for the new row (crucial for searchable combobox)
-        if (window.Alpine) {
-            window.Alpine.initTree(newRow);
-        }
+        const addRowBtn = findInContext(ctx, 'addRow');
+        if (!addRowBtn) return;
+        
+        // Remove old listeners by cloning the button
+        const newAddRowBtn = addRowBtn.cloneNode(true);
+        addRowBtn.parentNode.replaceChild(newAddRowBtn, addRowBtn);
+        
+        newAddRowBtn.addEventListener('click', function () {
+            const container = findInContext(ctx, 'rowsContainer');
+            if (!container) return;
+            
+            const firstRow = container.querySelector('.product-row');
+            if (!firstRow) return;
+            
+            const newRow = firstRow.cloneNode(true);
 
-        addRowListeners(newRow);
-        updateRemoveButtons();
-        calculateGrandTotal();
-        rowIndex++;
-    });
+            // CLEANUP: Remove Alpine-rendered artifacts to prevent duplication
+            newRow.querySelectorAll('template').forEach(t => {
+                while (t.nextSibling && (t.nextSibling.nodeType === 1) && t.nextSibling.tagName !== 'TEMPLATE' && !t.nextSibling.hasAttribute('x-data')) {
+                    t.nextSibling.remove();
+                }
+            });
+
+            // Clean Alpine internal state from all x-data elements so they reinitialize properly
+            newRow.querySelectorAll('[x-data]').forEach(el => {
+                delete el._x_dataStack;
+                delete el.__x_is_init;
+                el._x_effects?.forEach(e => e());
+                delete el._x_effects;
+                delete el._x_runEffects;
+                delete el._x_undoAddedClasses;
+                delete el._x_undoAddedStyles;
+                if (el._x_cleanups) {
+                    el._x_cleanups.forEach(c => c());
+                    delete el._x_cleanups;
+                }
+            });
+
+            // Update IDs to new row index
+            newRow.querySelectorAll('[id]').forEach(el => {
+                const id = el.getAttribute('id');
+                if (id) {
+                    el.setAttribute('id', id.replace(/_\d+_/, `_${rowIndex}_`));
+                }
+            });
+
+            // Also update IDs in the format "products[0][field]_display" or "products[0][field]_value"
+            newRow.querySelectorAll('[id*="products["]').forEach(el => {
+                const id = el.getAttribute('id');
+                if (id) {
+                    el.setAttribute('id', id.replace(/products\[\d+\]/, `products[${rowIndex}]`));
+                }
+            });
+
+            // Update input/select names and clear values
+            newRow.querySelectorAll('input, select').forEach(el => {
+                const name = el.getAttribute('name');
+                if (name) {
+                    el.setAttribute(
+                        'name',
+                        name.replace(/\[\d+]/, `[${rowIndex}]`)
+                    );
+                }
+
+                if (el.tagName === 'SELECT') {
+                    el.selectedIndex = 0;
+                } else {
+                    el.value = '';
+                }
+            });
+
+            container.appendChild(newRow);
+            
+            // Re-initialize Alpine for the new row
+            if (window.Alpine) {
+                window.Alpine.initTree(newRow);
+            }
+
+            // Set default values for standard inputs
+            const qtyInput = newRow.querySelector('input[name*="[quantity]"]');
+            const unitInput = newRow.querySelector('input[name*="[unit]"]');
+            if (qtyInput) qtyInput.value = 1;
+            if (unitInput) unitInput.value = 'PCS';
+
+            // Reset new row's combobox
+            window.dispatchEvent(new CustomEvent('combobox-reset', { 
+                detail: { name: `products[${rowIndex}][product_id]` } 
+            }));
+
+            // Reset new row's rupiah components
+            const rupiahFields = ['het_price', 'basic_discount', 'additional_discount', 'net_price', 'subtotal'];
+            rupiahFields.forEach(field => {
+                window.dispatchEvent(new CustomEvent('update-rupiah-value', { 
+                    detail: { name: `products[${rowIndex}][${field}]`, value: '' } 
+                }));
+            });
+
+            addRowListeners(newRow);
+            updateRemoveButtons(ctx);
+            calculateGrandTotal(ctx);
+            rowIndex++;
+        });
+    }
 
     /* =========================
        HEADER EVENTS
     ========================= */
-    document.getElementById('globalDiscount')
-        ?.addEventListener('input', calculateGrandTotal);
-
-    document.getElementById('ppnInput')
-        ?.addEventListener('input', calculateGrandTotal);
+    function initHeaderEvents(ctx) {
+        if (!ctx) ctx = document;
+        
+        const globalDiscount = findInContext(ctx, 'globalDiscount');
+        const ppnInput = findInContext(ctx, 'ppnInput');
+        
+        // Use a wrapper that passes the correct context
+        const recalc = () => calculateGrandTotal(ctx);
+        
+        globalDiscount?.addEventListener('input', recalc);
+        ppnInput?.addEventListener('input', recalc);
+    }
 
     /* =========================
        PAYMENT METHOD ↔ LUNAS
     ========================= */
-    const methodSelect = document.getElementById('method');
-    const isPaidCheckbox = document.getElementById('isPaid');
-
-    function syncPaymentStatus() {
+    function syncPaymentStatus(ctx) {
+        if (!ctx) ctx = activeFormContext || document;
+        const methodSelect = findInContext(ctx, 'method');
+        const isPaidCheckbox = findInContext(ctx, 'isPaid');
+        
         if (!methodSelect || !isPaidCheckbox) return;
 
         if (methodSelect.value === '0') {
@@ -324,43 +442,57 @@
             isPaidCheckbox.disabled = false;
         }
     }
-
-    methodSelect?.addEventListener('change', syncPaymentStatus);
+    
+    function initPaymentHandlers(ctx) {
+        if (!ctx) ctx = document;
+        const methodSelect = findInContext(ctx, 'method');
+        methodSelect?.addEventListener('change', () => syncPaymentStatus(ctx));
+    }
 
     /* =========================
        INIT ON PAGE LOAD
     ========================= */
-    function initPurchaseForm() {
-        document.querySelectorAll('.product-row').forEach(row => {
+    function initPurchaseForm(ctx) {
+        if (!ctx) ctx = document;
+        
+        // Set the active form context
+        activeFormContext = ctx;
+        
+        // Reset manual price state for fresh init
+        const manualInput = findInContext(ctx, 'manualGrandTotal');
+        const initialManualValue = parseCurrency(manualInput?.value);
+        isManualPriceActive = initialManualValue > 0;
+        systemCalculatedPrice = 0;
+        
+        ctx.querySelectorAll('.product-row').forEach(row => {
             addRowListeners(row);
         });
 
-        // Set initial discount type max constraint
-        if (discountTypeInput?.value === 'percent') {
-            document.getElementById('globalDiscount')?.setAttribute('max', '100');
-        }
-        if (ppnTypeInput?.value === 'percent') {
-            document.getElementById('ppnInput')?.setAttribute('max', '100');
-        }
+        // Initialize add row button within this context
+        initAddRowButton(ctx);
+        
+        // Initialize header events (PPN, discount inputs)
+        initHeaderEvents(ctx);
+        
+        // Initialize payment method handler
+        initPaymentHandlers(ctx);
 
-        updateRemoveButtons();
-        syncPaymentStatus();
-        initManualPriceHandlers();
-        calculateGrandTotal();
+        updateRemoveButtons(ctx);
+        syncPaymentStatus(ctx);
+        initManualPriceHandlers(ctx);
+        calculateGrandTotal(ctx);
     }
 
     function resetPurchaseForm() {
-        const globalDiscount = document.getElementById('globalDiscount');
-        const ppnInput = document.getElementById('ppnInput');
-        const method = document.getElementById('method');
-        const manualGrandTotal = document.getElementById('manualGrandTotal');
-        const manualValueHidden = document.getElementById('manualGrandTotalValue');
-        const resetBtn = document.getElementById('resetManualPrice');
-        const systemInfo = document.getElementById('systemPriceInfo');
-
-        // Reset global inputs
-        const discountTypeInput = document.getElementById('discountTypeInput');
-        const ppnTypeInput = document.getElementById('ppnTypeInput');
+        const ctx = activeFormContext || document;
+        
+        const globalDiscount = findInContext(ctx, 'globalDiscount');
+        const ppnInput = findInContext(ctx, 'ppnInput');
+        const method = findInContext(ctx, 'method');
+        const manualGrandTotal = findInContext(ctx, 'manualGrandTotal');
+        const manualValueHidden = findInContext(ctx, 'manualGrandTotalValue');
+        const resetBtn = findInContext(ctx, 'resetManualPrice');
+        const systemInfo = findInContext(ctx, 'systemPriceInfo');
 
         if (globalDiscount) globalDiscount.value = '';
         if (ppnInput) ppnInput.value = '';
@@ -370,10 +502,10 @@
         window.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { name: 'discount', value: '' } }));
 
         if (method) method.value = '0';
-        syncPaymentStatus();
+        syncPaymentStatus(ctx);
 
         // Rows
-        const container = document.getElementById('rowsContainer');
+        const container = findInContext(ctx, 'rowsContainer');
         const rows = container?.querySelectorAll('.product-row') || [];
         
         // Remove all but first
@@ -411,8 +543,8 @@
         systemInfo?.classList.add('hidden');
 
         rowIndex = 1;
-        calculateGrandTotal();
-        updateRemoveButtons();
+        calculateGrandTotal(ctx);
+        updateRemoveButtons(ctx);
     }
 
     // Export functions to window for modal use

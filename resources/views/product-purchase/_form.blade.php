@@ -321,11 +321,11 @@
 
                 {{-- Manual Price Edit Section --}}
                 <div id="manualPriceSection" class="mt-4 border-t border-gray-200 pt-4 {{ $purchase?->manual_grand_total ? '' : 'hidden' }}">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                        <div class="flex-1">
-                            <label for="manualGrandTotal" class="mb-1 block text-xs font-semibold text-gray-600">
-                                Edit Manual Grand Total:
-                            </label>
+                    <label for="manualGrandTotal" class="mb-1 block text-xs font-semibold text-gray-600">
+                        Edit Manual Grand Total:
+                    </label>
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <div class="relative flex-1">
                             <input type="text" id="manualGrandTotal"
                                 value="{{ $purchase?->manual_grand_total ? number_format($purchase?->manual_grand_total, 0, ',', '.') : '' }}"
                                 class="w-full rounded-md border border-button-hover bg-amber-50 px-3 py-2 shadow-sm focus:border-amber-500 focus:ring-amber-500"
@@ -337,6 +337,9 @@
                             {{ $purchase?->manual_grand_total ? '' : 'disabled' }}>
                             Reset ke Harga Sistem
                         </button>
+                    </div>
+                    <div id="systemPriceInfo" class="mt-1.5 text-xs text-gray-500 hidden">
+                        Harga perhitungan sistem: <span id="systemPriceValue" class="font-semibold text-red-500"></span>
                     </div>
                 </div>
             </div>

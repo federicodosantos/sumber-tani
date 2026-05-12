@@ -20,16 +20,17 @@
                     
                     // Re-init form components
                     $nextTick(() => {
-                        if (window.Alpine) {
-                            window.Alpine.initTree(document.getElementById('edit-modal-body'));
+                        const editModalBody = document.getElementById('edit-modal-body');
+                        if (window.Alpine && editModalBody) {
+                            window.Alpine.initTree(editModalBody);
                         }
                         
-                        // Re-init purchase form logic
-                        if (window.initPurchaseForm) {
+                        // Re-init purchase form logic scoped to the edit modal
+                        if (window.initPurchaseForm && editModalBody) {
                             // Update rowIndex based on loaded rows
-                            const rows = document.querySelectorAll('#edit-modal-body .product-row');
+                            const rows = editModalBody.querySelectorAll('.product-row');
                             if (window.setRowIndex) window.setRowIndex(rows.length);
-                            window.initPurchaseForm();
+                            window.initPurchaseForm(editModalBody);
                         }
                     });
                 })

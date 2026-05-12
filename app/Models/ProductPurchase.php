@@ -59,6 +59,22 @@ class ProductPurchase extends Model
         'is_paid' => 'boolean',
     ];
 
+    public function getManualGrandTotalAttribute()
+    {
+        $subtotal = $this->subtotal ?? 0;
+        $discountValue = $this->discount_value ?? 0;
+        $afterDiscount = $subtotal - $discountValue;
+        $ppnValue = $this->ppn_value ?? 0;
+        $systemGrandTotal = $afterDiscount + $ppnValue;
+
+        // If the saved grand_total differs from the system grand total by more than 1 rupiah, it was manually set
+        if (abs($this->grand_total - $systemGrandTotal) > 1) {
+            return $this->grand_total;
+        }
+
+        return null;
+    }
+
     public function details(): HasMany
     {
         return $this->hasMany(ProductPurchaseDetail::class, 'product_purchase_id');
