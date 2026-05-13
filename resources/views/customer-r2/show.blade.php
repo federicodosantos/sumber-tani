@@ -178,19 +178,66 @@
 
                     {{-- Toggle Switch / Segmented Control --}}
                     <div class="flex items-center gap-1 rounded-xl bg-gray-100 p-1 self-start sm:self-auto">
-                        <a href="{{ route('customer-r2.show', $customer->id) }}"
+                        <a href="{{ route('customer-r2.show', array_merge([$customer->id], request()->only(['date_from', 'date_to']))) }}"
                             class="rounded-lg px-4 py-2 text-[10px] font-bold tracking-wider transition-all cursor-pointer {{ !request('type') ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50' }}">
                             SEMUA
                         </a>
-                        <a href="{{ route('customer-r2.show', [$customer->id, 'type' => 'purchasement']) }}"
+                        <a href="{{ route('customer-r2.show', array_merge([$customer->id, 'type' => 'purchasement'], request()->only(['date_from', 'date_to']))) }}"
                             class="rounded-lg px-4 py-2 text-[10px] font-bold tracking-wider transition-all cursor-pointer {{ request('type') === 'purchasement' ? 'bg-button-main text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50' }}">
                             PEMBELIAN
                         </a>
-                        <a href="{{ route('customer-r2.show', [$customer->id, 'type' => 'debt_payment']) }}"
+                        <a href="{{ route('customer-r2.show', array_merge([$customer->id, 'type' => 'debt_payment'], request()->only(['date_from', 'date_to']))) }}"
                             class="rounded-lg px-4 py-2 text-[10px] font-bold tracking-wider transition-all cursor-pointer {{ request('type') === 'debt_payment' ? 'bg-button-main text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50' }}">
                             PEMBAYARAN
                         </a>
                     </div>
+                </div>
+
+                {{-- Date Filter Form --}}
+                <div class="mb-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                    <form method="GET" action="{{ route('customer-r2.show', $customer->id) }}" class="flex flex-wrap items-end gap-5">
+                        @if(request('type'))
+                            <input type="hidden" name="type" value="{{ request('type') }}">
+                        @endif
+
+                        {{-- From Date --}}
+                        <div class="flex min-w-40 flex-1 flex-col gap-1.5 sm:flex-none">
+                            <label class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Dari Tanggal
+                            </label>
+                            <input type="date" name="date_from" value="{{ request('date_from') }}"
+                                class="w-full rounded-lg border-gray-200 bg-gray-50 px-3 py-2 text-sm transition-all focus:border-button-hover focus:bg-white focus:ring-2 focus:ring-button-main/20">
+                        </div>
+
+                        {{-- To Date --}}
+                        <div class="flex min-w-[160px] flex-1 flex-col gap-1.5 sm:flex-none">
+                            <label class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">
+                                Sampai Tanggal
+                            </label>
+                            <input type="date" name="date_to" value="{{ request('date_to') }}"
+                                class="w-full rounded-lg border-gray-200 bg-gray-50 px-3 py-2 text-sm transition-all focus:border-button-hover focus:bg-white focus:ring-2 focus:ring-button-main/20">
+                        </div>
+
+                        {{-- Action Buttons --}}
+                        <div class="flex items-center gap-2 pt-1">
+                            <button type="submit"
+                                class="inline-flex items-center gap-2 rounded-lg bg-button-main px-5 py-2.5 text-sm font-bold text-gray-800 shadow-sm transition-all hover:bg-button-hover cursor-pointer hover:shadow-md active:scale-95">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                Cari
+                            </button>
+
+                            <a href="{{ route('customer-r2.show', array_merge([$customer->id], request()->only('type'))) }}"
+                                class="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-800 active:scale-95 cursor-pointer"
+                                title="Reset Filter">
+                                Reset
+                            </a>
+                        </div>
+                    </form>
                 </div>
 
                 @if ($invoices->count() > 0)

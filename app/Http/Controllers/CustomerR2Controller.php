@@ -148,12 +148,21 @@ class CustomerR2Controller extends Controller
             $invoicesQuery->where('type', $request->type);
         }
 
-        $invoices = $invoicesQuery->paginate(15, ['*'], 'invoices_page');
+        if ($request->filled('date_from')) {
+            $invoicesQuery->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $invoicesQuery->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $invoices = $invoicesQuery->paginate(15, ['*'], 'invoices_page')->withQueryString();
 
         $debtPayments = $customer->debtPayments()
             ->with(['details.invoice', 'paymentInvoice'])
             ->orderBy('payment_date', 'desc')
-            ->paginate(5, ['*'], 'payments_page');
+            ->paginate(5, ['*'], 'payments_page')
+            ->withQueryString();
 
         return view('customer-r2.show', compact('customer', 'totalDebt', 'invoices', 'debtPayments'));
     }
@@ -176,12 +185,16 @@ class CustomerR2Controller extends Controller
         $validator = Validator::make($request->all(), [
             'amount' => 'required|numeric|min:1',
             'payment_method' => 'required|string|in:Cash,Transfer,QRIS',
+            'payment_date' => 'required|date|before_or_equal:now',
         ], [
             'amount.required' => 'Nominal pembayaran wajib diisi.',
             'amount.numeric' => 'Nominal pembayaran harus berupa angka.',
             'amount.min' => 'Nominal pembayaran minimal Rp 1.',
             'payment_method.required' => 'Metode pembayaran wajib dipilih.',
             'payment_method.in' => 'Metode pembayaran tidak valid.',
+            'payment_date.required' => 'Tanggal pembayaran wajib diisi.',
+            'payment_date.date' => 'Format tanggal pembayaran tidak valid.',
+            'payment_date.before_or_equal' => 'Tanggal pembayaran tidak boleh di masa depan.',
         ]);
 
         if ($validator->fails()) {
@@ -195,6 +208,7 @@ class CustomerR2Controller extends Controller
         $validated = $validator->validated();
         $amount = (float) $validated['amount'];
         $paymentMethod = $validated['payment_method'];
+        $paymentDate = $this->dateWithCurrentTime($validated['payment_date']);
 
         // Check total debt
         $totalDebt = $customer->invoices()
@@ -214,7 +228,7 @@ class CustomerR2Controller extends Controller
         }
 
         try {
-            DB::transaction(function () use ($customer, $amount, $paymentMethod) {
+            DB::transaction(function () use ($customer, $amount, $paymentMethod, $paymentDate) {
                 $originalAmount = $amount;
 
                 // 1. Create receipt invoice (debt_payment type)
@@ -225,6 +239,8 @@ class CustomerR2Controller extends Controller
                     'debts' => 0,
                     'type' => Invoice::TYPE_DEBT_PAYMENT,
                     'inv_code' => $invCode,
+                    'created_at' => $paymentDate,
+                    'updated_at' => $paymentDate,
                 ]);
 
                 // 2. Create debt payment record
@@ -233,7 +249,7 @@ class CustomerR2Controller extends Controller
                     'payment_invoice_id' => $paymentInvoice->id,
                     'amount' => $originalAmount,
                     'payment_method' => $paymentMethod,
-                    'payment_date' => now(),
+                    'payment_date' => $paymentDate,
                 ]);
 
                 // 3. FIFO: get unpaid purchase invoices ordered by oldest first

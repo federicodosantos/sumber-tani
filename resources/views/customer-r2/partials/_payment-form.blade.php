@@ -3,6 +3,8 @@
 <form action="{{ route('customer-r2.process', $customer->id) }}" method="POST"
     x-data="{
         paymentMethod: '{{ old('payment_method', 'Cash') }}',
+        paymentDate: '{{ old('payment_date', now()->format('Y-m-d')) }}',
+        maxDate: '{{ now()->format('Y-m-d') }}',
         maxAmount: {{ (float) $totalDebt }},
         currentAmount: {{ (float) old('amount', 0) }},
         formatRp(n) { return Number(n||0).toLocaleString('id-ID'); },
@@ -20,6 +22,7 @@
         resetToOriginal() {
             this.currentAmount = 0;
             this.paymentMethod = 'Cash';
+            this.paymentDate = '{{ now()->format('Y-m-d') }}';
             this.$dispatch('update-rupiah-value', { name: 'amount', value: '' });
         }
     }"
@@ -28,7 +31,7 @@
     @modal-closed.window="if ($event.detail === 'pay-debt') resetToOriginal()">
     @csrf
 
-    <x-input-rupiah name="amount" label="Nominal Pembayaran" placeholder="0" />
+    <x-input-rupiah name="amount" label="Nominal Pembayaran" placeholder="0" containerClass="mb-6" />
 
     {{-- Real-time client-side validation banner --}}
     <template x-if="exceedsLimit">
@@ -44,9 +47,21 @@
         </div>
     </template>
 
+    {{-- Date Selection --}}
+    <div class="mb-6">
+        <label class="mb-1.5 block text-sm font-semibold text-black">Tanggal Pembayaran</label>
+        <input type="date" name="payment_date" x-model="paymentDate" :max="maxDate"
+            @click="$el.showPicker()"
+            onkeydown="return false"
+            class="block w-full rounded-md border border-gray-300 focus:border-button-hover px-3 py-2 text-sm focus:outline-none transition-all duration-100 font-semibold text-gray-900 bg-white cursor-pointer">
+        @error('payment_date')
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+        @enderror
+    </div>
+
     {{-- Payment Method Selection --}}
     <div class="mb-6">
-        <label class="mb-1.5 block text-xs font-bold text-gray-600">Metode Pembayaran</label>
+        <label class="mb-1.5 block text-sm font-semibold text-black">Metode Pembayaran</label>
         <input type="hidden" name="payment_method" :value="paymentMethod">
         
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
