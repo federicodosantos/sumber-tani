@@ -347,6 +347,7 @@ class FinanceReportController extends Controller
                 'r2_customer'      => $r2Customer ? (object) [
                     'id'   => $r2Customer->id,
                     'name' => $r2Customer->name,
+                    'type' => $r2Customer->type,
                 ] : null,
             ];
         });

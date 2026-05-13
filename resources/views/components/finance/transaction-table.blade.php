@@ -43,13 +43,19 @@
                 <span class="inline-flex items-center rounded bg-amber-100 border border-amber-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700" title="Nota manual (tidak mengurangi stok)">MANUAL</span>
               @endif
               @if (!empty($report->r2_customer))
+                @php
+                    $custType = strtoupper($report->r2_customer->type ?? 'R2');
+                    $badgeClass = strtolower($custType) === 'r1' 
+                        ? 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100' 
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100';
+                @endphp
                 <a href="{{ route('customer-r2.show', $report->r2_customer->id) }}"
-                   class="inline-flex items-center gap-1 rounded bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-blue-700 hover:bg-blue-100 transition-colors"
-                   title="Pelanggan R2: {{ $report->r2_customer->name }}">
+                   class="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider transition-colors {{ $badgeClass }}"
+                   title="Pelanggan {{ $custType }}: {{ $report->r2_customer->name }}">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-2.5 w-2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                   </svg>
-                  R2 — {{ \Illuminate\Support\Str::limit($report->r2_customer->name, 18) }}
+                  {{ $custType }} — {{ \Illuminate\Support\Str::limit($report->r2_customer->name, 18) }}
                 </a>
               @endif
             </div>
