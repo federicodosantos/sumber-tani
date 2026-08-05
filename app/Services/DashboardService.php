@@ -9,6 +9,8 @@ use Exception;
 use App\Models\Transaction;
 use Carbon\Carbon;
 
+use Illuminate\Support\Facades\DB;
+
 class DashboardService
 {
     public function getSummary($user): array
@@ -17,7 +19,22 @@ class DashboardService
             $totalProducts = Product::count();
             $totalStock = ProductStock::sum('stock_opname');
 
-            $fiveLowest = Product::select('products.id', 'products.name', 'ps.stock_opname')->join('product_stocks as ps', 'products.id', '=', 'ps.product_id')->whereNull('products.deleted_at')->whereNull('ps.deleted_at')->orderBy('ps.stock_opname', 'asc')->limit(5)->get();
+            $totalStockSub = DB::table('product_stocks')
+                ->select('product_id', DB::raw('SUM(stock_opname) as total_stock'))
+                ->whereNull('deleted_at')
+                ->groupBy('product_id');
+
+            $fiveLowest = Product::query()
+                ->leftJoinSub($totalStockSub, 'ts', 'ts.product_id', '=', 'products.id')
+                ->select([
+                    'products.id',
+                    'products.name',
+                    DB::raw('COALESCE(ts.total_stock, 0) as stock_opname')
+                ])
+                ->whereNull('products.deleted_at')
+                ->orderBy('stock_opname', 'asc')
+                ->limit(5)
+                ->get();
 
             $totalCategories = ItemCategory::count();
 
