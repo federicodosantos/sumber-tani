@@ -41,7 +41,9 @@ class Invoice extends Model
 
     public function customer()
     {
-        return $this->belongsTo(Customer::class, 'customer_id', 'id');
+        // withTrashed() ensures soft-deleted customers still resolve here,
+        // so finance report rows keep showing the customer name after deletion.
+        return $this->belongsTo(Customer::class, 'customer_id', 'id')->withTrashed();
     }
 
     public function transaction()

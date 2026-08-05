@@ -27,7 +27,11 @@ class CustomerR2Controller extends Controller
         $type = $request->input('type', 'all');
         $type = in_array($type, ['r1', 'r2'], true) ? $type : 'all';
 
-        $query = Customer::query()->ofType($type === 'all' ? null : $type);
+        $query = Customer::query()
+            ->withSum(['invoices as total_debt' => function ($q) {
+                $q->where('type', Invoice::TYPE_PURCHASE);
+            }], 'debts')
+            ->ofType($type === 'all' ? null : $type);
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -800,6 +804,42 @@ class CustomerR2Controller extends Controller
                 ->with('success', 'Pembayaran hutang berhasil dibatalkan dan hutang dipulihkan.');
         } catch (Exception $e) {
             return redirect()->back()->withErrors(['general' => 'Gagal membatalkan pembayaran: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Soft-delete a customer.
+     * Blocked if the customer still has any unpaid invoices (debts > 0).
+     * Historical invoices/transactions are preserved in the database.
+     */
+    public function destroy(Customer $customer)
+    {
+        // Guard: block deletion if any active debt exists
+        $hasActiveDebt = $customer->invoices()
+            ->where('type', Invoice::TYPE_PURCHASE)
+            ->where('debts', '>', 0)
+            ->exists();
+
+        if ($hasActiveDebt) {
+            return redirect()
+                ->back()
+                ->withErrors([
+                    'general' => 'Pelanggan tidak dapat dihapus karena masih memiliki hutang aktif. Lunasi semua hutang terlebih dahulu.',
+                ]);
+        }
+
+        try {
+            $label = strtoupper($customer->type);
+            $name  = $customer->name;
+            $customer->delete(); // soft delete — records in invoices/transactions are preserved
+
+            return redirect()
+                ->route('customer-r2.index')
+                ->with('success', "Pelanggan {$label} \"{$name}\" berhasil dihapus.");
+        } catch (Exception $e) {
+            return redirect()
+                ->back()
+                ->withErrors(['general' => 'Gagal menghapus pelanggan: ' . $e->getMessage()]);
         }
     }
 

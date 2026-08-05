@@ -94,6 +94,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/customer-r2/create', [CustomerR2Controller::class, 'create'])->name('customer-r2.create');
     Route::post('/customer-r2', [CustomerR2Controller::class, 'store'])->name('customer-r2.store');
     Route::put('/customer-r2/{customer}', [CustomerR2Controller::class, 'update'])->name('customer-r2.update');
+    Route::delete('/customer-r2/{customer}', [CustomerR2Controller::class, 'destroy'])->name('customer-r2.destroy');
     Route::get('/customer-r2/{customer}', [CustomerR2Controller::class, 'show'])->name('customer-r2.show');
     Route::get('/customer-r2/{customer}/pay', [CustomerR2Controller::class, 'payDebt'])->name('customer-r2.pay');
     Route::post('/customer-r2/{customer}/pay', [CustomerR2Controller::class, 'processPayment'])->name('customer-r2.process');
