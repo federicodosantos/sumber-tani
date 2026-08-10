@@ -46,6 +46,10 @@
     </div>
 
     @if ($isManualDebt)
+        @php
+            $paidDebtSum = $invoice->debtPaymentDetails?->sum('amount_paid') ?? 0;
+            $originalDebt = $invoice->debts + $paidDebtSum;
+        @endphp
         {{-- ==============================
              MANUAL DEBT CONTENT
              ============================== --}}
@@ -57,9 +61,19 @@
         </div>
 
         <div class="invoice-summary flex justify-end px-6 pb-6">
-            <table class="w-[240px] border-collapse">
+            <table class="w-[280px] border-collapse">
+                <tr>
+                    <td class="p-1 px-2 text-right text-xs text-gray-500">Nominal Hutang</td>
+                    <td class="p-1 px-2 text-right text-xs font-bold text-gray-900">Rp {{ number_format($originalDebt, 0, ',', '.') }}</td>
+                </tr>
+                @if ($paidDebtSum > 0)
+                    <tr>
+                        <td class="p-1 px-2 text-right text-xs text-gray-500">Sudah Dibayar</td>
+                        <td class="p-1 px-2 text-right text-xs font-bold text-green-600">-Rp {{ number_format($paidDebtSum, 0, ',', '.') }}</td>
+                    </tr>
+                @endif
                 <tr class="total-row border-t border-gray-800">
-                    <td class="p-2 px-2 text-right text-xs font-bold text-gray-900 uppercase">TOTAL HUTANG</td>
+                    <td class="p-2 px-2 text-right text-xs font-bold text-gray-900 uppercase">SISA HUTANG</td>
                     <td class="p-2 px-2 text-right text-base font-bold {{ $invoice->debts > 0 ? 'text-red-600' : 'text-green-600' }}">
                         Rp {{ number_format($invoice->debts, 0, ',', '.') }}
                     </td>

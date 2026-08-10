@@ -266,7 +266,7 @@
                                             <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 text-center">Invoice Terlibat</th>
                                         @endif
                                         <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 text-center">Status</th>
-                                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 text-right">Aksi</th>
+                                        <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -276,7 +276,7 @@
                                             $isManualInvoice = $invoice->type === 'purchasement' && $invoice->transaction && $invoice->transaction->is_manual;
                                             $rowTotal = $invoice->type === 'debt_payment'
                                                 ? ($invoice->debtPayment?->amount ?? 0)
-                                                : ($invoice->transaction?->total_price ?? $invoice->debts);
+                                                : ($invoice->transaction?->total_price ?? ($invoice->debts + ($invoice->debtPaymentDetails?->sum('amount_paid') ?? 0)));
                                         @endphp
                                         <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                                             <td class="px-5 py-3.5">

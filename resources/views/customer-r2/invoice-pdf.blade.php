@@ -44,6 +44,8 @@
                 <div class="info-title">
                     @if ($invoice->type === 'debt_payment')
                         BUKTI PEMBAYARAN HUTANG
+                    @elseif ($invoice->type === 'purchasement' && !$invoice->transaction)
+                        PENCATATAN HUTANG
                     @else
                         NOTA PENJUALAN
                     @endif
@@ -96,6 +98,32 @@
             <tr class="total-row">
                 <td style="text-transform: uppercase;">Total Bayar</td>
                 <td style="color: #16a34a;">Rp {{ number_format($debtPayment?->amount ?? 0, 0, ',', '.') }}</td>
+            </tr>
+        </table>
+    @elseif ($invoice->type === 'purchasement' && !$invoice->transaction)
+        @php
+            $paidDebtSum = $invoice->debtPaymentDetails?->sum('amount_paid') ?? 0;
+            $originalDebt = $invoice->debts + $paidDebtSum;
+        @endphp
+        <div style="margin-bottom: 20px; padding: 10px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px;">
+            <div style="font-size: 10px; font-weight: bold; color: #666; text-transform: uppercase; margin-bottom: 4px;">Keterangan</div>
+            <div style="font-size: 12px; color: #333; white-space: pre-wrap;">{{ $invoice->note ?: '(tanpa keterangan)' }}</div>
+        </div>
+
+        <table class="total-table">
+            <tr>
+                <td>Nominal Hutang</td>
+                <td>Rp {{ number_format($originalDebt, 0, ',', '.') }}</td>
+            </tr>
+            @if ($paidDebtSum > 0)
+                <tr>
+                    <td>Sudah Dibayar</td>
+                    <td style="color: #16a34a;">-Rp {{ number_format($paidDebtSum, 0, ',', '.') }}</td>
+                </tr>
+            @endif
+            <tr class="total-row">
+                <td style="text-transform: uppercase;">Sisa Hutang</td>
+                <td style="{{ $invoice->debts > 0 ? 'color: #dc2626;' : 'color: #16a34a;' }}">Rp {{ number_format($invoice->debts, 0, ',', '.') }}</td>
             </tr>
         </table>
     @else
