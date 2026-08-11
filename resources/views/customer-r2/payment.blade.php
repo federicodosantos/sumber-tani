@@ -30,12 +30,22 @@
                             <p class="mt-0.5 text-xl font-bold text-red-600">
                                 Rp {{ number_format($totalDebt, 0, ',', '.') }}
                             </p>
+                            @if (($creditBalance ?? 0) > 0)
+                                <p class="mt-1 text-xs font-medium text-green-600">
+                                    Sisa Saldo: Rp {{ number_format($creditBalance, 0, ',', '.') }}
+                                </p>
+                            @endif
                         </div>
                     </div>
                 </div>
 
                 {{-- Payment Form --}}
-                @include('customer-r2.partials._payment-form', ['customer' => $customer, 'totalDebt' => $totalDebt, 'isModal' => false])
+                @include('customer-r2.partials._payment-form', [
+                    'customer'      => $customer,
+                    'totalDebt'     => $totalDebt,
+                    'creditBalance' => $creditBalance ?? 0,
+                    'isModal'       => false,
+                ])
             </div>
 
         </div>

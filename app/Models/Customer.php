@@ -14,7 +14,7 @@ class Customer extends Model
 
     protected $table = 'customers';
 
-    protected $fillable = ['name', 'type', 'phone_number', 'address'];
+    protected $fillable = ['name', 'type', 'phone_number', 'address', 'credit_balance'];
 
     public function scopeOfType($query, ?string $type)
     {

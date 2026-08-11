@@ -8,7 +8,7 @@ class DebtPayment extends Model
 {
     protected $table = 'debt_payments';
 
-    protected $fillable = ['customer_id', 'payment_invoice_id', 'amount', 'payment_method', 'payment_date'];
+    protected $fillable = ['customer_id', 'payment_invoice_id', 'amount', 'payment_method', 'payment_date', 'credit_amount', 'refund_amount', 'credit_used'];
 
     protected $casts = [
         'payment_date' => 'datetime',

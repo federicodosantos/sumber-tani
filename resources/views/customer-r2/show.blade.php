@@ -140,23 +140,44 @@
                     </div>
 
                     {{-- Debt Summary --}}
-                    <div class="rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 sm:min-w-[220px]">
-                        <p class="text-xs font-medium uppercase tracking-wider text-gray-500">Total Hutang</p>
-                        <p class="mt-1 text-2xl font-bold {{ $totalDebt > 0 ? 'text-red-600' : 'text-green-600' }}">
-                            Rp {{ number_format($totalDebt, 0, ',', '.') }}
-                        </p>
-                        <p class="mt-1 text-xs text-gray-400">{{ $customer->invoices->count() }} invoice</p>
+                    <div class="flex flex-col sm:flex-row gap-3 sm:min-w-[300px]">
+                        {{-- Total Hutang Card --}}
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 flex-1">
+                            <p class="text-xs font-medium uppercase tracking-wider text-gray-500">Total Hutang</p>
+                            <p class="mt-1 text-2xl font-bold {{ $totalDebt > 0 ? 'text-red-600' : 'text-green-600' }}">
+                                Rp {{ number_format($totalDebt, 0, ',', '.') }}
+                            </p>
+                            <p class="mt-1 text-xs text-gray-400">{{ $customer->invoices->count() }} invoice</p>
 
-                        @if ($totalDebt > 0)
-                            <button @click="$dispatch('open-modal', 'pay-debt')"
-                                class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-button-main px-4 py-3 text-xs font-bold text-gray-800 transition-colors hover:bg-button-hover cursor-pointer shadow-sm active:scale-[0.98]">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
-                                </svg>
-                                BAYAR HUTANG
-                            </button>
+                            @if ($totalDebt > 0)
+                                <button @click="$dispatch('open-modal', 'pay-debt')"
+                                    class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-button-main px-4 py-3 text-xs font-bold text-gray-800 transition-colors hover:bg-button-hover cursor-pointer shadow-sm active:scale-[0.98]">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+                                    </svg>
+                                    BAYAR HUTANG
+                                </button>
+                            @endif
+                        </div>
+
+                        {{-- Sisa Saldo (Credit Balance) Card — only shown when credit > 0 --}}
+                        @if ($creditBalance > 0)
+                            <div class="rounded-xl border border-green-200 bg-green-50 px-5 py-4 flex-1">
+                                <p class="text-xs font-medium uppercase tracking-wider text-green-600">Sisa Saldo</p>
+                                <p class="mt-1 text-2xl font-bold text-green-700">
+                                    Rp {{ number_format($creditBalance, 0, ',', '.') }}
+                                </p>
+                                <p class="mt-1 text-xs text-green-500">Kredit tersedia</p>
+                                @if ($totalDebt > 0)
+                                    <p class="mt-3 text-[10px] text-green-600 leading-relaxed">
+                                        Gunakan saldo ini melalui tombol <strong>Bayar Hutang</strong>.
+                                    </p>
+                                @else
+                                    <p class="mt-3 text-[10px] text-green-600 italic">Gunakan saat ada hutang baru</p>
+                                @endif
+                            </div>
                         @endif
                     </div>
                 </div>
@@ -1102,7 +1123,12 @@
                 </div>
             </div>
 
-            @include('customer-r2.partials._payment-form', ['customer' => $customer, 'totalDebt' => $totalDebt, 'isModal' => true])
+            @include('customer-r2.partials._payment-form', [
+                'customer'      => $customer,
+                'totalDebt'     => $totalDebt,
+                'creditBalance' => $creditBalance,
+                'isModal'       => true,
+            ])
         </div>
     </x-modal>
     @if(auth()->check() && auth()->user()->isOwner())
