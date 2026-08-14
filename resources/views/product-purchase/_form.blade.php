@@ -77,6 +77,7 @@
                                     id="ppnInputNominal"
                                     class="w-full"
                                     placeholder="0"
+                                    decimals="3"
                                     :value="old('ppn_type', $purchase?->ppn_type) == 'nominal' ? old('ppn', $purchase?->ppn_value ?? '') : ''" 
                                     x-bind:disabled="type !== 'nominal'" />
                             </div>
@@ -125,6 +126,7 @@
                                     id="globalDiscountNominal"
                                     class="w-full"
                                     placeholder="0"
+                                    decimals="3"
                                     :value="old('discount_type', $purchase?->discount_type) == 'nominal' ? old('discount', $purchase?->discount_value ?? '') : ''" 
                                     x-bind:disabled="type !== 'nominal'" />
                             </div>
@@ -197,10 +199,11 @@
 
                         <div class="min-w-0">
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Jumlah</label>
-                            <input type="number" name="products[{{ $i }}][quantity]"
-                                value="{{ old('products.' . $i . '.quantity', $detail?->quantity ?? 1) }}"
+                            <input type="text" name="products[{{ $i }}][quantity]"
+                                value="{{ old('products.' . $i . '.quantity', $detail?->quantity ? rtrim(rtrim(number_format($detail->quantity, 3, ',', ''), '0'), ',') : '1') }}"
                                 class="quantity-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-sm"
-                                placeholder="10" required min="1">
+                                placeholder="1" required
+                                @keydown="const k=$event.key; const nav=['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End','Enter']; const ok=/[0-9]/.test(k)||nav.includes(k)||$event.ctrlKey||$event.metaKey||(k===','&&!$el.value.includes(',')); if(!ok) $event.preventDefault();">
                         </div>
 
                         <div class="min-w-0">
@@ -218,6 +221,7 @@
                                 id="products_{{ $i }}_het_price"
                                 class="w-full"
                                 placeholder="0"
+                                decimals="3"
                                 :value="old('products.' . $i . '.het_price', $detail?->het_price ?? '')"
                                 required />
                         </div>
@@ -229,6 +233,7 @@
                                 id="products_{{ $i }}_basic_discount"
                                 class="w-full"
                                 placeholder="0"
+                                decimals="3"
                                 :value="old('products.' . $i . '.basic_discount', $detail?->basic_discount ?? '')" />
                         </div>
 
@@ -239,6 +244,7 @@
                                 id="products_{{ $i }}_additional_discount"
                                 class="w-full"
                                 placeholder="0"
+                                decimals="3"
                                 :value="old('products.' . $i . '.additional_discount', $detail?->additional_discount ?? '')" />
                         </div>
 
@@ -249,6 +255,7 @@
                                 id="products_{{ $i }}_net_price"
                                 class="w-full"
                                 placeholder="0"
+                                decimals="3"
                                 :value="old('products.' . $i . '.net_price', $detail?->net_price ?? '')"
                                 readonly />
                         </div>
@@ -260,6 +267,7 @@
                                 id="products_{{ $i }}_subtotal"
                                 class="w-full"
                                 placeholder="0"
+                                decimals="3"
                                 :value="$detail?->subtotal ?? ''"
                                 readonly />
                         </div>

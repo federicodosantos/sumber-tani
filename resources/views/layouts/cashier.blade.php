@@ -326,10 +326,11 @@
                                     −
                                 </button>
 
-                                <input type="number" :value="item.qty"
+                                <input type="text"
+                                    :value="String(item.qty).replace('.', ',')"
                                     @input="setQty(item.id, $event.target.value)" @blur="handleQtyBlur(item.id, $event)"
-                                    min="1" :max="item.stock"
-                                    class="h-8 w-12 rounded-lg border border-gray-200 bg-white text-center text-sm font-bold tabular-nums text-gray-900 focus:border-button-main focus:outline-none focus:ring-2 focus:ring-button-main/20 cart-qty-input">
+                                    @keydown="const k=$event.key; const nav=['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End','Enter']; const ok=/[0-9]/.test(k)||nav.includes(k)||$event.ctrlKey||$event.metaKey||(k===','&&!$el.value.includes(',')); if(!ok) $event.preventDefault();"
+                                    class="h-8 w-14 rounded-lg border border-gray-200 bg-white text-center text-sm font-bold tabular-nums text-gray-900 focus:border-button-main focus:outline-none focus:ring-2 focus:ring-button-main/20 cart-qty-input">
 
                                 <button @click="updateQty(item.id, 1)" type="button"
                                     class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-base font-bold text-gray-700 transition-all hover:bg-button-main hover:text-white active:scale-95 cursor-pointer">
@@ -557,7 +558,7 @@
                                 <div class="flex flex-col">
                                     <p class="text-xs font-semibold uppercase tracking-wider text-gray-700 opacity-70">Total
                                         Item</p>
-                                    <p class="font-bold text-gray-900"><span x-text="totalQty"></span> Pcs</p>
+                                    <p class="font-bold text-gray-900"><span x-text="totalQty"></span></p>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-xs font-semibold uppercase tracking-wider text-gray-700 opacity-70">

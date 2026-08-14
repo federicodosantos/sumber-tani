@@ -285,7 +285,7 @@
 
                                                     {{-- Row 2: Harga HPP (Unit Price) --}}
                                                     <x-input-rupiah label="Harga HPP (Unit Price)" name="unit_price"
-                                                        placeholder="0" containerClass="" />
+                                                        placeholder="0" containerClass="" decimals="3" />
 
                                                     {{-- Row 2: Jumlah Stok --}}
                                                     <x-content.form-input label="Jumlah Stok" name="stock_opname"
@@ -293,15 +293,15 @@
 
                                                     {{-- Row 3: Harga Konsumen --}}
                                                     <x-input-rupiah label="Harga Produk per Satuan (Konsumen)" name="price_consument"
-                                                        placeholder="0" containerClass="" required />
+                                                        placeholder="0" containerClass="" required decimals="3" />
 
                                                     {{-- Row 3: Harga R1 --}}
                                                     <x-input-rupiah label="Harga Produk per Satuan (R1)" name="price_r1"
-                                                        placeholder="0" containerClass="" required />
+                                                        placeholder="0" containerClass="" required decimals="3" />
 
                                                     {{-- Row 4: Harga R2 --}}
                                                     <x-input-rupiah label="Harga Produk per Satuan (R2)" name="price_r2"
-                                                        placeholder="0" containerClass="" required />
+                                                        placeholder="0" containerClass="" required decimals="3" />
 
                                                     {{-- Row 4: Tanggal Kadaluarsa --}}
                                                     <div>
@@ -430,7 +430,7 @@
                                                         {{-- Harga HPP --}}
                                                         <x-input-rupiah label="Harga HPP (Unit Price)" name="unit_price"
                                                             :value="$latestStock->unit_price ?? 0"
-                                                            placeholder="0" containerClass="" />
+                                                            placeholder="0" containerClass="" decimals="3" />
 
                                                         {{-- Jumlah Stok --}}
                                                         <x-content.form-input label="Jumlah Stok" name="stock_opname"
@@ -439,17 +439,17 @@
                                                         {{-- Harga Konsumen --}}
                                                         <x-input-rupiah label="Harga Produk per Satuan (Konsumen)" name="price_consument"
                                                             :value="$latestStock->price_consument ?? 0"
-                                                            placeholder="0" containerClass="" required />
+                                                            placeholder="0" containerClass="" required decimals="3" />
 
                                                         {{-- Harga R1 --}}
                                                         <x-input-rupiah label="Harga Produk per Satuan (R1)" name="price_r1"
                                                             :value="$latestStock->price_r1 ?? 0"
-                                                            placeholder="0" containerClass="" required />
+                                                            placeholder="0" containerClass="" required decimals="3" />
 
                                                         {{-- Harga R2 --}}
                                                         <x-input-rupiah label="Harga Produk per Satuan (R2)" name="price_r2"
                                                             :value="$latestStock->price_r2 ?? 0"
-                                                            placeholder="0" containerClass="" required />
+                                                            placeholder="0" containerClass="" required decimals="3" />
 
                                                         {{-- Tanggal Kadaluarsa --}}
                                                         <div>

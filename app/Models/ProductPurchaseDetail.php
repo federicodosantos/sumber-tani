@@ -24,12 +24,13 @@ class ProductPurchaseDetail extends Model
     ];
 
     protected $casts = [
-        'het_price' => 'decimal:2',
-        'basic_discount' => 'decimal:2',
-        'additional_discount' => 'decimal:2',
-        'net_price' => 'decimal:2',
-        'price' => 'decimal:2',
-        'subtotal' => 'decimal:2',
+        'quantity'            => 'decimal:3',
+        'het_price'           => 'decimal:3',
+        'basic_discount'      => 'decimal:3',
+        'additional_discount' => 'decimal:3',
+        'net_price'           => 'decimal:3',
+        'price'               => 'decimal:3',
+        'subtotal'            => 'decimal:3',
     ];
 
     public function purchase(): BelongsTo

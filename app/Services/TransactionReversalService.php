@@ -74,7 +74,7 @@ class TransactionReversalService
             foreach ($payload['items'] as $item) {
                 $stock = ProductStock::where('product_id', $item['id'])
                     ->whereNull('deleted_at')
-                    ->where('stock_opname', '>=', (int) $item['qty'])
+                    ->where('stock_opname', '>=', (float) $item['qty'])
                     ->orderBy('created_at', 'asc')
                     ->first();
 
@@ -240,7 +240,7 @@ class TransactionReversalService
             'items' => $transaction->transactionDetails->map(fn($d) => [
                 'product_id' => $d->product_id,
                 'product_stock_id' => $d->product_stock_id,
-                'quantity' => (int) $d->quantity,
+                'quantity' => (float) $d->quantity,
                 'product_price' => (float) $d->product_price,
                 'buying_price' => (float) $d->buying_price,
                 'total_price' => (float) $d->total_price,

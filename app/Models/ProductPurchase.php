@@ -49,14 +49,15 @@ class ProductPurchase extends Model
 
     protected $casts = [
         'purchase_date' => 'date',
-        'subtotal' => 'decimal:2',
+        'total_items'   => 'decimal:3',
+        'subtotal'      => 'decimal:3',
         'discount_percent' => 'decimal:3',
-        'discount_value' => 'decimal:2',
-        'ppn_type' => 'string',
-        'ppn_percent' => 'decimal:3',
-        'ppn_value' => 'decimal:2',
-        'grand_total' => 'decimal:2',
-        'is_paid' => 'boolean',
+        'discount_value'   => 'decimal:3',
+        'ppn_type'      => 'string',
+        'ppn_percent'   => 'decimal:3',
+        'ppn_value'     => 'decimal:3',
+        'grand_total'   => 'decimal:3',
+        'is_paid'       => 'boolean',
     ];
 
     public function getManualGrandTotalAttribute()

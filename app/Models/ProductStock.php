@@ -31,7 +31,12 @@ class ProductStock extends Model
     protected $dates = ['deleted_at'];
 
     protected $casts = [
-        'expired_date' => 'date',
+        'stock_opname'    => 'decimal:3',
+        'unit_price'      => 'decimal:3',
+        'price_consument' => 'decimal:3',
+        'price_r1'        => 'decimal:3',
+        'price_r2'        => 'decimal:3',
+        'expired_date'    => 'date',
     ];
 
     public function product()

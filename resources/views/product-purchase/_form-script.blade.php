@@ -13,14 +13,22 @@
        UTIL
     ========================= */
     function formatCurrency(num) {
-        return new Intl.NumberFormat('id-ID').format(Math.round(num));
+        // Truncate to max 3 decimal places WITHOUT rounding
+        // e.g. 36750.3756 -> "36.750,375"  36750.375 -> "36.750,375"  36750.5 -> "36.750,5"  36750 -> "36.750"
+        num = Math.trunc(num * 1000) / 1000;
+        return new Intl.NumberFormat('id-ID', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3
+        }).format(num);
     }
 
     function parseCurrency(str) {
-        if (!str) return 0;
-        return parseFloat(
-            str.toString().replace(/[^0-9,-]/g, '').replace(',', '.')
-        ) || 0;
+        if (!str && str !== 0) return 0;
+        let s = str.toString().trim();
+        // Format ID: titik = pemisah ribuan, koma = desimal
+        // Hapus semua titik (ribuan), ganti koma jadi titik (desimal)
+        s = s.replace(/\./g, '').replace(',', '.');
+        return parseFloat(s) || 0;
     }
 
     /**
@@ -81,7 +89,7 @@
         const het = parseFloat(hetInput?.value) || 0;
         const basicDisc = parseFloat(basicDiscInput?.value) || 0;
         const addDisc = parseFloat(addDiscInput?.value) || 0;
-        const qty = parseFloat(quantityInput?.value) || 0;
+        const qty = parseFloat((quantityInput?.value || '').replace(',', '.')) || 0;
 
         const netPrice = het - basicDisc - addDisc;
         const subtotal = netPrice * qty;
@@ -122,11 +130,11 @@
 
         const discountInputEl = discountType === 'percent' 
             ? findInContext(ctx, 'globalDiscount') 
-            : findInContext(ctx, 'globalDiscountNominal_value');
+            : findInContext(ctx, 'discount_display');
         
         const ppnInputEl = ppnType === 'percent' 
             ? findInContext(ctx, 'ppnInput') 
-            : findInContext(ctx, 'ppnInputNominal_value');
+            : findInContext(ctx, 'ppn_display');
 
         const discountInputValue = parseCurrency(discountInputEl?.value);
         const ppnInputValue = parseCurrency(ppnInputEl?.value);
@@ -217,12 +225,33 @@
         const grandDisplay = findInContext(ctx, 'grandTotalDisplay');
         const manualValueHidden = findInContext(ctx, 'manualGrandTotalValue');
 
+        // Hanya izinkan: angka, koma (maks 1), Backspace, Delete, navigasi
+        manualInput?.addEventListener('keydown', function(e) {
+            const k = e.key;
+            const nav = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'];
+            const ok = /[0-9]/.test(k) || nav.includes(k) || e.ctrlKey || e.metaKey 
+                       || (k === ',' && !this.value.includes(','));
+            if (!ok) e.preventDefault();
+        });
+
         manualInput?.addEventListener('input', function(e) {
             let value = e.target.value;
+
+            // Jika user masih mengetik desimal (trailing comma), biarkan dulu
+            if (value.endsWith(',')) {
+                const rawSoFar = parseCurrency(value.slice(0, -1));
+                manualValueHidden.value = rawSoFar || '';
+                return;
+            }
+
             const numericValue = parseCurrency(value);
 
             if (numericValue > 0) {
-                e.target.value = formatCurrency(numericValue);
+                // Reformatkan tapi jangan hapus bagian desimal yang sedang diketik
+                const parts = value.split(',');
+                const intPart = parseInt((parts[0] || '0').replace(/\./g, ''), 10);
+                const intFormatted = intPart.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                e.target.value = parts[1] !== undefined ? intFormatted + ',' + parts[1] : intFormatted;
 
                 isManualPriceActive = true;
                 resetBtn.disabled = false;

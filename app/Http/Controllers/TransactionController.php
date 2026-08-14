@@ -190,7 +190,7 @@ class TransactionController extends Controller
             return [
                 'name' => $detail->product?->name ?? 'Unknown',
                 'price' => (float) $detail->product_price,
-                'qty' => (int) $detail->quantity,
+                'qty' => (float) $detail->quantity,
                 'total' => (float) $detail->total_price,
             ];
         });
@@ -206,7 +206,7 @@ class TransactionController extends Controller
             'transaction' => [
                 'id' => $transaction->id,
                 'datetime' => $transaction->created_at->translatedFormat('d M Y H:i'),
-                'total_qty' => (int) $transaction->total_quantity,
+                'total_qty' => (float) $transaction->total_quantity,
                 'discount' => (float) $transaction->discount,
                 'total' => (float) $transaction->total_price,
                 'payment_method' => $transaction->payment_method,

@@ -765,8 +765,8 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             if (!product) return;
 
             const maxAllowed = this.getVisualStock(product) + item.qty;
-            let newQty = parseInt(value, 10) || 0;
-            if (newQty <= 0) newQty = 1;
+            let newQty = parseFloat(String(value).replace(',', '.')) || 0;
+            if (newQty <= 0) newQty = 0.001;
 
             if (newQty > maxAllowed) {
                 alert(`Stok tidak mencukupi! Max: ${maxAllowed}`);
@@ -782,9 +782,9 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             const item = this.cart.find(cartItem => cartItem.id === id);
             if (!item) return;
 
-            if (!value || parseInt(value, 10) <= 0) {
+            if (!value || parseFloat(String(value).replace(',', '.')) <= 0) {
                 event.target.value = item.qty;
-                alert('Jumlah minimal adalah 1');
+                alert('Jumlah minimal adalah 0.001');
                 return;
             }
 

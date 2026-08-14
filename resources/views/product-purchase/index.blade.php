@@ -52,7 +52,7 @@
             </div>
 
             <x-modal name="create-purchase" title="TAMBAH PEMBELIAN PRODUK" maxWidth="full" 
-                x-init="if ($errors->any()) $dispatch('open-modal', 'create-purchase')">
+                x-init="{{ $errors->any() ? '$dispatch(\'open-modal\', \'create-purchase\')' : '' }}">
                 <div class="">
                     @include('product-purchase._form', [
                         'action' => route('purchase.store'), 
@@ -185,7 +185,7 @@
                                 {{ $purchase->purchase_date->translatedFormat('l, d M Y') }}
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
-                                {{ $purchase->total_items }}
+                            {{ rtrim(rtrim(number_format((float)$purchase->total_items, 3, ',', ''), '0'), ',') }}
                             </td>
                             <td class="max-w-sm px-6 py-4 text-sm text-gray-600">
                                 <span class="line-clamp-2">
@@ -194,17 +194,25 @@
                             </td>
                             <td class="max-w-sm px-6 py-4 text-sm text-gray-600">
                                 <span class="line-clamp-2">
-                                    {{ rtrim(rtrim(number_format($purchase->discount_percent, 3), '0'), '.') }}%
+                                    @if ($purchase->discount_type === 'nominal')
+                                        Rp {{ rtrim(rtrim(number_format((float) $purchase->discount_value, 3, ',', '.'), '0'), ',') }}
+                                    @else
+                                        {{ rtrim(rtrim(number_format($purchase->discount_percent, 3), '0'), '.') }}%
+                                    @endif
                                 </span>
                             </td>
                             <td class="max-w-sm px-6 py-4 text-sm text-gray-600">
                                 <span class="line-clamp-2">
-                                    {{ rtrim(rtrim(number_format($purchase->ppn_percent, 3), '0'), '.') }}%
+                                    @if ($purchase->ppn_type === 'nominal')
+                                        Rp {{ rtrim(rtrim(number_format((float) $purchase->ppn_value, 3, ',', '.'), '0'), ',') }}
+                                    @else
+                                        {{ rtrim(rtrim(number_format($purchase->ppn_percent, 3), '0'), '.') }}%
+                                    @endif
                                 </span>
                             </td>
                             <td class="max-w-sm px-6 py-4 text-sm text-gray-600">
                                 <span class="line-clamp-2">
-                                    Rp {{ number_format($purchase->grand_total, 0, ',', '.') }}
+                            Rp {{ rtrim(rtrim(number_format((float)$purchase->grand_total, 3, ',', '.'), '0'), ',') }}
                                 </span>
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm">

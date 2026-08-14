@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ItemCategory;
 use App\Services\ProductStockService;
 use Illuminate\Support\Facades\DB;
+ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 
 class ProductPurchaseController extends Controller
@@ -95,7 +96,8 @@ class ProductPurchaseController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $data = $this->prepareRequestData($request);
+        $validated = Validator::make($data, [
             'purchase_date'      => ['required', 'date'],
             'ppn'                => ['nullable', 'numeric', 'min:0'],
             'ppn_type'           => ['required', 'in:percent,nominal'],
@@ -108,9 +110,9 @@ class ProductPurchaseController extends Controller
             'products.*.het_price'   => ['required'],
             'products.*.basic_discount' => ['nullable'],
             'products.*.additional_discount' => ['nullable'],
-            'products.*.quantity'    => ['required', 'integer', 'min:1'],
+            'products.*.quantity'    => ['required', 'numeric', 'min:0.001'],
             'products.*.unit'        => ['required', 'string', 'max:50'],
-        ]);
+        ])->validate();
 
         $paymentMethod = (int) $validated['method'] === 0 ? 'cash' : 'credit';
         $isPaid = $paymentMethod === 'cash' ? true : $request->boolean('isPaid');
@@ -122,7 +124,7 @@ class ProductPurchaseController extends Controller
             $het = $this->parseNumber($item['het_price']);
             $basicDisc = $this->parseNumber($item['basic_discount'] ?? '0');
             $addDisc = $this->parseNumber($item['additional_discount'] ?? '0');
-            $qty = (int) $item['quantity'];
+            $qty = (float) str_replace(',', '.', (string) $item['quantity']);
 
             $netPrice = $het - $basicDisc - $addDisc;
             $subtotal = $netPrice * $qty;
@@ -143,7 +145,7 @@ class ProductPurchaseController extends Controller
         });
 
         $subtotal = $items->sum('subtotal');
-
+        
         // Hitung diskon berdasarkan tipe
         $discountInput = (float) ($validated['discount'] ?? 0);
         if ($discountType === 'percent') {
@@ -224,7 +226,8 @@ class ProductPurchaseController extends Controller
      */
     public function update(Request $request, ProductPurchase $purchase)
     {
-        $validated = $request->validate([
+        $data = $this->prepareRequestData($request);
+        $validated = Validator::make($data, [
             'purchase_date'      => ['required', 'date'],
             'ppn'                => ['nullable', 'numeric', 'min:0'],
             'ppn_type'           => ['required', 'in:percent,nominal'],
@@ -237,9 +240,9 @@ class ProductPurchaseController extends Controller
             'products.*.het_price'   => ['required'],
             'products.*.basic_discount' => ['nullable'],
             'products.*.additional_discount' => ['nullable'],
-            'products.*.quantity'    => ['required', 'integer', 'min:1'],
+            'products.*.quantity'    => ['required', 'numeric', 'min:0.001'],
             'products.*.unit'        => ['required', 'string'],
-        ]);
+        ])->validate();
 
         $paymentMethod = (int) $validated['method'] === 0 ? 'cash' : 'credit';
         $isPaid = $paymentMethod === 'cash' ? true : $request->boolean('isPaid');
@@ -251,7 +254,7 @@ class ProductPurchaseController extends Controller
             $het = $this->parseNumber($item['het_price']);
             $basicDisc = $this->parseNumber($item['basic_discount'] ?? '0');
             $addDisc = $this->parseNumber($item['additional_discount'] ?? '0');
-            $qty = (int) $item['quantity'];
+            $qty = (float) str_replace(',', '.', (string) $item['quantity']);
 
             $netPrice = $het - $basicDisc - $addDisc;
             $subtotal = $netPrice * $qty;
@@ -330,12 +333,53 @@ class ProductPurchaseController extends Controller
         return redirect()->route('purchase.index')->with('success', 'Pembelian berhasil dihapus.');
     }
 
+    /**
+     * Normalisasi input request sebelum validasi:
+     * Konversi koma desimal (format Indonesia) ke titik agar lolos validasi 'numeric' Laravel.
+     * Contoh: "1,5" → "1.5", "25.000,50" tidak berlaku (rupiah di-parse terpisah)
+     */
+    private function prepareRequestData(Request $request): array
+    {
+        $data = $request->all();
+
+        if (isset($data['products']) && is_array($data['products'])) {
+            foreach ($data['products'] as $i => $item) {
+                if (isset($item['quantity'])) {
+                    $data['products'][$i]['quantity'] = str_replace(',', '.', (string) $item['quantity']);
+                }
+            }
+        }
+
+        foreach (['ppn', 'discount', 'manual_grand_total'] as $field) {
+            if (isset($data[$field]) && $data[$field] !== '') {
+                $data[$field] = str_replace(',', '.', (string) $data[$field]);
+            }
+        }
+
+        return $data;
+    }
+
     private function parseNumber(string $value): float
     {
-        $clean = preg_replace('/[^0-9,.,-]/', '', $value);
-        $clean = str_replace('.', '', $clean);
-        $clean = str_replace(',', '.', $clean);
+        $value = trim($value);
+
+        if (str_contains($value, ',')) {
+            // Format tampilan Indonesia: "25.000,50" — titik = ribuan, koma = desimal
+            $clean = str_replace('.', '', $value);   // hapus pemisah ribuan
+            $clean = str_replace(',', '.', $clean);  // koma desimal → titik
+        } else {
+            // Format raw dari hidden input: "25000.50" — titik = desimal
+            // Bersihkan karakter selain angka dan titik
+            $clean = preg_replace('/[^0-9.]/', '', $value);
+            // Pastikan hanya ada satu titik desimal
+            $parts = explode('.', $clean);
+            if (count($parts) > 2) {
+                // Jika ada lebih dari satu titik, satukan bagian belakangnya
+                $clean = $parts[0] . '.' . implode('', array_slice($parts, 1));
+            }
+        }
 
         return (float) $clean;
     }
 }
+

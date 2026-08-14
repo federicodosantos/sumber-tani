@@ -70,7 +70,7 @@
                     <div class="contents">
                         {{-- Row 2: Harga HPP --}}
                         <x-input-rupiah label="Harga HPP (Unit Price)" name="unit_price"
-                            containerClass="" placeholder="0" disabled readonly />
+                            containerClass="" placeholder="0" disabled readonly decimals="3" />
 
                         {{-- Row 2: Jumlah Stok --}}
                         <x-content.form-input label="Jumlah Stok" name="stock_opname"
@@ -78,15 +78,15 @@
 
                         {{-- Row 3: Harga Konsumen --}}
                         <x-input-rupiah label="Harga Produk per Satuan (Konsumen)" name="price_consument"
-                            placeholder="0" containerClass="" required />
+                            placeholder="0" containerClass="" required decimals="3" />
 
                         {{-- Row 3: Harga R1 --}}
                         <x-input-rupiah label="Harga Produk per Satuan (R1)" name="price_r1"
-                            placeholder="0" containerClass="" required />
+                            placeholder="0" containerClass="" required decimals="3" />
 
                         {{-- Row 4: Harga R2 --}}
                         <x-input-rupiah label="Harga Produk per Satuan (R2)" name="price_r2"
-                            placeholder="0" containerClass="" required />
+                            placeholder="0" containerClass="" required decimals="3" />
 
                         {{-- Row 4: Tanggal Kadaluarsa --}}
                         <div x-data="expiryHandler()">
