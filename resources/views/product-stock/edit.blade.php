@@ -50,13 +50,16 @@
                     </div>
 
                     {{-- Row 2: Harga HPP (Disabled) --}}
-                    <x-input-rupiah label="Harga HPP (Unit Price)" name="unit_price"
+                    {{-- Hidden input ensures unit_price is submitted even though display field is disabled --}}
+                    <input type="hidden" name="unit_price" value="{{ old('unit_price', $activeStock->unit_price) }}">
+                    <x-input-rupiah label="Harga HPP (Unit Price)"
                         :value="old('unit_price', $activeStock->unit_price)" 
                         containerClass="" placeholder="0" disabled readonly decimals="3" />
 
                     {{-- Row 2: Jumlah Stok --}}
-                    <x-content.form-input label="Jumlah Stok" name="stock_opname" type="number"
-                        placeholder="0" :value="old('stock_opname', $activeStock->stock_opname)" required />
+                    <x-input-rupiah label="Jumlah Stok" name="stock_opname"
+                        :value="old('stock_opname', $activeStock->stock_opname)"
+                        placeholder="0" containerClass="" required decimals="3" />
 
                     {{-- Row 3: Harga Konsumen --}}
                     <x-input-rupiah label="Harga Produk per Satuan (Konsumen)" name="price_consument"

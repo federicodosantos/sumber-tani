@@ -21,11 +21,12 @@ class StoreProductStockRequest extends FormRequest
                 Rule::unique('product_stocks', 'product_id')
                     ->whereNull('deleted_at'),
             ],
-            'stock_opname'     => 'required|numeric|min:0',
-            'price_consument'  => 'required|numeric|min:0',
-            'price_r1'         => 'required|numeric|min:0',
-            'price_r2'         => 'required|numeric|min:0',
-            'expired_date'      => 'nullable|date|after_or_equal:today',
+            'unit_price' => 'nullable|numeric|min:0',
+            'stock_opname' => 'required|numeric|min:0',
+            'price_consument' => 'required|numeric|min:0',
+            'price_r1' => 'required|numeric|min:0',
+            'price_r2' => 'required|numeric|min:0',
+            'expired_date' => 'nullable|date|after_or_equal:today',
         ];
     }
 
@@ -33,12 +34,12 @@ class StoreProductStockRequest extends FormRequest
     {
         return [
             'product_id.required' => 'Produk wajib dipilih.',
-            'product_id.exists'   => 'Produk tidak ditemukan.',
-            'product_id.unique'   => 'Produk ini sudah memiliki data stok. Gunakan opsi "Ubah Jumlah Stok".',
+            'product_id.exists' => 'Produk tidak ditemukan.',
+            'product_id.unique' => 'Produk ini sudah memiliki data stok. Gunakan opsi "Ubah Jumlah Stok".',
 
             'stock_opname.required' => 'Jumlah stok wajib diisi.',
-            'stock_opname.numeric'  => 'Jumlah stok harus berupa angka.',
-            'stock_opname.min'      => 'Jumlah stok tidak boleh kurang dari 0.',
+            'stock_opname.numeric' => 'Jumlah stok harus berupa angka.',
+            'stock_opname.min' => 'Jumlah stok tidak boleh kurang dari 0.',
 
             'expired_date.required' => 'Tanggal kedaluwarsa wajib diisi.',
             'expired_date.date' => 'Tanggal kedaluwarsa tidak valid.',

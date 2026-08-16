@@ -77,10 +77,10 @@
 
         let raw = this.toRaw(val);
 
-        // Batasi maks 'maxDecimals' digit desimal
+        // Bulatkan ke maks 'maxDecimals' digit desimal (konsisten dengan pembulatan MySQL)
         if (raw.includes('.')) {
-            let [i, d] = raw.split('.');
-            if (d && d.length > this.maxDecimals) raw = i + '.' + d.slice(0, this.maxDecimals);
+            const pow = Math.pow(10, this.maxDecimals);
+            raw = String(Math.round(parseFloat(raw) * pow) / pow);
         }
 
         let numVal = parseFloat(raw);
@@ -123,12 +123,10 @@
 
         let raw = this.toRaw(displayVal);
 
-        // Batasi maks 'maxDecimals' digit desimal
+        // Bulatkan ke maks 'maxDecimals' digit desimal (konsisten dengan pembulatan MySQL)
         if (raw.includes('.')) {
-            let [i, d] = raw.split('.');
-            if (d && d.length > this.maxDecimals) {
-                raw = i + '.' + d.slice(0, this.maxDecimals);
-            }
+            const pow = Math.pow(10, this.maxDecimals);
+            raw = String(Math.round(parseFloat(raw) * pow) / pow);
         }
 
         let numVal = parseFloat(raw);

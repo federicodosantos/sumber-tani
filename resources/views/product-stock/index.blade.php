@@ -177,8 +177,14 @@
                                         0 (Habis)
                                     </span>
                                 @else
+                                    @php
+                                        $st = (float) $product->stock_total;
+                                        $stFormatted = $st == floor($st)
+                                            ? number_format($st, 0, ',', '.')
+                                            : rtrim(rtrim(number_format($st, 3, ',', '.'), '0'), ',');
+                                    @endphp
                                     <span class="font-medium text-black">
-                                        {{ number_format($product->stock_total) }}
+                                        {{ $stFormatted }}
                                     </span>
                                 @endif
                             </td>
@@ -187,7 +193,13 @@
                                 @if (is_null($product->price_consument))
                                     <span class="text-black">-</span>
                                 @else
-                                    Rp {{ number_format($product->price_consument, 0, ',', '.') }}
+                                    @php
+                                        $pc = (float) $product->price_consument;
+                                        $pcFormatted = $pc == floor($pc)
+                                            ? number_format($pc, 0, ',', '.')
+                                            : rtrim(rtrim(number_format($pc, 3, ',', '.'), '0'), ',');
+                                    @endphp
+                                    Rp {{ $pcFormatted }}
                                 @endif
                             </td>
 
@@ -195,7 +207,13 @@
                                 @if (is_null($product->price_r1))
                                     <span class="text-black">-</span>
                                 @else
-                                    Rp {{ number_format($product->price_r1, 0, ',', '.') }}
+                                    @php
+                                        $pr1 = (float) $product->price_r1;
+                                        $pr1Formatted = $pr1 == floor($pr1)
+                                            ? number_format($pr1, 0, ',', '.')
+                                            : rtrim(rtrim(number_format($pr1, 3, ',', '.'), '0'), ',');
+                                    @endphp
+                                    Rp {{ $pr1Formatted }}
                                 @endif
                             </td>
 
@@ -203,7 +221,13 @@
                                 @if (is_null($product->price_r2))
                                     <span class="text-black">-</span>
                                 @else
-                                    Rp {{ number_format($product->price_r2, 0, ',', '.') }}
+                                    @php
+                                        $pr2 = (float) $product->price_r2;
+                                        $pr2Formatted = $pr2 == floor($pr2)
+                                            ? number_format($pr2, 0, ',', '.')
+                                            : rtrim(rtrim(number_format($pr2, 3, ',', '.'), '0'), ',');
+                                    @endphp
+                                    Rp {{ $pr2Formatted }}
                                 @endif
                             </td>
 
@@ -288,8 +312,8 @@
                                                         placeholder="0" containerClass="" decimals="3" />
 
                                                     {{-- Row 2: Jumlah Stok --}}
-                                                    <x-content.form-input label="Jumlah Stok" name="stock_opname"
-                                                        type="number" placeholder="0" required />
+                                                    <x-input-rupiah label="Jumlah Stok" name="stock_opname"
+                                                        placeholder="0" containerClass="" required decimals="3" />
 
                                                     {{-- Row 3: Harga Konsumen --}}
                                                     <x-input-rupiah label="Harga Produk per Satuan (Konsumen)" name="price_consument"
@@ -336,7 +360,7 @@
                                             $latestStock = $product->stock->firstWhere('id', $product->latest_stock_id);
                                             $batchOptions = $product->stock->sortByDesc('batch')->map(fn($s) => [
                                                 'id' => $s->id,
-                                                'label' => 'BATCH ' . $s->batch . ' (Stok: ' . $s->stock_opname . ')',
+                                                'label' => 'BATCH ' . $s->batch . ' (Stok: ' . rtrim(rtrim(number_format((float)$s->stock_opname, 3, ',', '.'), '0'), ',') . ')',
                                                 'data' => [
                                                     'id' => $s->id,
                                                     'stock_opname' => $s->stock_opname,
@@ -392,6 +416,7 @@
                                                     this.$dispatch('update-rupiah-value', { name: 'price_consument', value: this.currentData.price_consument });
                                                     this.$dispatch('update-rupiah-value', { name: 'price_r1', value: this.currentData.price_r1 });
                                                     this.$dispatch('update-rupiah-value', { name: 'price_r2', value: this.currentData.price_r2 });
+                                                    this.$dispatch('update-rupiah-value', { name: 'stock_opname', value: this.currentData.stock_opname });
                                                 }
                                             }" @combobox-change="if($event.detail.value) handleBatchChange($event.detail)">
                                                 
@@ -433,8 +458,10 @@
                                                             placeholder="0" containerClass="" decimals="3" />
 
                                                         {{-- Jumlah Stok --}}
-                                                        <x-content.form-input label="Jumlah Stok" name="stock_opname"
-                                                            type="number" placeholder="0" x-model="currentData.stock_opname" required />
+                                                        <x-input-rupiah label="Jumlah Stok" name="stock_opname"
+                                                            :value="$latestStock->stock_opname ?? 0"
+                                                            placeholder="0" containerClass="" required decimals="3"
+                                                            @rupiah-change="currentData.stock_opname = $event.detail.value" />
 
                                                         {{-- Harga Konsumen --}}
                                                         <x-input-rupiah label="Harga Produk per Satuan (Konsumen)" name="price_consument"

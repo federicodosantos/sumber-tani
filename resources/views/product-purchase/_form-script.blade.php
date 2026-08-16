@@ -13,9 +13,9 @@
        UTIL
     ========================= */
     function formatCurrency(num) {
-        // Truncate to max 3 decimal places WITHOUT rounding
-        // e.g. 36750.3756 -> "36.750,375"  36750.375 -> "36.750,375"  36750.5 -> "36.750,5"  36750 -> "36.750"
-        num = Math.trunc(num * 1000) / 1000;
+        // Round to max 3 decimal places (matches MySQL DECIMAL round-half-away-from-zero)
+        // e.g. 36750.3756 -> "36.750,376"  36746.8647 -> "36.746,865"  36750 -> "36.750"
+        num = Math.round(num * 1000) / 1000;
         return new Intl.NumberFormat('id-ID', {
             minimumFractionDigits: 0,
             maximumFractionDigits: 3
