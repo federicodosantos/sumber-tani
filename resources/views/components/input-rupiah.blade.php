@@ -41,6 +41,16 @@
     },
 
     /**
+     * Konversi nilai dari format tampilan Indonesia (titik = ribuan, koma = desimal)
+     * ke format raw (titik desimal). Digunakan untuk input display yang selalu
+     * berformat Indonesia, agar ribuan seperti '500.000' tidak disalahartikan sebagai desimal.
+     */
+    fromDisplay(val) {
+        if (!val && val !== 0) return '';
+        return val.toString().trim().replace(/\./g, '').replace(',', '.');
+    },
+
+    /**
      * Format nilai raw (titik desimal) ke tampilan Indonesia (titik ribuan, koma desimal).
      * Mempertahankan trailing comma dan digit desimal yang sedang diketik.
      */
@@ -115,13 +125,13 @@
 
         // Jika user sedang mengetik trailing comma (misal '25000,') — jangan proses dulu
         if (displayVal.endsWith(',')) {
-            this.rawAmount = this.toRaw(displayVal.slice(0, -1)) || '';
+            this.rawAmount = this.fromDisplay(displayVal.slice(0, -1)) || '';
             // Biarkan displayAmount apa adanya (dengan trailing comma)
             this.$dispatch('rupiah-change', { value: this.rawAmount, name: currentName });
             return;
         }
 
-        let raw = this.toRaw(displayVal);
+        let raw = this.fromDisplay(displayVal);
 
         // Bulatkan ke maks 'maxDecimals' digit desimal (konsisten dengan pembulatan MySQL)
         if (raw.includes('.')) {
