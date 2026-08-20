@@ -667,8 +667,10 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
         parseNumberInput(rawValue) {
             if (rawValue === null || rawValue === undefined) return 0;
-            // Remove dot separators first, then handle comma as decimal
-            const cleaned = rawValue.toString().replace(/\./g, '').replace(/,/g, '.');
+            // Nilai dari komponen input-rupiah selalu berformat RAW (titik = desimal),
+            // mis. "1234.567". Bukan format tampilan Indonesia (titik = ribuan).
+            const cleaned = rawValue.toString().trim();
+            if (cleaned === '') return 0;
             const parsed = Number(cleaned);
             return Number.isFinite(parsed) ? parsed : 0;
         },
