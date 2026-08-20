@@ -7,7 +7,6 @@ use App\Models\Invoice;
 use App\Models\ProductStock;
 use App\Models\Transaction;
 use Carbon\Carbon;
-use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -145,14 +144,14 @@ class TransactionController extends Controller
                     $manualPrice = $item['price'] ?? null;
 
                     // Only save if price was manually set and differs from base system price
-                    if ($basePrice !== null && $manualPrice !== null && (float)$manualPrice !== (float)$basePrice) {
+                    if ($basePrice !== null && $manualPrice !== null && (float) $manualPrice !== (float) $basePrice) {
                         CustomerProductPrice::updateOrCreate(
                             [
                                 'customer_id' => $request->customer_id,
-                                'product_id'  => $item['id'],
+                                'product_id' => $item['id'],
                             ],
                             [
-                                'custom_price' => (float)$manualPrice,
+                                'custom_price' => (float) $manualPrice,
                             ]
                         );
                     }
@@ -167,7 +166,7 @@ class TransactionController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            \Illuminate\Support\Facades\Log::error('Transaction Error: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Transaction Error: '.$e->getMessage());
 
             return response()->json(
                 [
@@ -189,16 +188,16 @@ class TransactionController extends Controller
         $items = $transaction->transactionDetails->map(function ($detail) {
             return [
                 'name' => $detail->product?->name ?? 'Unknown',
-                'price' => (float) $detail->product_price,
-                'qty' => (float) $detail->quantity,
-                'total' => (float) $detail->total_price,
+                'price' => round((float) $detail->product_price, 3),
+                'qty' => round((float) $detail->quantity, 3),
+                'total' => round((float) $detail->total_price, 3),
             ];
         });
 
         return response()->json([
             'store' => [
                 'name' => 'TOKO SUMBERTANI',
-                'address' => 'Jl. Trans Sulawesi, Motolohu, Kec. Randangan, ' . PHP_EOL . 'Kab. Pohuwato, Gorontalo 96469',
+                'address' => 'Jl. Trans Sulawesi, Motolohu, Kec. Randangan, '.PHP_EOL.'Kab. Pohuwato, Gorontalo 96469',
                 'phone' => '+6281356745129',
                 'email' => 'sumbertani0209@gmail.com',
             ],
@@ -206,12 +205,12 @@ class TransactionController extends Controller
             'transaction' => [
                 'id' => $transaction->id,
                 'datetime' => $transaction->created_at->translatedFormat('d M Y H:i'),
-                'total_qty' => (float) $transaction->total_quantity,
-                'discount' => (float) $transaction->discount,
-                'total' => (float) $transaction->total_price,
+                'total_qty' => round((float) $transaction->total_quantity, 3),
+                'discount' => round((float) $transaction->discount, 3),
+                'total' => round((float) $transaction->total_price, 3),
                 'payment_method' => $transaction->payment_method,
-                'cash_received' => $transaction->cash_received !== null ? (float) $transaction->cash_received : null,
-                'change_amount' => $transaction->change_amount !== null ? (float) $transaction->change_amount : null,
+                'cash_received' => $transaction->cash_received !== null ? round((float) $transaction->cash_received, 3) : null,
+                'change_amount' => $transaction->change_amount !== null ? round((float) $transaction->change_amount, 3) : null,
             ],
 
             'items' => $items,
