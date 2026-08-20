@@ -31,11 +31,12 @@ class Transaction extends Model
     protected $fillable = ['total_quantity', 'total_price', 'created_at', 'updated_at', 'offline_uuid', 'discount', 'payment_method', 'is_paid', 'cash_received', 'change_amount', 'is_manual', 'transaction_date'];
 
     protected $casts = [
-        'total_price' => 'decimal:2',
-        'discount' => 'decimal:2',
+        'total_quantity' => 'decimal:3',
+        'total_price' => 'decimal:3',
+        'discount' => 'decimal:3',
         'is_paid' => 'boolean',
-        'cash_received' => 'decimal:2',
-        'change_amount' => 'decimal:2',
+        'cash_received' => 'decimal:3',
+        'change_amount' => 'decimal:3',
         'is_manual' => 'boolean',
         'transaction_date' => 'datetime',
     ];
