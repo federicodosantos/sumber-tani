@@ -23,7 +23,7 @@ class FinanceReportController extends Controller
     /**
      * Resolve start & end dates from the range_filter parameter.
      *
-     * @return array{0: Carbon, 1: Carbon, 2: string}  [startDate, endDate, rangeKey]
+     * @return array{0: Carbon, 1: Carbon, 2: string} [startDate, endDate, rangeKey]
      */
     private function resolveDateRange(Request $request): array
     {
@@ -33,17 +33,17 @@ class FinanceReportController extends Controller
         switch ($rangeKey) {
             case 'this_week':
                 $start = $now->copy()->startOfWeek();
-                $end   = $now->copy()->endOfWeek();
+                $end = $now->copy()->endOfWeek();
                 break;
 
             case 'last_month':
                 $start = $now->copy()->subMonth()->startOfMonth();
-                $end   = $now->copy()->subMonth()->endOfMonth();
+                $end = $now->copy()->subMonth()->endOfMonth();
                 break;
 
             case 'this_quarter':
                 $start = $now->copy()->firstOfQuarter();
-                $end   = $now->copy()->lastOfQuarter()->endOfDay();
+                $end = $now->copy()->lastOfQuarter()->endOfDay();
                 break;
 
             case 'custom':
@@ -59,7 +59,7 @@ class FinanceReportController extends Controller
             default:
                 $rangeKey = 'this_month';
                 $start = $now->copy()->startOfMonth();
-                $end   = $now->copy()->endOfMonth();
+                $end = $now->copy()->endOfMonth();
                 break;
         }
 
@@ -83,8 +83,8 @@ class FinanceReportController extends Controller
 
         return [
             'range_filter' => 'custom',
-            'start_date'   => $date->copy()->startOfDay()->toDateString(),
-            'end_date'     => $date->copy()->endOfDay()->toDateString(),
+            'start_date' => $date->copy()->startOfDay()->toDateString(),
+            'end_date' => $date->copy()->endOfDay()->toDateString(),
         ];
     }
 
@@ -94,12 +94,12 @@ class FinanceReportController extends Controller
     private function getRangeLabel(string $key, Carbon $start, Carbon $end): string
     {
         return match ($key) {
-            'this_week'    => 'Minggu Ini',
-            'this_month'   => 'Bulan Ini',
-            'last_month'   => 'Bulan Lalu',
+            'this_week' => 'Minggu Ini',
+            'this_month' => 'Bulan Ini',
+            'last_month' => 'Bulan Lalu',
             'this_quarter' => 'Kuartal Ini',
-            'custom'       => $start->format('d M Y') . ' - ' . $end->format('d M Y'),
-            default        => 'Bulan Ini',
+            'custom' => $start->format('d M Y').' - '.$end->format('d M Y'),
+            default => 'Bulan Ini',
         };
     }
 
@@ -112,11 +112,11 @@ class FinanceReportController extends Controller
 
         $transactionFilter = $request->input('transaction_filter', 'daily');
 
-        $stats         = $this->getStats($startDate, $endDate);
-        $chartData     = $this->getChartData($startDate, $endDate);
+        $stats = $this->getStats($startDate, $endDate);
+        $chartData = $this->getChartData($startDate, $endDate);
         $financeReports = $this->getFinanceReports($startDate, $endDate);
-        $products      = $this->getAllProduct();
-        $categories    = $this->getAllCategories();
+        $products = $this->getAllProduct();
+        $categories = $this->getAllCategories();
 
         $rangeLabel = $this->getRangeLabel($rangeKey, $startDate, $endDate);
 
@@ -167,7 +167,7 @@ class FinanceReportController extends Controller
         $cashIn = Transaction::where('transaction_date', '<=', $end)
             ->where('is_paid', 1)
             ->sum('total_price');
-            
+
         $cashOut = ProductPurchase::where('purchase_date', '<=', $end)
             ->where('is_paid', 1)
             ->sum('grand_total');
@@ -232,7 +232,7 @@ class FinanceReportController extends Controller
         // Periode sebelumnya (same duration, shifted back)
         $diff = $start->diffInDays($end) + 1;
         $prevStart = $start->copy()->subDays($diff);
-        $prevEnd   = $start->copy()->subDay()->endOfDay();
+        $prevEnd = $start->copy()->subDay()->endOfDay();
         $prevSales = Transaction::whereBetween('transaction_date', [$prevStart, $prevEnd])->sum('total_price');
 
         $salesPercentage = $prevSales > 0
@@ -240,7 +240,7 @@ class FinanceReportController extends Controller
             : 0;
 
         // Penjualan hari ini (selalu tetap)
-        $dailySales     = Transaction::whereDate('transaction_date', $now->toDateString())->sum('total_price');
+        $dailySales = Transaction::whereDate('transaction_date', $now->toDateString())->sum('total_price');
         $yesterdaySales = Transaction::whereDate('transaction_date', $now->copy()->subDay()->toDateString())->sum('total_price');
         $dailyPercentage = $yesterdaySales > 0
             ? round((($dailySales - $yesterdaySales) / $yesterdaySales) * 100, 1)
@@ -248,23 +248,23 @@ class FinanceReportController extends Controller
 
         // Total transaksi dalam range
         $totalTransactions = Transaction::whereBetween('transaction_date', [$start, $end])->count();
-        $prevTransactions  = Transaction::whereBetween('transaction_date', [$prevStart, $prevEnd])->count();
+        $prevTransactions = Transaction::whereBetween('transaction_date', [$prevStart, $prevEnd])->count();
         $transactionPercentage = $prevTransactions > 0
             ? round((($totalTransactions - $prevTransactions) / $prevTransactions) * 100, 1)
             : 0;
 
         return [
-            'range_sales'              => $rangeSales,
-            'range_sales_percentage'   => abs($salesPercentage),
-            'range_sales_trend'        => $salesPercentage >= 0 ? 'up' : 'down',
+            'range_sales' => $rangeSales,
+            'range_sales_percentage' => abs($salesPercentage),
+            'range_sales_trend' => $salesPercentage >= 0 ? 'up' : 'down',
 
-            'daily_sales'              => $dailySales,
-            'daily_percentage'         => abs($dailyPercentage),
-            'daily_trend'              => $dailyPercentage >= 0 ? 'up' : 'down',
+            'daily_sales' => $dailySales,
+            'daily_percentage' => abs($dailyPercentage),
+            'daily_trend' => $dailyPercentage >= 0 ? 'up' : 'down',
 
-            'total_transactions'       => $totalTransactions,
-            'transaction_percentage'   => abs($transactionPercentage),
-            'transaction_trend'        => $transactionPercentage >= 0 ? 'up' : 'down',
+            'total_transactions' => $totalTransactions,
+            'transaction_percentage' => abs($transactionPercentage),
+            'transaction_trend' => $transactionPercentage >= 0 ? 'up' : 'down',
         ];
     }
 
@@ -316,13 +316,19 @@ class FinanceReportController extends Controller
         $sort = request('sort', 'date_new');
 
         switch ($sort) {
-            case 'trx_id_asc':    $orderBy = ['id', 'asc']; break;
-            case 'trx_id_desc':   $orderBy = ['id', 'desc']; break;
-            case 'income_in_asc': $orderBy = ['total_price', 'asc']; break;
-            case 'income_in_desc':$orderBy = ['total_price', 'desc']; break;
-            case 'date_old':      $orderBy = ['transaction_date', 'asc']; break;
+            case 'trx_id_asc':    $orderBy = ['id', 'asc'];
+                break;
+            case 'trx_id_desc':   $orderBy = ['id', 'desc'];
+                break;
+            case 'income_in_asc': $orderBy = ['total_price', 'asc'];
+                break;
+            case 'income_in_desc':$orderBy = ['total_price', 'desc'];
+                break;
+            case 'date_old':      $orderBy = ['transaction_date', 'asc'];
+                break;
             case 'date_new':
-            default:              $orderBy = ['transaction_date', 'desc']; break;
+            default:              $orderBy = ['transaction_date', 'desc'];
+                break;
         }
 
         $query = Transaction::with(['invoices.customer'])
@@ -335,17 +341,17 @@ class FinanceReportController extends Controller
             $r2Customer = $r2Invoice?->customer;
 
             return (object) [
-                'id'               => $t->id,
-                'date'             => $t->transaction_date,
-                'payment_method'   => $t->payment_method,
-                'discount'         => $t->discount,
-                'is_paid'          => $t->is_paid,
+                'id' => $t->id,
+                'date' => $t->transaction_date,
+                'payment_method' => $t->payment_method,
+                'discount' => $t->discount,
+                'is_paid' => $t->is_paid,
                 'total_items_sold' => $t->total_quantity,
-                'total_income'     => $t->total_price,
-                'is_manual'        => (bool) $t->is_manual,
-                'inv_code'         => $r2Invoice?->inv_code,
-                'r2_customer'      => $r2Customer ? (object) [
-                    'id'   => $r2Customer->id,
+                'total_income' => $t->total_price,
+                'is_manual' => (bool) $t->is_manual,
+                'inv_code' => $r2Invoice?->inv_code,
+                'r2_customer' => $r2Customer ? (object) [
+                    'id' => $r2Customer->id,
                     'name' => $r2Customer->name,
                     'type' => $r2Customer->type,
                 ] : null,
@@ -359,6 +365,7 @@ class FinanceReportController extends Controller
     public function show(Transaction $transaction)
     {
         $transactionDetails = TransactionDetail::where('transaction_id', $transaction->id)->with('product')->get();
+
         return view('finance.show', compact('transaction', 'transactionDetails'));
     }
 
@@ -389,6 +396,7 @@ class FinanceReportController extends Controller
         }])->get()->map(function ($p) {
             $stockSum = $p->stock->sum('stock_opname');
             $firstStock = $p->stock->first();
+
             return [
                 'id' => $p->id,
                 'name' => $p->name,
@@ -398,10 +406,10 @@ class FinanceReportController extends Controller
         });
 
         $initialItems = $transaction->transactionDetails->map(fn ($d) => [
-            'id'       => $d->product_id,
-            'name'     => $d->product?->name ?? '(produk dihapus)',
-            'price'    => (float) $d->product_price,
-            'qty'      => (int) $d->quantity,
+            'id' => $d->product_id,
+            'name' => $d->product?->name ?? '(produk dihapus)',
+            'price' => (float) $d->product_price,
+            'qty' => (float) $d->quantity,
             'maxStock' => null,
         ])->values();
 
@@ -419,8 +427,8 @@ class FinanceReportController extends Controller
             'items' => 'required|array|min:1',
             'items.*.id' => 'required|integer|exists:products,id',
             'items.*.price' => 'required|numeric|min:0',
-            'items.*.qty' => 'required|integer|min:1',
-            'totalQty' => 'required|numeric|min:1',
+            'items.*.qty' => 'required|numeric|min:0.001',
+            'totalQty' => 'required|numeric|min:0.001',
             'totalAmount' => 'required|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
             'payment_method' => 'required|string|in:Cash,Kredit,QRIS,Transfer',
@@ -439,7 +447,7 @@ class FinanceReportController extends Controller
         }
 
         return redirect()->route('finance.index')
-            ->with('success', 'Transaksi #' . $transaction->id . ' berhasil diperbarui.');
+            ->with('success', 'Transaksi #'.$transaction->id.' berhasil diperbarui.');
     }
 
     /* ================================================================
@@ -517,23 +525,23 @@ class FinanceReportController extends Controller
     public function storeManual(Request $request)
     {
         $validated = $request->validate([
-            'customer_kind'     => 'required|in:guest,r1,r2',
-            'customer_id'       => 'required_unless:customer_kind,guest|nullable|integer|exists:customers,id',
-            'reduce_stock'      => 'required|boolean',
-            'items'             => 'required|array|min:1',
-            'items.*.id'        => 'required|integer|exists:products,id',
-            'items.*.price'     => 'required|numeric|min:0',
-            'items.*.qty'       => 'required|integer|min:1',
+            'customer_kind' => 'required|in:guest,r1,r2',
+            'customer_id' => 'required_unless:customer_kind,guest|nullable|integer|exists:customers,id',
+            'reduce_stock' => 'required|boolean',
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|integer|exists:products,id',
+            'items.*.price' => 'required|numeric|min:0',
+            'items.*.qty' => 'required|numeric|min:0.001',
             'items.*.basePrice' => 'nullable|numeric|min:0',
-            'totalQty'          => 'required|numeric|min:1',
-            'totalAmount'       => 'required|numeric|min:0',
-            'discount'          => 'nullable|numeric|min:0',
-            'payment_method'    => 'required|in:Cash,Kredit,QRIS,Transfer',
-            'is_paid'           => 'required|boolean',
-            'cash_received'     => 'nullable|numeric|min:0',
-            'change_amount'     => 'nullable|numeric',
-            'created_at'        => 'required|date|before_or_equal:now',
-            'note'              => 'nullable|string|max:1000',
+            'totalQty' => 'required|numeric|min:0.001',
+            'totalAmount' => 'required|numeric|min:0',
+            'discount' => 'nullable|numeric|min:0',
+            'payment_method' => 'required|in:Cash,Kredit,QRIS,Transfer',
+            'is_paid' => 'required|boolean',
+            'cash_received' => 'nullable|numeric|min:0',
+            'change_amount' => 'nullable|numeric',
+            'created_at' => 'required|date|before_or_equal:now',
+            'note' => 'nullable|string|max:1000',
         ]);
 
         $customerKind = $validated['customer_kind'];
@@ -552,17 +560,17 @@ class FinanceReportController extends Controller
         $reduceStock = (bool) $validated['reduce_stock'];
         $items = $validated['items'];
         $totalAmount = (float) $validated['totalAmount'];
-        $totalQty = (int) $validated['totalQty'];
+        $totalQty = (float) $validated['totalQty'];
         $discount = (float) ($validated['discount'] ?? 0);
         $isPaid = (bool) $validated['is_paid'];
 
         if ($reduceStock) {
             $stockErrors = [];
             foreach ($items as $idx => $item) {
-                $available = (int) ProductStock::where('product_id', $item['id'])
+                $available = (float) ProductStock::where('product_id', $item['id'])
                     ->whereNull('deleted_at')
                     ->sum('stock_opname');
-                if ($available < (int) $item['qty']) {
+                if ($available < (float) $item['qty']) {
                     $name = Product::where('id', $item['id'])->value('name') ?? "Produk #{$item['id']}";
                     $stockErrors["items.$idx.qty"] = "Stok '{$name}' hanya {$available}, tidak cukup untuk {$item['qty']}.";
                 }
@@ -592,21 +600,21 @@ class FinanceReportController extends Controller
 
         try {
             DB::transaction(function () use (
-                $customer, $customerKind, $reduceStock, $items, $totalAmount, $totalQty,
+                $customer, $reduceStock, $items, $totalAmount, $totalQty,
                 $discount, $isPaid, $cashReceived, $changeAmount, $transactionDate, $validated
             ) {
                 $transaction = Transaction::create([
-                    'total_quantity'    => $totalQty,
-                    'total_price'       => $totalAmount,
-                    'discount'          => $discount,
-                    'payment_method'    => $validated['payment_method'],
-                    'is_paid'           => $isPaid,
-                    'created_at'        => $transactionDate,
-                    'updated_at'        => $transactionDate,
-                    'transaction_date'  => $transactionDate,
-                    'cash_received'     => $cashReceived,
-                    'change_amount'     => $changeAmount,
-                    'is_manual'         => true,
+                    'total_quantity' => $totalQty,
+                    'total_price' => $totalAmount,
+                    'discount' => $discount,
+                    'payment_method' => $validated['payment_method'],
+                    'is_paid' => $isPaid,
+                    'created_at' => $transactionDate,
+                    'updated_at' => $transactionDate,
+                    'transaction_date' => $transactionDate,
+                    'cash_received' => $cashReceived,
+                    'change_amount' => $changeAmount,
+                    'is_manual' => true,
                 ]);
 
                 foreach ($items as $item) {
@@ -622,14 +630,14 @@ class FinanceReportController extends Controller
                     }
 
                     $transaction->transactionDetails()->create([
-                        'product_id'       => $item['id'],
+                        'product_id' => $item['id'],
                         'product_stock_id' => $productStock?->id,
-                        'product_price'    => $item['price'],
-                        'buying_price'     => $buyingPrice,
-                        'quantity'         => $item['qty'],
-                        'total_price'      => $item['price'] * $item['qty'],
-                        'created_at'       => $transactionDate,
-                        'updated_at'       => $transactionDate,
+                        'product_price' => $item['price'],
+                        'buying_price' => $buyingPrice,
+                        'quantity' => $item['qty'],
+                        'total_price' => $item['price'] * $item['qty'],
+                        'created_at' => $transactionDate,
+                        'updated_at' => $transactionDate,
                     ]);
 
                     if ($reduceStock && $productStock) {
@@ -639,14 +647,14 @@ class FinanceReportController extends Controller
 
                 if ($customer) {
                     Invoice::create([
-                        'customer_id'    => $customer->id,
+                        'customer_id' => $customer->id,
                         'transaction_id' => $transaction->id,
-                        'debts'          => $isPaid ? 0 : $totalAmount,
-                        'type'           => Invoice::TYPE_PURCHASE,
-                        'inv_code'       => Invoice::generateInvCode(Invoice::TYPE_PURCHASE),
-                        'note'           => $validated['note'] ?? null,
-                        'created_at'     => $transactionDate,
-                        'updated_at'     => $transactionDate,
+                        'debts' => $isPaid ? 0 : $totalAmount,
+                        'type' => Invoice::TYPE_PURCHASE,
+                        'inv_code' => Invoice::generateInvCode(Invoice::TYPE_PURCHASE),
+                        'note' => $validated['note'] ?? null,
+                        'created_at' => $transactionDate,
+                        'updated_at' => $transactionDate,
                     ]);
 
                     foreach ($items as $item) {
@@ -668,7 +676,7 @@ class FinanceReportController extends Controller
                 ->with('success', 'Transaksi manual berhasil disimpan.');
         } catch (Exception $e) {
             return redirect()->back()->withInput()->withErrors([
-                'general' => 'Terjadi kesalahan saat menyimpan transaksi: ' . $e->getMessage(),
+                'general' => 'Terjadi kesalahan saat menyimpan transaksi: '.$e->getMessage(),
             ]);
         }
     }
@@ -679,39 +687,39 @@ class FinanceReportController extends Controller
     public function download(Request $request)
     {
         $request->validate([
-            'range_type'    => 'required|string',
-            'start_date'    => 'nullable|date',
-            'end_date'      => 'nullable|date|after_or_equal:start_date',
-            'format_time'   => 'required|in:harian,bulanan,tahunan',
-            'download_by'   => 'required|in:category,product',
-            'product_ids'   => 'nullable|array',
+            'range_type' => 'required|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'format_time' => 'required|in:harian,bulanan,tahunan',
+            'download_by' => 'required|in:category,product',
+            'product_ids' => 'nullable|array',
             'product_ids.*' => 'exists:products,id',
-            'category_ids'  => 'nullable|array',
-            'category_ids.*'=> 'exists:item_categories,id',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:item_categories,id',
         ]);
 
         Carbon::setLocale('id');
 
-        $endDate   = Carbon::now();
+        $endDate = Carbon::now();
         $startDate = null;
 
         $rangeMap = [
-            '7days'   => fn() => Carbon::now()->subDays(7),
-            '1month'  => fn() => Carbon::now()->subMonth(),
-            '3months' => fn() => Carbon::now()->subMonths(3),
-            '6months' => fn() => Carbon::now()->subMonths(6),
-            '1year'   => fn() => Carbon::now()->subYear(),
+            '7days' => fn () => Carbon::now()->subDays(7),
+            '1month' => fn () => Carbon::now()->subMonth(),
+            '3months' => fn () => Carbon::now()->subMonths(3),
+            '6months' => fn () => Carbon::now()->subMonths(6),
+            '1year' => fn () => Carbon::now()->subYear(),
         ];
 
         if ($request->range_type === 'custom') {
             $startDate = Carbon::parse($request->start_date);
-            $endDate   = Carbon::parse($request->end_date);
+            $endDate = Carbon::parse($request->end_date);
         } else {
             $startDate = $rangeMap[$request->range_type]();
         }
 
         $periodSelect = match ($request->format_time) {
-            'harian'  => DB::raw('DATE(transactions.transaction_date) as period'),
+            'harian' => DB::raw('DATE(transactions.transaction_date) as period'),
             'bulanan' => DB::raw('DATE_FORMAT(transactions.transaction_date, "%Y-%m") as period'),
             'tahunan' => DB::raw('YEAR(transactions.transaction_date) as period'),
         };
@@ -743,6 +751,7 @@ class FinanceReportController extends Controller
             } elseif ($request->format_time === 'harian') {
                 $row->period = Carbon::parse($row->period)->translatedFormat('d F Y');
             }
+
             return $row;
         });
 
@@ -759,45 +768,46 @@ class FinanceReportController extends Controller
 
             $totalQty = [];
             foreach ($columns as $id => $name) {
-                $totalQty[$id] = $data->filter(fn($r) => $request->download_by === 'product' ? $r->product_id == $id : $r->category_id == $id)->sum('total_qty');
+                $totalQty[$id] = $data->filter(fn ($r) => $request->download_by === 'product' ? $r->product_id == $id : $r->category_id == $id)->sum('total_qty');
             }
 
             $pivot = $data->groupBy('period')->map(function ($rows) use ($columns, $request) {
                 $out = [];
                 foreach ($columns as $id => $name) {
-                    $out[$id] = $rows->filter(fn($r) => $request->download_by === 'product' ? $r->product_id == $id : $r->category_id == $id)->sum('total_sales');
+                    $out[$id] = $rows->filter(fn ($r) => $request->download_by === 'product' ? $r->product_id == $id : $r->category_id == $id)->sum('total_sales');
                 }
+
                 return $out;
             });
         } else {
-            $columns  = [];
-            $pivot    = [];
+            $columns = [];
+            $pivot = [];
             $totalQty = [];
         }
 
         $totalSales = [];
         foreach ($columns as $id => $name) {
             $totalSales[$id] = $data
-                ->filter(fn($r) => $request->download_by === 'product' ? $r->product_id == $id : $r->category_id == $id)
+                ->filter(fn ($r) => $request->download_by === 'product' ? $r->product_id == $id : $r->category_id == $id)
                 ->sum('total_sales');
         }
 
-        $grandTotalQty   = array_sum($totalQty);
+        $grandTotalQty = array_sum($totalQty);
         $grandTotalSales = array_sum($totalSales);
         $data = $data->sortBy('period')->groupBy('period');
 
         $pdf = Pdf::loadView('finance.report', [
-            'data'            => $data,
-            'pivot'           => $pivot,
-            'columns'         => $columns,
-            'totalSales'      => $totalSales,
-            'grandTotalQty'   => $grandTotalQty,
+            'data' => $data,
+            'pivot' => $pivot,
+            'columns' => $columns,
+            'totalSales' => $totalSales,
+            'grandTotalQty' => $grandTotalQty,
             'grandTotalSales' => $grandTotalSales,
-            'totalQty'        => $totalQty,
-            'isLandscape'     => $isLandscape,
-            'downloadBy'      => $request->download_by,
-            'startDate'       => $startDate->translatedFormat('d F Y'),
-            'endDate'         => $endDate->translatedFormat('d F Y'),
+            'totalQty' => $totalQty,
+            'isLandscape' => $isLandscape,
+            'downloadBy' => $request->download_by,
+            'startDate' => $startDate->translatedFormat('d F Y'),
+            'endDate' => $endDate->translatedFormat('d F Y'),
         ]);
 
         if ($isLandscape) {
