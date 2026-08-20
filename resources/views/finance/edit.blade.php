@@ -173,7 +173,11 @@
                     <div class="flex items-center rounded-lg border border-gray-300 bg-white">
                       <button type="button" @click="decQty(idx)"
                               class="flex h-9 w-9 items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition">−</button>
-                      <input type="number" x-model.number="row.qty" min="1" step="1"
+                      <input type="text"
+                             :value="formatQty(row.qty)"
+                             @input="setQty(row, $event.target.value)"
+                             @blur="handleQtyBlur(row, $event)"
+                             @keydown="const k=$event.key; const nav=['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End','Enter']; const ok=/[0-9]/.test(k)||nav.includes(k)||$event.ctrlKey||$event.metaKey||(k===','&&!$el.value.includes(',')); if(!ok) $event.preventDefault();"
                              class="w-full border-0 bg-transparent text-center text-sm font-semibold tabular-nums focus:ring-0 p-0" />
                       <button type="button" @click="incQty(idx)"
                               class="flex h-9 w-9 items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition">+</button>

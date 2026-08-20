@@ -21,24 +21,46 @@ export default (config) => ({
     },
 
     get totalQty() {
-        return this.items.reduce((s, r) => s + (Number(r.qty) || 0), 0);
+        return Math.round(this.items.reduce((s, r) => s + (Number(r.qty) || 0), 0) * 1000) / 1000;
     },
     get subtotal() {
-        return this.items.reduce(
-            (s, r) => s + (Number(r.price) || 0) * (Number(r.qty) || 0),
-            0
-        );
+        return Math.round(
+            this.items.reduce(
+                (s, r) => s + (Number(r.price) || 0) * (Number(r.qty) || 0),
+                0
+            ) * 1000
+        ) / 1000;
     },
     get totalAmount() {
-        return Math.max(0, this.subtotal - (Number(this.discount) || 0));
+        return Math.max(0, Math.round((this.subtotal - (Number(this.discount) || 0)) * 1000) / 1000);
     },
     get changeAmount() {
         if (this.payment_method !== 'Cash' || !this.is_paid) return 0;
-        return Math.max(0, (Number(this.cash_received) || 0) - this.totalAmount);
+        return Math.max(0, Math.round(((Number(this.cash_received) || 0) - this.totalAmount) * 1000) / 1000);
     },
 
     formatRp(n) {
-        return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+        return 'Rp ' + Number(n || 0).toLocaleString('id-ID', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 3,
+        });
+    },
+
+    formatQty(qty) {
+        return String(qty).replace('.', ',');
+    },
+
+    setQty(row, value) {
+        const parsed = parseFloat(String(value).replace(',', '.')) || 0;
+        row.qty = parsed < 0.001 ? 0.001 : parsed;
+    },
+
+    handleQtyBlur(row, event) {
+        const parsed = parseFloat(String(event.target.value).replace(',', '.')) || 0;
+        if (parsed < 0.001) {
+            event.target.value = this.formatQty(row.qty);
+            alert('Jumlah minimal adalah 0,001');
+        }
     },
 
     addRow() {
@@ -55,7 +77,7 @@ export default (config) => ({
         row.name = product.name;
         row.maxStock = product.stock;
         if (!row.price || row.price === 0) row.price = product.price;
-        if (!row.qty || row.qty < 1) row.qty = 1;
+        if (!row.qty || row.qty < 0.001) row.qty = 1;
         this.activeSearchIdx = null;
     },
 
@@ -66,7 +88,7 @@ export default (config) => ({
     decQty(idx) {
         const row = this.items[idx];
         const next = (Number(row.qty) || 0) - 1;
-        row.qty = Math.max(1, next);
+        row.qty = Math.max(0.001, next);
     },
 
     productLabel(row) {
@@ -82,8 +104,8 @@ export default (config) => ({
             return;
         }
         for (const row of this.items) {
-            if (!row.id || !row.qty || row.qty < 1) {
-                alert('Pastikan semua baris lengkap (produk dipilih & qty ≥ 1).');
+            if (!row.id || !row.qty || row.qty < 0.001) {
+                alert('Pastikan semua baris lengkap (produk dipilih & qty ≥ 0,001).');
                 return;
             }
         }
