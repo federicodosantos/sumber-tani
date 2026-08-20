@@ -172,7 +172,7 @@
 
                         <div class="text-right text-xs text-gray-900">
                             <template x-if="getVisualStock(product) > 0">
-                                <span>Sisa Stok: <span class="font-bold" x-text="getVisualStock(product)"></span></span>
+                                <span>Sisa Stok: <span class="font-bold" x-text="formatStock(getVisualStock(product))"></span></span>
                             </template>
                             <template x-if="getVisualStock(product) <= 0">
                                 <span class="font-bold text-red-500">STOK HABIS</span>

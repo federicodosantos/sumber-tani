@@ -806,6 +806,12 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             }).format(Number(number) || 0);
         },
 
+        formatStock(value) {
+            const n = Number(value);
+            if (!Number.isFinite(n)) return '0';
+            return n.toLocaleString('id-ID', { maximumFractionDigits: 3 });
+        },
+
         get totalQty() {
             return Math.round(this.cart.reduce((total, item) => total + (Number(item.qty) || 0), 0) * 1000) / 1000;
         },

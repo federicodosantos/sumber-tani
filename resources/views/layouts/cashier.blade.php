@@ -339,7 +339,7 @@
                                 </button>
 
                                 <span class="ml-1 text-[11px] font-medium text-gray-400 tabular-nums">
-                                    / <span x-text="item.stock"></span>
+                                    / <span x-text="formatStock(item.stock)"></span>
                                 </span>
                             </div>
 
