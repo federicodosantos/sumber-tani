@@ -800,11 +800,12 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                 style: 'currency',
                 currency: 'IDR',
                 minimumFractionDigits: 0,
+                maximumFractionDigits: 3,
             }).format(Number(number) || 0);
         },
 
         get totalQty() {
-            return this.cart.reduce((total, item) => total + item.qty, 0);
+            return Math.round(this.cart.reduce((total, item) => total + (Number(item.qty) || 0), 0) * 1000) / 1000;
         },
 
         get totalPrice() {
@@ -814,14 +815,14 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             }
 
             if (this.manualTotal !== null) {
-                return Number(this.manualTotal) || 0;
+                return Math.round((Number(this.manualTotal) || 0) * 1000) / 1000;
             }
 
-            return this.cart.reduce((total, item) => total + ((Number(item.price) || 0) * item.qty), 0);
+            return Math.round(this.cart.reduce((total, item) => total + ((Number(item.price) || 0) * (Number(item.qty) || 0)), 0) * 1000) / 1000;
         },
 
         get systemCartTotal() {
-            return this.cart.reduce((total, item) => total + ((Number(item.basePrice) || 0) * item.qty), 0);
+            return Math.round(this.cart.reduce((total, item) => total + ((Number(item.basePrice) || 0) * (Number(item.qty) || 0)), 0) * 1000) / 1000;
         },
 
         get cashReceived() {
@@ -831,7 +832,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         get changeAmount() {
             if (this.paymentMethod !== 'Cash') return 0;
             const change = this.cashReceived - this.totalPrice;
-            return change > 0 ? change : 0;
+            return Math.round((change > 0 ? change : 0) * 1000) / 1000;
         },
 
         async processCheckout() {
@@ -855,12 +856,12 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
             const cleanCart = JSON.parse(JSON.stringify(this.cart));
             const offlineUuid = self.crypto.randomUUID();
-            const originalTotal = cleanCart.reduce((total, item) => total + ((Number(item.price) || 0) * item.qty), 0);
+            const originalTotal = Math.round(cleanCart.reduce((total, item) => total + ((Number(item.price) || 0) * (Number(item.qty) || 0)), 0) * 1000) / 1000;
             const isPaid = this.paymentMethod === 'Kredit' ? 0 : 1;
 
             let discountValue = 0;
             if (this.manualTotal !== null) {
-                discountValue = originalTotal - parseFloat(this.manualTotal);
+                discountValue = Math.round((originalTotal - parseFloat(this.manualTotal)) * 1000) / 1000;
                 if (discountValue < 0) discountValue = 0;
             }
 
