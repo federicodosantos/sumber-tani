@@ -300,6 +300,7 @@
                                         value="0"
                                         placeholder="0"
                                         containerClass="w-full mb-0"
+                                        decimals="3"
                                         @rupiah-change="setItemManualPrice(item.id, $event.detail.value)"
                                         x-init="$watch('isEditingPrice', v => v && $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: item.price } })))"
                                     />
@@ -517,6 +518,7 @@
                                         value=""
                                         placeholder="0"
                                         containerClass="mb-0"
+                                        decimals="3"
                                         @rupiah-change="cashReceivedInput = $event.detail.value"
                                         x-init="$watch('cashReceivedInput', v => v === '' && $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: '' } })))"
                                     />
@@ -590,6 +592,7 @@
                                                 value="0"
                                                 placeholder="0"
                                                 containerClass="w-36"
+                                                decimals="3"
                                                 @rupiah-change="manualTotal = $event.detail.value"
                                                 x-init="$watch('isEditing', v => v && $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: manualTotal || totalPrice } })))"
                                                 @keydown.enter.prevent="isEditing = false"
