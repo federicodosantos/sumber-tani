@@ -78,5 +78,8 @@ function formatRightLine(label, value, width = LINE_CHARS) {
  * Utility for number formatting (Indonesian style)
  */
 function formatIDR(value) {
-    return Number(value).toLocaleString("id-ID");
+    return Number(value).toLocaleString("id-ID", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 3,
+    });
 }
