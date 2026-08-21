@@ -1,5 +1,9 @@
 @props(['financeReports'])
 
+@php
+    use Illuminate\Support\Number;
+@endphp
+
 <div id="transactions" class="rounded-lg border border-gray-200 bg-white shadow">
   <div class="border-b border-gray-200 px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
     <h3 class="text-lg font-medium text-gray-700">Riwayat Transaksi</h3>
@@ -65,9 +69,9 @@
           </td>
           <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">{{ $report->date->translatedFormat('d F Y') }}</td>
           <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">{{ strtoupper($report->payment_method) }}</td>
-          <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">{{ number_format($report->total_items_sold, 0, ',', '.') }} item</td>
-          <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">Rp {{ number_format($report->discount, 0, ',', '.') }}</td>
-          <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">Rp {{ number_format($report->total_income, 0, ',', '.') }}</td>
+          <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">{{ Number::format((float) $report->total_items_sold, null, 3, 'id') }} item</td>
+          <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">Rp {{ Number::format((float) $report->discount, null, 3, 'id') }}</td>
+          <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">Rp {{ Number::format((float) $report->total_income, null, 3, 'id') }}</td>
           <td class="whitespace-nowrap px-6 py-4 text-sm">
             <span class="px-3 py-1 rounded-full {{ $report->is_paid ? 'bg-green-200 text-green-700 font-bold' : 'bg-red-200 text-red-700 font-bold' }}">
               {{ $report->is_paid ? 'Sudah' : 'Belum' }}

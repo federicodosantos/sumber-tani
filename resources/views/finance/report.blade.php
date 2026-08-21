@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    @php use Illuminate\Support\Number; @endphp
     <style>
         body {
             font-family: DejaVu Sans, sans-serif;
@@ -58,9 +59,9 @@
                         @php $rowTotal = 0; @endphp
                         @foreach ($rows as $total)
                             @php $rowTotal += $total; @endphp
-                            <td>Rp {{ number_format($total, 0, ',', '.') }}</td>
+                            <td>Rp {{ Number::format((float) $total, null, 3, 'id') }}</td>
                         @endforeach
-                        <td><b>Rp {{ number_format($rowTotal, 0, ',', '.') }}</b></td>
+                        <td><b>Rp {{ Number::format((float) $rowTotal, null, 3, 'id') }}</b></td>
                     </tr>
                 @endforeach
                 {{-- GARIS PEMISAH --}}
@@ -71,17 +72,17 @@
                 <tr>
                     <td><b>TOTAL QTY</b></td>
                     @foreach ($totalQty as $qty)
-                        <td><b>{{ $qty }}</b></td>
+                        <td><b>{{ Number::format((float) $qty, null, 3, 'id') }}</b></td>
                     @endforeach
-                    <td><b>{{ $grandTotalQty }}</b></td>
+                    <td><b>{{ Number::format((float) $grandTotalQty, null, 3, 'id') }}</b></td>
                 </tr>
                 {{-- TOTAL PENJUALAN --}}
                 <tr>
                     <td><b>TOTAL PENJUALAN</b></td>
                     @foreach ($totalSales as $total)
-                        <td><b>Rp {{ number_format($total, 0, ',', '.') }}</b></td>
+                        <td><b>Rp {{ Number::format((float) $total, null, 3, 'id') }}</b></td>
                     @endforeach
-                    <td><b>Rp {{ number_format($grandTotalSales, 0, ',', '.') }}</b></td>
+                    <td><b>Rp {{ Number::format((float) $grandTotalSales, null, 3, 'id') }}</b></td>
                 </tr>
             </tbody>
         </table>
@@ -121,8 +122,8 @@
                                 <td style="color: transparent; border-top: none;">{{ $period }}</td>
                             @endif
                             <td style="text-align: left;">{{ $downloadBy === 'product' ? $row->product_name : $row->category_name }}</td>
-                            <td>{{ $row->total_qty }}</td>
-                            <td>Rp {{ number_format($row->total_sales, 0, ',', '.') }}</td>
+                            <td>{{ Number::format((float) $row->total_qty, null, 3, 'id') }}</td>
+                            <td>Rp {{ Number::format((float) $row->total_sales, null, 3, 'id') }}</td>
                         </tr>
                     @endforeach
                 @endforeach
@@ -131,8 +132,8 @@
                 <tr style="background: #f5f5f5; font-weight: bold;">
                     <td></td>
                     <td style="text-align: left;"><b>TOTAL</b></td>
-                    <td><b>{{ $totalQtySum }}</b></td>
-                    <td><b>Rp {{ number_format($totalSalesSum, 0, ',', '.') }}</b></td>
+                    <td><b>{{ Number::format((float) $totalQtySum, null, 3, 'id') }}</b></td>
+                    <td><b>Rp {{ Number::format((float) $totalSalesSum, null, 3, 'id') }}</b></td>
                 </tr>
             </tbody>
         </table>

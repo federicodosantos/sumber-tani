@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
+    @php use Illuminate\Support\Number; @endphp
     <title>Nota Transaksi #{{ $transaction->id }}</title>
     <style>
         body { font-family: helvetica, sans-serif; font-size: 12px; color: #333; }
@@ -68,9 +69,9 @@
             @forelse($transaction->transactionDetails as $detail)
                 <tr>
                     <td>{{ $detail->product->name ?? 'Produk tidak diketahui' }}</td>
-                    <td class="text-right">Rp {{ number_format($detail->product_price, 0, ',', '.') }}</td>
-                    <td class="text-center">{{ $detail->quantity }}</td>
-                    <td class="text-right">Rp {{ number_format($detail->total_price, 0, ',', '.') }}</td>
+                    <td class="text-right">Rp {{ Number::format((float) $detail->product_price, null, 3, 'id') }}</td>
+                    <td class="text-center">{{ Number::format((float) $detail->quantity, null, 3, 'id') }}</td>
+                    <td class="text-right">Rp {{ Number::format((float) $detail->total_price, null, 3, 'id') }}</td>
                 </tr>
             @empty
                 <tr>
@@ -84,25 +85,25 @@
         @if ($transaction->discount > 0)
             <tr>
                 <td>Subtotal</td>
-                <td>Rp {{ number_format($transaction->total_price + $transaction->discount, 0, ',', '.') }}</td>
+                <td>Rp {{ Number::format((float) $transaction->total_price + (float) $transaction->discount, null, 3, 'id') }}</td>
             </tr>
             <tr>
                 <td>Diskon</td>
-                <td>-Rp {{ number_format($transaction->discount, 0, ',', '.') }}</td>
+                <td>-Rp {{ Number::format((float) $transaction->discount, null, 3, 'id') }}</td>
             </tr>
         @endif
         <tr class="total-row">
             <td>TOTAL</td>
-            <td>Rp {{ number_format($transaction->total_price, 0, ',', '.') }}</td>
+            <td>Rp {{ Number::format((float) $transaction->total_price, null, 3, 'id') }}</td>
         </tr>
         @if ($transaction->payment_method === 'Cash' && $transaction->cash_received !== null)
             <tr>
                 <td>Tunai</td>
-                <td>Rp {{ number_format($transaction->cash_received, 0, ',', '.') }}</td>
+                <td>Rp {{ Number::format((float) $transaction->cash_received, null, 3, 'id') }}</td>
             </tr>
             <tr>
                 <td>Kembalian</td>
-                <td>Rp {{ number_format($transaction->change_amount ?? 0, 0, ',', '.') }}</td>
+                <td>Rp {{ Number::format((float) ($transaction->change_amount ?? 0), null, 3, 'id') }}</td>
             </tr>
         @endif
     </table>

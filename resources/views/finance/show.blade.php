@@ -1,5 +1,6 @@
 @php
     use Illuminate\Support\Str;
+    use Illuminate\Support\Number;
 @endphp
 
 <x-app-layout>
@@ -110,27 +111,27 @@
                                 Harga Asli:
                                 <span class="font-semibold">
                                     Rp
-                                    {{ number_format($transaction->total_price + $transaction->discount, 0, ',', '.') }}
+                                    {{ Number::format((float) $transaction->total_price + (float) $transaction->discount, null, 3, 'id') }}
                                 </span>
                             </h1>
 
                             <h1 class="px-5 pb-5 text-sm uppercase">
                                 Total Diskon:
                                 <span class="font-semibold">
-                                    Rp {{ number_format($transaction->discount, 0, ',', '.') }}
+                                    Rp {{ Number::format((float) $transaction->discount, null, 3, 'id') }}
                                 </span>
                             </h1>
                             <h1 class="px-5 pb-5 text-sm uppercase">
                                 Total Transaksi:
                                 <span class="font-semibold">
-                                    Rp {{ number_format($transaction->total_price, 0, ',', '.') }}
+                                    Rp {{ Number::format((float) $transaction->total_price, null, 3, 'id') }}
                                 </span>
                             </h1>
                         @else
                             <h1 class="p-5 pb-5 text-sm uppercase">
                                 Total Transaksi:
                                 <span class="font-semibold">
-                                    Rp {{ number_format($transaction->total_price, 0, ',', '.') }}
+                                    Rp {{ Number::format((float) $transaction->total_price, null, 3, 'id') }}
                                 </span>
                             </h1>
                         @endif
@@ -161,13 +162,13 @@
                                     {{ $details->product->name }}
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                                    Rp {{ number_format($details->product_price, 0, ',', '.') }}
+                                    Rp {{ Number::format((float) $details->product_price, null, 3, 'id') }}
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                                    {{ $details->quantity }} pcs
+                                    {{ Number::format((float) $details->quantity, null, 3, 'id') }} pcs
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-sm">
-                                    Rp {{ number_format($details->total_price, 0, ',', '.') }}
+                                    Rp {{ Number::format((float) $details->total_price, null, 3, 'id') }}
                                 </td>
                             </tr>
 
