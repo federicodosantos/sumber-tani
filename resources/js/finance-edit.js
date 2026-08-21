@@ -97,67 +97,23 @@ export default (config) => ({
         return p ? p.name : '';
     },
 
-    async submitForm(e) {
+    submitForm(e) {
         if (this.submitting) return;
         if (this.items.length === 0) {
             alert('Minimal harus ada 1 item.');
+            e.preventDefault();
             return;
         }
         for (const row of this.items) {
             if (!row.id || !row.qty || row.qty < 0.001) {
                 alert('Pastikan semua baris lengkap (produk dipilih & qty ≥ 0,001).');
+                e.preventDefault();
                 return;
             }
         }
 
         this.submitting = true;
-        const form = e.target;
-        const payload = new FormData();
-        payload.append('_token', form.querySelector('[name=_token]').value);
-        payload.append('_method', 'PUT');
-
-        this.items.forEach((r, i) => {
-            payload.append(`items[${i}][id]`, r.id);
-            payload.append(`items[${i}][price]`, r.price);
-            payload.append(`items[${i}][qty]`, r.qty);
-        });
-        payload.append('totalQty', this.totalQty);
-        payload.append('totalAmount', this.totalAmount);
-        payload.append('discount', this.discount || 0);
-        payload.append('payment_method', this.payment_method);
-        payload.append('is_paid', this.is_paid ? 1 : 0);
-
-        if (
-            this.payment_method === 'Cash' &&
-            this.is_paid &&
-            this.cash_received !== null &&
-            this.cash_received !== ''
-        ) {
-            payload.append('cash_received', this.cash_received);
-            payload.append('change_amount', this.changeAmount);
-        }
-        if (this.transaction_date) {
-            payload.append('transaction_date', this.transaction_date.replace('T', ' '));
-        }
-
-        try {
-            const res = await fetch(form.action, {
-                method: 'POST',
-                body: payload,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            });
-            if (res.redirected) {
-                window.location.href = res.url;
-                return;
-            }
-            const text = await res.text();
-            document.open();
-            document.write(text);
-            document.close();
-        } catch (err) {
-            alert('Gagal menyimpan: ' + err.message);
-            this.submitting = false;
-        }
+        return true;
     },
 
     filteredProducts(query) {

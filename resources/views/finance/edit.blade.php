@@ -7,12 +7,12 @@
     window.__financeEditConfig = {
       products: @json($products),
       initial: {
-        items: @json($initialItems),
-        discount: {{ (float) $transaction->discount }},
-        payment_method: @json($transaction->payment_method),
-        is_paid: {{ $transaction->is_paid ? 'true' : 'false' }},
-        cash_received: {{ $transaction->cash_received !== null ? (float) $transaction->cash_received : 'null' }},
-        transaction_date: @json(optional($transaction->transaction_date)->format('Y-m-d\\TH:i'))
+        items: @json(old('items', $initialItems)),
+        discount: (float) {{ old('discount', (float) $transaction->discount) }},
+        payment_method: @json(old('payment_method', $transaction->payment_method)),
+        is_paid: {{ old('is_paid', $transaction->is_paid ? 1 : 0) ? 'true' : 'false' }},
+        cash_received: @json(old('cash_received', $transaction->cash_received !== null ? (float) $transaction->cash_received : null)),
+        transaction_date: @json(old('transaction_date', optional($transaction->transaction_date)->format('Y-m-d\\TH:i')))
       }
     };
   </script>
@@ -51,6 +51,19 @@
       </div>
     @endif
 
+    @if ($errors->any())
+      <div class="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <svg class="mt-0.5 h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-1-7v3a1 1 0 1 0 2 0v-3a1 1 0 1 0-2 0Zm1-6a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" clip-rule="evenodd"/>
+        </svg>
+        <div>
+          @foreach ($errors->all() as $error)
+            <p>{{ $error }}</p>
+          @endforeach
+        </div>
+      </div>
+    @endif
+
     {{-- Warning banner --}}
     <div class="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200/70 bg-gradient-to-r from-amber-50 to-yellow-50 px-5 py-4">
       <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
@@ -68,10 +81,17 @@
     </div>
 
     <form method="POST" action="{{ route('finance.update', $transaction->id) }}"
-          x-on:submit.prevent="submitForm($event)"
+          x-on:submit="submitForm($event)"
           class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       @csrf
       @method('PUT')
+
+      {{-- Hidden payload fields (values are kept numeric/raw, not locale-formatted) --}}
+      <input type="hidden" x-model="payment_method" name="payment_method" />
+      <input type="hidden" :value="totalQty" name="totalQty" />
+      <input type="hidden" :value="totalAmount" name="totalAmount" />
+      <input type="hidden" :value="changeAmount" name="change_amount"
+                    :disabled="!(payment_method === 'Cash' && is_paid)" />
 
       {{-- LEFT COLUMN --}}
       <div class="space-y-6">
@@ -116,6 +136,10 @@
           <ul x-show="items.length > 0" class="divide-y divide-gray-100">
             <template x-for="(row, idx) in items" :key="idx">
               <li class="px-6 py-4 transition hover:bg-gray-50/40">
+                {{-- Item payload (hidden, numeric values) --}}
+                <input type="hidden" :name="`items[${idx}][id]`" :value="row.id" />
+                <input type="hidden" :name="`items[${idx}][price]`" :value="row.price" />
+                <input type="hidden" :name="`items[${idx}][qty]`" :value="row.qty" />
                 <div class="grid grid-cols-12 items-start gap-3">
                   {{-- Product picker --}}
                   <div class="col-span-12 md:col-span-5"
@@ -231,7 +255,7 @@
             {{-- Date --}}
             <div>
               <label class="mb-1.5 block text-xs font-semibold text-gray-700">Tanggal Transaksi</label>
-              <input type="datetime-local" x-model="transaction_date"
+              <input type="datetime-local" x-model="transaction_date" name="transaction_date"
                      class="w-full rounded-lg border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:ring-green-500" />
             </div>
 
@@ -240,7 +264,7 @@
               <label class="mb-1.5 block text-xs font-semibold text-gray-700">Diskon</label>
               <div class="relative">
                 <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">Rp</span>
-                <input type="number" x-model.number="discount" min="0" step="any"
+                <input type="number" x-model.number="discount" min="0" step="any" name="discount"
                        class="w-full rounded-lg border-gray-300 pl-9 py-2 text-sm tabular-nums focus:border-green-500 focus:ring-green-500" />
               </div>
             </div>
@@ -249,7 +273,7 @@
             <div>
               <label class="mb-1.5 block text-xs font-semibold text-gray-700">Status</label>
               <label class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 cursor-pointer hover:border-gray-300 transition">
-                <input type="checkbox" x-model="is_paid" class="h-4 w-4 rounded border-gray-300 text-button-main focus:ring-button-main" />
+                <input type="checkbox" x-model="is_paid" name="is_paid" class="h-4 w-4 rounded border-gray-300 text-button-main focus:ring-button-main" />
                 <span class="text-sm font-medium text-gray-800">Sudah lunas</span>
                 <span x-show="is_paid" class="ml-auto rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-700">paid</span>
               </label>
@@ -261,7 +285,8 @@
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="relative">
                   <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">Rp</span>
-                  <input type="number" x-model.number="cash_received" min="0" step="any"
+                  <input type="number" x-model.number="cash_received" min="0" step="any" name="cash_received"
+                         :disabled="!(payment_method === 'Cash' && is_paid)"
                          class="w-full rounded-lg border-gray-300 pl-9 py-2 text-sm tabular-nums focus:border-green-500 focus:ring-green-500" />
                 </div>
                 <div class="rounded-lg bg-gray-50 px-4 py-2 ring-1 ring-gray-100">

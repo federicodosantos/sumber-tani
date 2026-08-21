@@ -432,7 +432,7 @@ class FinanceReportController extends Controller
             'totalAmount' => 'required|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
             'payment_method' => 'required|string|in:Cash,Kredit,QRIS,Transfer',
-            'is_paid' => 'required|boolean',
+            'is_paid' => 'nullable|boolean',
             'cash_received' => 'nullable|numeric|min:0',
             'change_amount' => 'nullable|numeric',
             'transaction_date' => 'nullable|date',
