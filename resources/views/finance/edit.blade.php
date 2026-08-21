@@ -8,7 +8,7 @@
       products: @json($products),
       initial: {
         items: @json(old('items', $initialItems)),
-        discount: (float) {{ old('discount', (float) $transaction->discount) }},
+        discount: @json(old('discount', (float) $transaction->discount)),
         payment_method: @json(old('payment_method', $transaction->payment_method)),
         is_paid: {{ old('is_paid', $transaction->is_paid ? 1 : 0) ? 'true' : 'false' }},
         cash_received: @json(old('cash_received', $transaction->cash_received !== null ? (float) $transaction->cash_received : null)),
