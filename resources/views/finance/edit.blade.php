@@ -188,7 +188,7 @@
                     <x-input-rupiah decimals="3"
                         containerClass="mb-0"
                         @rupiah-change="row.price = rawToNumber($event.detail.value)"
-                        x-init="$el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: row.price } })); $watch('row.price', v => $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: v } })))" />
+                        x-init="$nextTick(() => $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: row.price } }))); $watch('row.price', v => $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: v } })))" />
                   </div>
 
                   {{-- Qty stepper --}}
