@@ -90,6 +90,7 @@
       <input type="hidden" x-model="payment_method" name="payment_method" />
       <input type="hidden" :value="totalQty" name="totalQty" />
       <input type="hidden" :value="totalAmount" name="totalAmount" />
+      <input type="hidden" :value="is_paid ? 1 : 0" name="is_paid" />
       <input type="hidden" :value="changeAmount" name="change_amount"
                     :disabled="!(payment_method === 'Cash' && is_paid)" />
 
@@ -273,7 +274,7 @@
             <div>
               <label class="mb-1.5 block text-xs font-semibold text-gray-700">Status</label>
               <label class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 cursor-pointer hover:border-gray-300 transition">
-                <input type="checkbox" x-model="is_paid" name="is_paid" class="h-4 w-4 rounded border-gray-300 text-button-main focus:ring-button-main" />
+                <input type="checkbox" x-model="is_paid" class="h-4 w-4 rounded border-gray-300 text-button-main focus:ring-button-main" />
                 <span class="text-sm font-medium text-gray-800">Sudah lunas</span>
                 <span x-show="is_paid" class="ml-auto rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-700">paid</span>
               </label>
