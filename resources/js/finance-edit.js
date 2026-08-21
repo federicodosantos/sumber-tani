@@ -50,6 +50,11 @@ export default (config) => ({
         return String(qty).replace('.', ',');
     },
 
+    rawToNumber(raw) {
+        if (raw === '' || raw === null || raw === undefined) return 0;
+        return Number(raw);
+    },
+
     setQty(row, value) {
         const parsed = parseFloat(String(value).replace(',', '.')) || 0;
         row.qty = parsed < 0.001 ? 0.001 : parsed;
@@ -76,7 +81,7 @@ export default (config) => ({
         row.id = product.id;
         row.name = product.name;
         row.maxStock = product.stock;
-        if (!row.price || row.price === 0) row.price = product.price;
+        if (!row.price || row.price === 0) row.price = Number(product.price) || 0;
         if (!row.qty || row.qty < 0.001) row.qty = 1;
         this.activeSearchIdx = null;
     },

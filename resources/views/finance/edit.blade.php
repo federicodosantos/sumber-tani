@@ -185,11 +185,10 @@
                   {{-- Price --}}
                   <div class="col-span-6 md:col-span-3">
                     <label class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-gray-400">Harga</label>
-                    <div class="relative">
-                      <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">Rp</span>
-                      <input type="number" x-model.number="row.price" min="0" step="any"
-                             class="w-full rounded-lg border-gray-300 pl-9 pr-2 py-2 text-right text-sm tabular-nums focus:border-green-500 focus:ring-green-500" />
-                    </div>
+                    <x-input-rupiah decimals="3"
+                        containerClass="mb-0"
+                        @rupiah-change="row.price = rawToNumber($event.detail.value)"
+                        x-init="$el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: row.price } })); $watch('row.price', v => $el.dispatchEvent(new CustomEvent('update-rupiah-value', { detail: { value: v } })))" />
                   </div>
 
                   {{-- Qty stepper --}}
@@ -263,11 +262,9 @@
             {{-- Discount --}}
             <div>
               <label class="mb-1.5 block text-xs font-semibold text-gray-700">Diskon</label>
-              <div class="relative">
-                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">Rp</span>
-                <input type="number" x-model.number="discount" min="0" step="any" name="discount"
-                       class="w-full rounded-lg border-gray-300 pl-9 py-2 text-sm tabular-nums focus:border-green-500 focus:ring-green-500" />
-              </div>
+              <x-input-rupiah name="discount" decimals="3"
+                  value="{{ old('discount', (float) $transaction->discount) }}"
+                  @rupiah-change="discount = rawToNumber($event.detail.value)" />
             </div>
 
             {{-- Paid status --}}
@@ -284,11 +281,12 @@
             <div x-show="payment_method === 'Cash' && is_paid" class="md:col-span-2">
               <label class="mb-1.5 block text-xs font-semibold text-gray-700">Uang Diterima</label>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="relative">
-                  <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">Rp</span>
-                  <input type="number" x-model.number="cash_received" min="0" step="any" name="cash_received"
-                         :disabled="!(payment_method === 'Cash' && is_paid)"
-                         class="w-full rounded-lg border-gray-300 pl-9 py-2 text-sm tabular-nums focus:border-green-500 focus:ring-green-500" />
+                <div>
+                  <x-input-rupiah decimals="3"
+                      value="{{ old('cash_received', $transaction->cash_received !== null ? (float) $transaction->cash_received : '') }}"
+                      @rupiah-change="cash_received = rawToNumber($event.detail.value)" />
+                  <input type="hidden" name="cash_received" :value="cash_received ?? ''"
+                         :disabled="!(payment_method === 'Cash' && is_paid)" />
                 </div>
                 <div class="rounded-lg bg-gray-50 px-4 py-2 ring-1 ring-gray-100">
                   <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Kembalian</p>

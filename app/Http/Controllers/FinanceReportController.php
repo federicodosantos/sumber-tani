@@ -400,7 +400,7 @@ class FinanceReportController extends Controller
             return [
                 'id' => $p->id,
                 'name' => $p->name,
-                'price' => $firstStock?->price_consument ?? 0,
+                'price' => (float) ($firstStock?->price_consument ?? 0),
                 'stock' => $stockSum,
             ];
         });
