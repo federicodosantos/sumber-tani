@@ -6,6 +6,7 @@ use App\Models\CustomerProductPrice;
 use App\Models\Invoice;
 use App\Models\ProductStock;
 use App\Models\Transaction;
+use App\Services\DecimalMathService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,13 +34,18 @@ class TransactionController extends Controller
      */
     public function store(Request $request)
     {
+        $this->normalizeDecimalInput($request);
+
         $request->validate([
-            'items' => 'required|array',
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|integer|exists:products,id',
+            'items.*.price' => 'required|numeric|min:0|decimal:0,3',
+            'items.*.qty' => 'required|numeric|min:0.001|decimal:0,3',
             'totalQty' => 'required|numeric',
             'totalAmount' => 'required|numeric',
             'created_at' => 'nullable|date',
             'offline_uuid' => 'nullable|string',
-            'discount' => 'nullable|numeric|min:0',
+            'discount' => 'nullable|numeric|min:0|decimal:0,3',
             'payment_method' => 'required|string|in:Cash,Kredit,QRIS,Transfer',
             'is_paid' => 'required|boolean',
             'cash_received' => 'nullable|numeric|min:0',
@@ -65,17 +71,44 @@ class TransactionController extends Controller
             $transactionDate = Carbon::now();
         }
 
-        $items = $request->items;
-        $totalQty = $request->totalQty;
-        $totalAmount = $request->totalAmount;
-        $discount = $request->discount ?? 0;
+        $math = app(DecimalMathService::class);
+
+        $discount = $math->round($request->input('discount', 0));
+
+        $preparedItems = [];
+        $totalQty = '0.000';
+        $subtotal = '0.000';
+
+        foreach ($request->input('items') as $item) {
+            $id = (int) $item['id'];
+            $price = $math->round($item['price']);
+            $qty = $math->round($item['qty']);
+            $lineTotal = $math->multiply($price, $qty);
+
+            $totalQty = $math->add($totalQty, $qty);
+            $subtotal = $math->add($subtotal, $lineTotal);
+
+            $preparedItems[] = [
+                'id' => $id,
+                'price' => $price,
+                'qty' => $qty,
+                'basePrice' => $item['basePrice'] ?? null,
+                'lineTotal' => $lineTotal,
+            ];
+        }
+
+        $totalAmount = $math->subtract($subtotal, $discount);
+        if ($math->isNegative($totalAmount)) {
+            $totalAmount = '0.000';
+        }
+
         $cashReceived = null;
         $changeAmount = null;
         if ($request->payment_method === 'Cash') {
-            $cashReceived = $request->filled('cash_received') ? (float) $request->cash_received : null;
-            $changeAmount = $request->filled('change_amount') ? (float) $request->change_amount : null;
+            $cashReceived = $request->filled('cash_received') ? $math->round($request->input('cash_received')) : null;
+            $changeAmount = $request->filled('change_amount') ? $math->round($request->input('change_amount')) : null;
 
-            if ($request->is_paid && $cashReceived !== null && $cashReceived < $totalAmount) {
+            if ($request->is_paid && $cashReceived !== null && $math->compare($cashReceived, $totalAmount) < 0) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Uang diterima kurang dari total transaksi.',
@@ -100,7 +133,7 @@ class TransactionController extends Controller
                 'change_amount' => $changeAmount,
             ]);
 
-            foreach ($items as $item) {
+            foreach ($preparedItems as $item) {
                 // Update Stok & Get Buying Price
                 $productStock = ProductStock::where('product_id', $item['id'])
                     ->whereNull('deleted_at')
@@ -108,7 +141,7 @@ class TransactionController extends Controller
                     ->orderBy('created_at', 'asc')
                     ->first();
 
-                $buyingPrice = $productStock ? $productStock->unit_price : 0;
+                $buyingPrice = $productStock ? $math->round($productStock->unit_price) : '0.000';
 
                 $transaction->transactionDetails()->create([
                     'product_id' => $item['id'],
@@ -116,13 +149,13 @@ class TransactionController extends Controller
                     'product_price' => $item['price'],
                     'buying_price' => $buyingPrice,
                     'quantity' => $item['qty'],
-                    'total_price' => $item['price'] * $item['qty'],
+                    'total_price' => $item['lineTotal'],
                     'created_at' => $transactionDate,
                     'updated_at' => $transactionDate,
                 ]);
 
                 if ($productStock) {
-                    $productStock->decrement('stock_opname', $item['qty']);
+                    $productStock->decrement('stock_opname', (float) $item['qty']);
                 }
             }
 
@@ -138,20 +171,18 @@ class TransactionController extends Controller
                     'inv_code' => Invoice::generateInvCode(Invoice::TYPE_PURCHASE),
                 ]);
 
-                // Save custom prices for each item where the price was manually changed
-                foreach ($items as $item) {
-                    $basePrice = $item['basePrice'] ?? null;
-                    $manualPrice = $item['price'] ?? null;
+                foreach ($preparedItems as $item) {
+                    $basePrice = $item['basePrice'];
+                    $manualPrice = $item['price'];
 
-                    // Only save if price was manually set and differs from base system price
-                    if ($basePrice !== null && $manualPrice !== null && (float) $manualPrice !== (float) $basePrice) {
+                    if ($basePrice !== null && $math->compare($manualPrice, $basePrice) !== 0) {
                         CustomerProductPrice::updateOrCreate(
                             [
                                 'customer_id' => $request->customer_id,
                                 'product_id' => $item['id'],
                             ],
                             [
-                                'custom_price' => (float) $manualPrice,
+                                'custom_price' => $manualPrice,
                             ]
                         );
                     }
@@ -254,5 +285,41 @@ class TransactionController extends Controller
     public function destroy(Transaction $transaction)
     {
         //
+    }
+
+    private function normalizeDecimalInput(Request $request): void
+    {
+        $data = $request->all();
+
+        foreach (['discount', 'totalQty', 'totalAmount', 'cash_received', 'change_amount'] as $key) {
+            if (array_key_exists($key, $data)) {
+                $data[$key] = $this->normalizeDecimal($data[$key]);
+            }
+        }
+
+        if (isset($data['items']) && is_array($data['items'])) {
+            foreach ($data['items'] as $i => $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+
+                foreach (['price', 'qty', 'basePrice'] as $field) {
+                    if (array_key_exists($field, $item)) {
+                        $data['items'][$i][$field] = $this->normalizeDecimal($item[$field]);
+                    }
+                }
+            }
+        }
+
+        $request->merge($data);
+    }
+
+    private function normalizeDecimal(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        return str_replace(',', '.', trim($value));
     }
 }
