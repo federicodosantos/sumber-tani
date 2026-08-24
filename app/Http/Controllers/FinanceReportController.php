@@ -11,6 +11,7 @@ use App\Models\ProductPurchase;
 use App\Models\ProductStock;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
+use App\Services\DecimalMathService;
 use App\Services\TransactionReversalService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -524,18 +525,20 @@ class FinanceReportController extends Controller
     ================================================================ */
     public function storeManual(Request $request)
     {
+        $this->normalizeDecimalInput($request);
+
         $validated = $request->validate([
             'customer_kind' => 'required|in:guest,r1,r2',
             'customer_id' => 'required_unless:customer_kind,guest|nullable|integer|exists:customers,id',
             'reduce_stock' => 'required|boolean',
             'items' => 'required|array|min:1',
             'items.*.id' => 'required|integer|exists:products,id',
-            'items.*.price' => 'required|numeric|min:0',
-            'items.*.qty' => 'required|numeric|min:0.001',
+            'items.*.price' => 'required|numeric|min:0|decimal:0,3',
+            'items.*.qty' => 'required|numeric|min:0.001|decimal:0,3',
             'items.*.basePrice' => 'nullable|numeric|min:0',
             'totalQty' => 'required|numeric|min:0.001',
             'totalAmount' => 'required|numeric|min:0',
-            'discount' => 'nullable|numeric|min:0',
+            'discount' => 'nullable|numeric|min:0|decimal:0,3',
             'payment_method' => 'required|in:Cash,Kredit,QRIS,Transfer',
             'is_paid' => 'required|boolean',
             'cash_received' => 'nullable|numeric|min:0',
@@ -557,20 +560,48 @@ class FinanceReportController extends Controller
             }
         }
 
+        $math = app(DecimalMathService::class);
+
         $reduceStock = (bool) $validated['reduce_stock'];
-        $items = $validated['items'];
-        $totalAmount = (float) $validated['totalAmount'];
-        $totalQty = (float) $validated['totalQty'];
-        $discount = (float) ($validated['discount'] ?? 0);
         $isPaid = (bool) $validated['is_paid'];
+
+        $discountRaw = $validated['discount'] ?? 0;
+        $discount = $math->round($discountRaw === '' ? 0 : $discountRaw);
+
+        $preparedItems = [];
+        $totalQty = '0.000';
+        $subtotal = '0.000';
+
+        foreach ($validated['items'] as $item) {
+            $id = (int) $item['id'];
+            $price = $math->round($item['price']);
+            $qty = $math->round($item['qty']);
+            $lineTotal = $math->multiply($price, $qty);
+
+            $totalQty = $math->add($totalQty, $qty);
+            $subtotal = $math->add($subtotal, $lineTotal);
+
+            $preparedItems[] = [
+                'id' => $id,
+                'price' => $price,
+                'qty' => $qty,
+                'basePrice' => $item['basePrice'] ?? null,
+                'lineTotal' => $lineTotal,
+            ];
+        }
+
+        $totalAmount = $math->subtract($subtotal, $discount);
+        if ($math->isNegative($totalAmount)) {
+            $totalAmount = '0.000';
+        }
 
         if ($reduceStock) {
             $stockErrors = [];
-            foreach ($items as $idx => $item) {
-                $available = (float) ProductStock::where('product_id', $item['id'])
+            foreach ($preparedItems as $idx => $item) {
+                $available = (string) ProductStock::where('product_id', $item['id'])
                     ->whereNull('deleted_at')
                     ->sum('stock_opname');
-                if ($available < (float) $item['qty']) {
+                if ($math->compare($available, $item['qty']) < 0) {
                     $name = Product::where('id', $item['id'])->value('name') ?? "Produk #{$item['id']}";
                     $stockErrors["items.$idx.qty"] = "Stok '{$name}' hanya {$available}, tidak cukup untuk {$item['qty']}.";
                 }
@@ -583,10 +614,10 @@ class FinanceReportController extends Controller
         $cashReceived = null;
         $changeAmount = null;
         if ($validated['payment_method'] === 'Cash') {
-            $cashReceived = isset($validated['cash_received']) ? (float) $validated['cash_received'] : null;
-            $changeAmount = isset($validated['change_amount']) ? (float) $validated['change_amount'] : null;
+            $cashReceived = isset($validated['cash_received']) ? $math->round($validated['cash_received']) : null;
+            $changeAmount = isset($validated['change_amount']) ? $math->round($validated['change_amount']) : null;
 
-            if ($isPaid && $cashReceived !== null && $cashReceived < $totalAmount) {
+            if ($isPaid && $cashReceived !== null && $math->compare($cashReceived, $totalAmount) < 0) {
                 return redirect()->back()->withInput()->withErrors([
                     'cash_received' => 'Uang diterima kurang dari total transaksi.',
                 ]);
@@ -600,8 +631,8 @@ class FinanceReportController extends Controller
 
         try {
             DB::transaction(function () use (
-                $customer, $reduceStock, $items, $totalAmount, $totalQty,
-                $discount, $isPaid, $cashReceived, $changeAmount, $transactionDate, $validated
+                $customer, $reduceStock, $preparedItems, $totalAmount, $totalQty,
+                $discount, $isPaid, $cashReceived, $changeAmount, $transactionDate, $validated, $math
             ) {
                 $transaction = Transaction::create([
                     'total_quantity' => $totalQty,
@@ -617,16 +648,16 @@ class FinanceReportController extends Controller
                     'is_manual' => true,
                 ]);
 
-                foreach ($items as $item) {
+                foreach ($preparedItems as $item) {
                     $productStock = null;
-                    $buyingPrice = 0;
+                    $buyingPrice = '0.000';
                     if ($reduceStock) {
                         $productStock = ProductStock::where('product_id', $item['id'])
                             ->whereNull('deleted_at')
                             ->where('stock_opname', '>', 0)
                             ->orderBy('created_at', 'asc')
                             ->first();
-                        $buyingPrice = $productStock ? (float) $productStock->unit_price : 0;
+                        $buyingPrice = $productStock ? $math->round($productStock->unit_price) : '0.000';
                     }
 
                     $transaction->transactionDetails()->create([
@@ -635,13 +666,13 @@ class FinanceReportController extends Controller
                         'product_price' => $item['price'],
                         'buying_price' => $buyingPrice,
                         'quantity' => $item['qty'],
-                        'total_price' => $item['price'] * $item['qty'],
+                        'total_price' => $item['lineTotal'],
                         'created_at' => $transactionDate,
                         'updated_at' => $transactionDate,
                     ]);
 
                     if ($reduceStock && $productStock) {
-                        $productStock->decrement('stock_opname', $item['qty']);
+                        $productStock->decrement('stock_opname', (float) $item['qty']);
                     }
                 }
 
@@ -657,13 +688,13 @@ class FinanceReportController extends Controller
                         'updated_at' => $transactionDate,
                     ]);
 
-                    foreach ($items as $item) {
-                        $basePrice = $item['basePrice'] ?? null;
-                        $manualPrice = $item['price'] ?? null;
-                        if ($basePrice !== null && $manualPrice !== null && (float) $manualPrice !== (float) $basePrice) {
+                    foreach ($preparedItems as $item) {
+                        $basePrice = $item['basePrice'];
+                        $manualPrice = $item['price'];
+                        if ($basePrice !== null && $math->compare($manualPrice, $basePrice) !== 0) {
                             CustomerProductPrice::updateOrCreate(
                                 ['customer_id' => $customer->id, 'product_id' => $item['id']],
-                                ['custom_price' => (float) $manualPrice],
+                                ['custom_price' => $manualPrice],
                             );
                         }
                     }
@@ -815,5 +846,41 @@ class FinanceReportController extends Controller
         }
 
         return $pdf->download('laporan-penjualan.pdf');
+    }
+
+    private function normalizeDecimalInput(Request $request): void
+    {
+        $data = $request->all();
+
+        foreach (['discount', 'totalQty', 'totalAmount', 'cash_received', 'change_amount'] as $key) {
+            if (array_key_exists($key, $data)) {
+                $data[$key] = $this->normalizeDecimal($data[$key]);
+            }
+        }
+
+        if (isset($data['items']) && is_array($data['items'])) {
+            foreach ($data['items'] as $i => $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+
+                foreach (['price', 'qty', 'basePrice'] as $field) {
+                    if (array_key_exists($field, $item)) {
+                        $data['items'][$i][$field] = $this->normalizeDecimal($item[$field]);
+                    }
+                }
+            }
+        }
+
+        $request->merge($data);
+    }
+
+    private function normalizeDecimal(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        return str_replace(',', '.', trim($value));
     }
 }
