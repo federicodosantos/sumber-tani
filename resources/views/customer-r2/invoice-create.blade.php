@@ -223,8 +223,8 @@
                                                 </td>
                                                 <td class="px-3 py-3 text-center">
                                                     <div class="inline-flex items-center gap-1">
-                                                        <button type="button" @click="item.qty = Math.max(1, (Number(item.qty) || 1) - 1)" class="h-7 w-7 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center cursor-pointer">−</button>
-                                                        <input type="number" min="1" step="1" x-model.number="item.qty"
+                                                        <button type="button" @click="item.qty = Math.max(0.001, (Number(item.qty) || 0.001) - 1)" class="h-7 w-7 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center cursor-pointer">−</button>
+                                                        <input type="number" min="0.001" step="0.001" x-model.number="item.qty"
                                                             class="w-12 rounded-md border border-gray-200 px-1 py-1 text-center text-sm tabular-nums focus:outline-none focus:border-button-main focus:bg-white">
                                                         <button type="button" @click="item.qty = (Number(item.qty) || 0) + 1" class="h-7 w-7 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center cursor-pointer">+</button>
                                                     </div>

@@ -10,6 +10,7 @@ use App\Models\Invoice;
 use App\Models\ItemCategory;
 use App\Models\Product;
 use App\Models\Transaction;
+use App\Services\DecimalMathService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -385,15 +386,17 @@ class CustomerR2Controller extends Controller
      */
     public function storeInvoice(Request $request, Customer $customer)
     {
+        $this->normalizeDecimalInput($request);
+
         $validated = $request->validate([
             'items' => 'required|array|min:1',
             'items.*.id' => 'required|integer|exists:products,id',
-            'items.*.price' => 'required|numeric|min:0',
-            'items.*.qty' => 'required|integer|min:1',
+            'items.*.price' => 'required|numeric|min:0|decimal:0,3',
+            'items.*.qty' => 'required|numeric|min:0.001|decimal:0,3',
             'items.*.basePrice' => 'nullable|numeric|min:0',
-            'totalQty' => 'required|numeric|min:1',
+            'totalQty' => 'required|numeric|min:0.001',
             'totalAmount' => 'required|numeric|min:0',
-            'discount' => 'nullable|numeric|min:0',
+            'discount' => 'nullable|numeric|min:0|decimal:0,3',
             'payment_method' => 'required|string|in:Cash,Kredit,QRIS,Transfer',
             'is_paid' => 'required|boolean',
             'cash_received' => 'nullable|numeric|min:0',
@@ -406,19 +409,48 @@ class CustomerR2Controller extends Controller
         $transactionDate = Carbon::parse($validated['created_at'])
             ->setTimezone(config('app.timezone'))
             ->setTime($now->hour, $now->minute, $now->second);
-        $items = $validated['items'];
-        $totalAmount = (float) $validated['totalAmount'];
-        $totalQty = (int) $validated['totalQty'];
-        $discount = (float) ($validated['discount'] ?? 0);
+
+        $math = app(DecimalMathService::class);
+
         $isPaid = (bool) $validated['is_paid'];
+
+        $discountRaw = $validated['discount'] ?? 0;
+        $discount = $math->round($discountRaw === '' ? 0 : $discountRaw);
+
+        $preparedItems = [];
+        $totalQty = '0.000';
+        $subtotal = '0.000';
+
+        foreach ($validated['items'] as $item) {
+            $id = (int) $item['id'];
+            $price = $math->round($item['price']);
+            $qty = $math->round($item['qty']);
+            $lineTotal = $math->multiply($price, $qty);
+
+            $totalQty = $math->add($totalQty, $qty);
+            $subtotal = $math->add($subtotal, $lineTotal);
+
+            $preparedItems[] = [
+                'id' => $id,
+                'price' => $price,
+                'qty' => $qty,
+                'basePrice' => $item['basePrice'] ?? null,
+                'lineTotal' => $lineTotal,
+            ];
+        }
+
+        $totalAmount = $math->subtract($subtotal, $discount);
+        if ($math->isNegative($totalAmount)) {
+            $totalAmount = '0.000';
+        }
 
         $cashReceived = null;
         $changeAmount = null;
         if ($validated['payment_method'] === 'Cash') {
-            $cashReceived = isset($validated['cash_received']) ? (float) $validated['cash_received'] : null;
-            $changeAmount = isset($validated['change_amount']) ? (float) $validated['change_amount'] : null;
+            $cashReceived = isset($validated['cash_received']) ? $math->round($validated['cash_received']) : null;
+            $changeAmount = isset($validated['change_amount']) ? $math->round($validated['change_amount']) : null;
 
-            if ($isPaid && $cashReceived !== null && $cashReceived < $totalAmount) {
+            if ($isPaid && $cashReceived !== null && $math->compare($cashReceived, $totalAmount) < 0) {
                 return redirect()
                     ->back()
                     ->withInput()
@@ -427,7 +459,7 @@ class CustomerR2Controller extends Controller
         }
 
         try {
-            DB::transaction(function () use ($customer, $items, $totalAmount, $totalQty, $discount, $isPaid, $cashReceived, $changeAmount, $transactionDate, $validated) {
+            DB::transaction(function () use ($customer, $preparedItems, $totalAmount, $totalQty, $discount, $isPaid, $cashReceived, $changeAmount, $transactionDate, $validated, $math) {
                 $transaction = Transaction::create([
                     'total_quantity' => $totalQty,
                     'total_price' => $totalAmount,
@@ -442,14 +474,14 @@ class CustomerR2Controller extends Controller
                     'is_manual' => true,
                 ]);
 
-                foreach ($items as $item) {
+                foreach ($preparedItems as $item) {
                     $transaction->transactionDetails()->create([
                         'product_id' => $item['id'],
                         'product_stock_id' => null,
                         'product_price' => $item['price'],
-                        'buying_price' => 0,
+                        'buying_price' => '0.000',
                         'quantity' => $item['qty'],
-                        'total_price' => $item['price'] * $item['qty'],
+                        'total_price' => $item['lineTotal'],
                         'created_at' => $transactionDate,
                         'updated_at' => $transactionDate,
                     ]);
@@ -466,18 +498,18 @@ class CustomerR2Controller extends Controller
                     'updated_at' => $transactionDate,
                 ]);
 
-                foreach ($items as $item) {
-                    $basePrice = $item['basePrice'] ?? null;
-                    $manualPrice = $item['price'] ?? null;
+                foreach ($preparedItems as $item) {
+                    $basePrice = $item['basePrice'];
+                    $manualPrice = $item['price'];
 
-                    if ($basePrice !== null && $manualPrice !== null && (float) $manualPrice !== (float) $basePrice) {
+                    if ($basePrice !== null && $math->compare($manualPrice, $basePrice) !== 0) {
                         CustomerProductPrice::updateOrCreate(
                             [
                                 'customer_id' => $customer->id,
                                 'product_id'  => $item['id'],
                             ],
                             [
-                                'custom_price' => (float) $manualPrice,
+                                'custom_price' => $manualPrice,
                             ]
                         );
                     }
@@ -1035,5 +1067,41 @@ class CustomerR2Controller extends Controller
             ->pluck('custom_price', 'product_id');
 
         return response()->json($prices);
+    }
+
+    private function normalizeDecimalInput(Request $request): void
+    {
+        $data = $request->all();
+
+        foreach (['discount', 'totalQty', 'totalAmount', 'cash_received', 'change_amount'] as $key) {
+            if (array_key_exists($key, $data)) {
+                $data[$key] = $this->normalizeDecimal($data[$key]);
+            }
+        }
+
+        if (isset($data['items']) && is_array($data['items'])) {
+            foreach ($data['items'] as $i => $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+
+                foreach (['price', 'qty', 'basePrice'] as $field) {
+                    if (array_key_exists($field, $item)) {
+                        $data['items'][$i][$field] = $this->normalizeDecimal($item[$field]);
+                    }
+                }
+            }
+        }
+
+        $request->merge($data);
+    }
+
+    private function normalizeDecimal(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        return str_replace(',', '.', trim($value));
     }
 }
