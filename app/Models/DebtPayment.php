@@ -12,6 +12,10 @@ class DebtPayment extends Model
 
     protected $casts = [
         'payment_date' => 'datetime',
+        'amount' => 'decimal:3',
+        'credit_amount' => 'decimal:3',
+        'refund_amount' => 'decimal:3',
+        'credit_used' => 'decimal:3',
     ];
 
     public function customer()

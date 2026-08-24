@@ -10,6 +10,12 @@ class DebtPaymentDetail extends Model
 
     protected $fillable = ['debt_payment_id', 'invoice_id', 'amount_paid', 'debt_before', 'debt_after'];
 
+    protected $casts = [
+        'amount_paid' => 'decimal:3',
+        'debt_before' => 'decimal:3',
+        'debt_after' => 'decimal:3',
+    ];
+
     /**
      * The parent debt payment.
      */

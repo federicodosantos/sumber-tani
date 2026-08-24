@@ -10,6 +10,10 @@ class CustomerProductPrice extends Model
 
     protected $fillable = ['customer_id', 'product_id', 'custom_price'];
 
+    protected $casts = [
+        'custom_price' => 'decimal:3',
+    ];
+
     public function customer()
     {
         return $this->belongsTo(Customer::class, 'customer_id');

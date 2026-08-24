@@ -20,6 +20,10 @@ class Invoice extends Model
 
     protected $fillable = ['customer_id', 'transaction_id', 'debts', 'type', 'inv_code', 'note', 'created_at', 'updated_at'];
 
+    protected $casts = [
+        'debts' => 'decimal:3',
+    ];
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

@@ -16,6 +16,10 @@ class Customer extends Model
 
     protected $fillable = ['name', 'type', 'phone_number', 'address', 'credit_balance'];
 
+    protected $casts = [
+        'credit_balance' => 'decimal:3',
+    ];
+
     public function scopeOfType($query, ?string $type)
     {
         if ($type && in_array($type, ['r1', 'r2'], true)) {
