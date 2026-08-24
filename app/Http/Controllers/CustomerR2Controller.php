@@ -190,11 +190,13 @@ class CustomerR2Controller extends Controller
      */
     public function processPayment(Request $request, Customer $customer)
     {
+        $this->normalizeDecimalInput($request);
+
         $validator = Validator::make($request->all(), [
-            'amount'             => 'required|numeric|min:0',
+            'amount'             => 'required|numeric|min:0|decimal:0,3',
             'payment_method'     => 'required|string|in:Cash,Transfer,QRIS',
             'payment_date'       => 'required|date|before_or_equal:now',
-            'use_credit_amount'  => 'nullable|numeric|min:0',
+            'use_credit_amount'  => 'nullable|numeric|min:0|decimal:0,3',
             'overpayment_action' => 'nullable|string|in:credit,refund',
         ], [
             'amount.required'         => 'Nominal pembayaran wajib diisi.',
@@ -212,44 +214,48 @@ class CustomerR2Controller extends Controller
         }
 
         $validated      = $validator->validated();
-        $cashAmount     = (float) $validated['amount'];
-        $creditUsed     = (float) ($validated['use_credit_amount'] ?? 0);
+        $math           = app(DecimalMathService::class);
+        $cashAmount     = $math->round($validated['amount']);
+        $creditUsed     = $math->round($validated['use_credit_amount'] ?? 0);
         $paymentMethod  = $validated['payment_method'];
         $paymentDate    = $this->dateWithCurrentTime($validated['payment_date']);
         $overpayAction  = $validated['overpayment_action'] ?? null;
 
         // Validate: at least some payment must happen
-        if ($cashAmount <= 0 && $creditUsed <= 0) {
+        if ($math->isZero($cashAmount) && $math->isZero($creditUsed)) {
             return redirect()->back()->withInput()
                 ->withErrors(['amount' => 'Minimal ada nominal tunai atau saldo kredit yang digunakan.'])
                 ->with('open_modal', 'pay-debt');
         }
 
         // Validate: credit used cannot exceed available balance
-        $availableCredit = (float) $customer->credit_balance;
-        if ($creditUsed > $availableCredit) {
+        $availableCredit = $math->round((string) $customer->credit_balance);
+        if ($math->compare($creditUsed, $availableCredit) > 0) {
             return redirect()->back()->withInput()
                 ->withErrors(['amount' => 'Saldo kredit yang digunakan (Rp ' . number_format($creditUsed, 0, ',', '.') . ') melebihi sisa saldo tersedia (Rp ' . number_format($availableCredit, 0, ',', '.') . ').'])
                 ->with('open_modal', 'pay-debt');
         }
 
-        $totalDebt = (float) $customer->invoices()
+        $totalDebt = $math->round((string) $customer->invoices()
             ->where('type', Invoice::TYPE_PURCHASE)
             ->where('debts', '>', 0)
-            ->sum('debts');
+            ->sum('debts'));
 
-        $effectivePayment = $cashAmount + $creditUsed;
-        $excess           = max(0, $effectivePayment - $totalDebt);
+        $effectivePayment = $math->add($cashAmount, $creditUsed);
+        $excess = $math->subtract($effectivePayment, $totalDebt);
+        if ($math->isNegative($excess)) {
+            $excess = '0.000';
+        }
 
         // If there is overpayment, an action must be chosen
-        if ($excess > 0 && ! in_array($overpayAction, ['credit', 'refund'], true)) {
+        if ($math->isPositive($excess) && ! in_array($overpayAction, ['credit', 'refund'], true)) {
             return redirect()->back()->withInput()
                 ->withErrors(['amount' => 'Terdapat kelebihan bayar Rp ' . number_format($excess, 0, ',', '.') . '. Pilih aksi: simpan sebagai saldo atau refund tunai.'])
                 ->with('open_modal', 'pay-debt');
         }
 
         try {
-            DB::transaction(function () use ($customer, $cashAmount, $creditUsed, $effectivePayment, $excess, $overpayAction, $paymentMethod, $paymentDate) {
+            DB::transaction(function () use ($customer, $math, $cashAmount, $creditUsed, $effectivePayment, $excess, $overpayAction, $paymentMethod, $paymentDate) {
 
                 // 1. Create receipt invoice (debt_payment type)
                 $paymentInvoice = Invoice::create([
@@ -263,8 +269,8 @@ class CustomerR2Controller extends Controller
                 ]);
 
                 // 2. Create debt payment record
-                $creditAmount = ($excess > 0 && $overpayAction === 'credit') ? $excess : 0;
-                $refundAmount = ($excess > 0 && $overpayAction === 'refund') ? $excess : 0;
+                $creditAmount = ($math->isPositive($excess) && $overpayAction === 'credit') ? $excess : '0.000';
+                $refundAmount = ($math->isPositive($excess) && $overpayAction === 'refund') ? $excess : '0.000';
 
                 $debtPayment = DebtPayment::create([
                     'customer_id'        => $customer->id,
@@ -277,13 +283,8 @@ class CustomerR2Controller extends Controller
                     'credit_used'        => $creditUsed,
                 ]);
 
-                // 3. Deduct any credit used from the customer's balance first
-                if ($creditUsed > 0) {
-                    $customer->decrement('credit_balance', $creditUsed);
-                    $customer->refresh();
-                }
-
-                // 4. FIFO: distribute effectivePayment across unpaid invoices (oldest first)
+                // 3. FIFO: distribute effectivePayment across unpaid invoices (oldest first)
+                $creditBalance = (string) $customer->credit_balance;
                 $remaining = $effectivePayment;
                 $invoices  = $customer->invoices()
                     ->where('type', Invoice::TYPE_PURCHASE)
@@ -292,15 +293,19 @@ class CustomerR2Controller extends Controller
                     ->get();
 
                 foreach ($invoices as $invoice) {
-                    if ($remaining <= 0) break;
+                    if ($math->compare($remaining, 0) <= 0) {
+                        break;
+                    }
 
-                    $debtBefore          = $invoice->debts;
-                    $paymentForThisInvoice = min($remaining, $invoice->debts);
+                    $debtBefore = (string) $invoice->debts;
+                    $paymentForThisInvoice = $math->compare($remaining, $invoice->debts) <= 0
+                        ? $remaining
+                        : (string) $invoice->debts;
 
-                    $invoice->update(['debts' => $invoice->debts - $paymentForThisInvoice]);
-                    $remaining -= $paymentForThisInvoice;
+                    $invoice->update(['debts' => $math->subtract((string) $invoice->debts, $paymentForThisInvoice)]);
+                    $remaining = $math->subtract($remaining, $paymentForThisInvoice);
 
-                    if ($invoice->fresh()->debts == 0 && $invoice->transaction) {
+                    if ($math->isZero((string) $invoice->fresh()->debts) && $invoice->transaction) {
                         $invoice->transaction->update(['is_paid' => true]);
                     }
 
@@ -309,15 +314,18 @@ class CustomerR2Controller extends Controller
                         'invoice_id'      => $invoice->id,
                         'amount_paid'     => $paymentForThisInvoice,
                         'debt_before'     => $debtBefore,
-                        'debt_after'      => $invoice->fresh()->debts,
+                        'debt_after'      => (string) $invoice->fresh()->debts,
                     ]);
                 }
 
-                // 5. Handle overpayment: save as credit or record as refund
-                if ($creditAmount > 0) {
-                    $customer->increment('credit_balance', $creditAmount);
+                // 4. Handle credit balance changes (used credit + saved overpayment)
+                if ($math->isPositive($creditUsed)) {
+                    $creditBalance = $math->subtract($creditBalance, $creditUsed);
                 }
-                // refundAmount is already recorded in the DebtPayment row; no balance change needed
+                if ($math->isPositive($creditAmount)) {
+                    $creditBalance = $math->add($creditBalance, $creditAmount);
+                }
+                $customer->update(['credit_balance' => $creditBalance]);
             });
 
             $msg = 'Pembayaran hutang berhasil diproses.';
@@ -326,7 +334,7 @@ class CustomerR2Controller extends Controller
             } elseif ($overpayAction === 'refund') {
                 $msg .= ' Kelebihan bayar dicatat sebagai refund tunai.';
             }
-            if ($creditUsed > 0) {
+            if ($math->isPositive($creditUsed)) {
                 $msg .= ' Saldo kredit Rp ' . number_format($creditUsed, 0, ',', '.') . ' digunakan.';
             }
 
@@ -1073,7 +1081,7 @@ class CustomerR2Controller extends Controller
     {
         $data = $request->all();
 
-        foreach (['discount', 'totalQty', 'totalAmount', 'cash_received', 'change_amount'] as $key) {
+        foreach (['amount', 'use_credit_amount', 'discount', 'totalQty', 'totalAmount', 'cash_received', 'change_amount'] as $key) {
             if (array_key_exists($key, $data)) {
                 $data[$key] = $this->normalizeDecimal($data[$key]);
             }
