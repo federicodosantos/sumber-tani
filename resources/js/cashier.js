@@ -760,13 +760,20 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             }
         },
 
-        setQty(id, value) {
+        setQty(id, value, event = null) {
             const item = this.cart.find(cartItem => cartItem.id === id);
             if (!item) return;
             const product = this.products.find(p => p.id === id);
             if (!product) return;
 
             const maxAllowed = this.getVisualStock(product) + item.qty;
+
+            if (this.countDecimals(value) > 3) {
+                alert('Jumlah maksimal 3 angka desimal.');
+                if (event) event.target.value = this.formatQty(item.qty);
+                return;
+            }
+
             let newQty = parseFloat(String(value).replace(',', '.')) || 0;
             if (newQty <= 0) newQty = 0.001;
 
@@ -790,7 +797,19 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                 return;
             }
 
-            this.setQty(id, value);
+            this.setQty(id, value, event);
+        },
+
+        countDecimals(value) {
+            const str = String(value ?? '').trim();
+            if (!str) return 0;
+            const idx = Math.max(str.indexOf(','), str.indexOf('.'));
+            if (idx === -1) return 0;
+            return str.slice(idx + 1).length;
+        },
+
+        formatQty(qty) {
+            return String(qty).replace('.', ',');
         },
 
         removeItem(id) {

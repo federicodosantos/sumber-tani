@@ -329,7 +329,7 @@
 
                                 <input type="text"
                                     :value="String(item.qty).replace('.', ',')"
-                                    @input="setQty(item.id, $event.target.value)" @blur="handleQtyBlur(item.id, $event)"
+                                    @input="setQty(item.id, $event.target.value, $event)" @blur="handleQtyBlur(item.id, $event)"
                                     @keydown="const k=$event.key; const nav=['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End','Enter']; const ok=/[0-9]/.test(k)||nav.includes(k)||$event.ctrlKey||$event.metaKey||(k===','&&!$el.value.includes(',')); if(!ok) $event.preventDefault();"
                                     class="h-8 w-14 rounded-lg border border-gray-200 bg-white text-center text-sm font-bold tabular-nums text-gray-900 focus:border-button-main focus:outline-none focus:ring-2 focus:ring-button-main/20 cart-qty-input">
 
