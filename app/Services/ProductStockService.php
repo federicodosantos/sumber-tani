@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductStock;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class ProductStockService
 {
@@ -194,6 +195,61 @@ class ProductStockService
     }
 
     
+
+    /**
+     * Alokasikan quantity secara FIFO melintasi batch produk dan kurangi stok.
+     *
+     * Harus dipanggil di dalam transaction database. Baris batch dikunci
+     * dengan lockForUpdate() untuk mencegah oversell pada operasi concurrent.
+     *
+     * @return array<int, array{stock_id: int, quantity: string, unit_price: string}>
+     * @throws RuntimeException ketika total stok semua batch tidak mencukupi.
+     */
+    public function allocateStockFifo(int $productId, string $quantity): array
+    {
+        $math = app(DecimalMathService::class);
+
+        $batches = ProductStock::where('product_id', $productId)
+            ->whereNull('deleted_at')
+            ->where('stock_opname', '>', 0)
+            ->orderBy('created_at', 'asc')
+            ->lockForUpdate()
+            ->get();
+
+        $available = $math->round((string) $batches->sum('stock_opname'));
+
+        if ($math->compare($available, $quantity) < 0) {
+            throw new RuntimeException(
+                'Stok tidak cukup untuk produk ID '.$productId.'. Tersedia '.$available.'.'
+            );
+        }
+
+        $remaining = $quantity;
+        $allocations = [];
+
+        foreach ($batches as $batch) {
+            if ($math->compare($remaining, 0) <= 0) {
+                break;
+            }
+
+            $batchQty = $math->round((string) $batch->stock_opname);
+            $take = $math->compare($remaining, $batchQty) <= 0
+                ? $remaining
+                : $batchQty;
+
+            $batch->decrement('stock_opname', (float) $take);
+
+            $allocations[] = [
+                'stock_id' => (int) $batch->id,
+                'quantity' => $take,
+                'unit_price' => $math->round((string) $batch->unit_price),
+            ];
+
+            $remaining = $math->subtract($remaining, $take);
+        }
+
+        return $allocations;
+    }
 
     /**
      * Get dashboard statistics

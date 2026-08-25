@@ -72,36 +72,26 @@ class TransactionReversalService
                 ? Carbon::parse($payload['transaction_date'])->setTimezone(config('app.timezone'))
                 : ($transaction->transaction_date ?? $transaction->created_at);
 
-            // 4. Apply new items (decrement stock, persist new details)
+            // 4. Apply new items (decrement stock across batches FIFO, persist new details)
             foreach ($payload['items'] as $item) {
-                $stock = ProductStock::where('product_id', $item['id'])
-                    ->whereNull('deleted_at')
-                    ->where('stock_opname', '>=', (float) $item['qty'])
-                    ->orderBy('created_at', 'asc')
-                    ->first();
-
-                if (! $stock) {
-                    throw new RuntimeException(
-                        'Stok tidak cukup untuk produk ID ' . $item['id'] . '. Edit dibatalkan.'
-                    );
-                }
-
-                $buyingPrice = $math->round((string) $stock->unit_price);
                 $price = $math->round($item['price']);
                 $qty = $math->round($item['qty']);
 
-                $transaction->transactionDetails()->create([
-                    'product_id' => $item['id'],
-                    'product_stock_id' => $stock->id,
-                    'product_price' => $price,
-                    'buying_price' => $buyingPrice,
-                    'quantity' => $qty,
-                    'total_price' => $math->multiply($price, $qty),
-                    'created_at' => $trxDate,
-                    'updated_at' => $trxDate,
-                ]);
+                $stockService = app(ProductStockService::class);
+                $allocations = $stockService->allocateStockFifo((int) $item['id'], $qty);
 
-                $stock->decrement('stock_opname', (float) $qty);
+                foreach ($allocations as $allocation) {
+                    $transaction->transactionDetails()->create([
+                        'product_id' => $item['id'],
+                        'product_stock_id' => $allocation['stock_id'],
+                        'product_price' => $price,
+                        'buying_price' => $allocation['unit_price'],
+                        'quantity' => $allocation['quantity'],
+                        'total_price' => $math->multiply($price, $allocation['quantity']),
+                        'created_at' => $trxDate,
+                        'updated_at' => $trxDate,
+                    ]);
+                }
             }
 
             // 5. Update transaction header — only transaction_date changes; created_at stays as the original record creation timestamp.

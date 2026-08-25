@@ -12,6 +12,7 @@ use App\Models\ProductStock;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Services\DecimalMathService;
+use App\Services\ProductStockService;
 use App\Services\TransactionReversalService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -649,30 +650,33 @@ class FinanceReportController extends Controller
                 ]);
 
                 foreach ($preparedItems as $item) {
-                    $productStock = null;
-                    $buyingPrice = '0.000';
                     if ($reduceStock) {
-                        $productStock = ProductStock::where('product_id', $item['id'])
-                            ->whereNull('deleted_at')
-                            ->where('stock_opname', '>', 0)
-                            ->orderBy('created_at', 'asc')
-                            ->first();
-                        $buyingPrice = $productStock ? $math->round($productStock->unit_price) : '0.000';
-                    }
+                        $stockService = app(ProductStockService::class);
+                        $allocations = $stockService->allocateStockFifo($item['id'], $item['qty']);
 
-                    $transaction->transactionDetails()->create([
-                        'product_id' => $item['id'],
-                        'product_stock_id' => $productStock?->id,
-                        'product_price' => $item['price'],
-                        'buying_price' => $buyingPrice,
-                        'quantity' => $item['qty'],
-                        'total_price' => $item['lineTotal'],
-                        'created_at' => $transactionDate,
-                        'updated_at' => $transactionDate,
-                    ]);
-
-                    if ($reduceStock && $productStock) {
-                        $productStock->decrement('stock_opname', (float) $item['qty']);
+                        foreach ($allocations as $allocation) {
+                            $transaction->transactionDetails()->create([
+                                'product_id' => $item['id'],
+                                'product_stock_id' => $allocation['stock_id'],
+                                'product_price' => $item['price'],
+                                'buying_price' => $allocation['unit_price'],
+                                'quantity' => $allocation['quantity'],
+                                'total_price' => $math->multiply($item['price'], $allocation['quantity']),
+                                'created_at' => $transactionDate,
+                                'updated_at' => $transactionDate,
+                            ]);
+                        }
+                    } else {
+                        $transaction->transactionDetails()->create([
+                            'product_id' => $item['id'],
+                            'product_stock_id' => null,
+                            'product_price' => $item['price'],
+                            'buying_price' => '0.000',
+                            'quantity' => $item['qty'],
+                            'total_price' => $item['lineTotal'],
+                            'created_at' => $transactionDate,
+                            'updated_at' => $transactionDate,
+                        ]);
                     }
                 }
 

@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\ProductStock;
 use App\Models\Transaction;
 use App\Services\DecimalMathService;
+use App\Services\ProductStockService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -134,28 +135,20 @@ class TransactionController extends Controller
             ]);
 
             foreach ($preparedItems as $item) {
-                // Update Stok & Get Buying Price
-                $productStock = ProductStock::where('product_id', $item['id'])
-                    ->whereNull('deleted_at')
-                    ->where('stock_opname', '>', 0)
-                    ->orderBy('created_at', 'asc')
-                    ->first();
+                $stockService = app(ProductStockService::class);
+                $allocations = $stockService->allocateStockFifo($item['id'], $item['qty']);
 
-                $buyingPrice = $productStock ? $math->round($productStock->unit_price) : '0.000';
-
-                $transaction->transactionDetails()->create([
-                    'product_id' => $item['id'],
-                    'product_stock_id' => $productStock?->id,
-                    'product_price' => $item['price'],
-                    'buying_price' => $buyingPrice,
-                    'quantity' => $item['qty'],
-                    'total_price' => $item['lineTotal'],
-                    'created_at' => $transactionDate,
-                    'updated_at' => $transactionDate,
-                ]);
-
-                if ($productStock) {
-                    $productStock->decrement('stock_opname', (float) $item['qty']);
+                foreach ($allocations as $allocation) {
+                    $transaction->transactionDetails()->create([
+                        'product_id' => $item['id'],
+                        'product_stock_id' => $allocation['stock_id'],
+                        'product_price' => $item['price'],
+                        'buying_price' => $allocation['unit_price'],
+                        'quantity' => $allocation['quantity'],
+                        'total_price' => $math->multiply($item['price'], $allocation['quantity']),
+                        'created_at' => $transactionDate,
+                        'updated_at' => $transactionDate,
+                    ]);
                 }
             }
 
