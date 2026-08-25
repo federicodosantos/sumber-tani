@@ -312,7 +312,7 @@
                                                         placeholder="0" containerClass="" decimals="3" />
 
                                                     {{-- Row 2: Jumlah Stok --}}
-                                                    <x-input-rupiah label="Jumlah Stok" name="stock_opname"
+                                                    <x-input-decimal label="Jumlah Stok" name="stock_opname"
                                                         placeholder="0" containerClass="" required decimals="3" />
 
                                                     {{-- Row 3: Harga Konsumen --}}
@@ -458,7 +458,7 @@
                                                             placeholder="0" containerClass="" decimals="3" />
 
                                                         {{-- Jumlah Stok --}}
-                                                        <x-input-rupiah label="Jumlah Stok" name="stock_opname"
+                                                        <x-input-decimal label="Jumlah Stok" name="stock_opname"
                                                             :value="$latestStock->stock_opname ?? 0"
                                                             placeholder="0" containerClass="" required decimals="3"
                                                             @rupiah-change="currentData.stock_opname = $event.detail.value" />

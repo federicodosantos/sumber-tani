@@ -57,7 +57,7 @@
                         containerClass="" placeholder="0" disabled readonly decimals="3" />
 
                     {{-- Row 2: Jumlah Stok --}}
-                    <x-input-rupiah label="Jumlah Stok" name="stock_opname"
+                    <x-input-decimal label="Jumlah Stok" name="stock_opname"
                         :value="old('stock_opname', $activeStock->stock_opname)"
                         placeholder="0" containerClass="" required decimals="3" />
 
