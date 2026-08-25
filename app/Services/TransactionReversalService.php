@@ -55,6 +55,8 @@ class TransactionReversalService
     public function updateTransaction(Transaction $transaction, array $payload): Transaction
     {
         return DB::transaction(function () use ($transaction, $payload) {
+            $math = app(DecimalMathService::class);
+
             $transaction->loadMissing(['transactionDetails', 'invoices']);
 
             $before = $this->snapshotForLog($transaction);
@@ -84,20 +86,22 @@ class TransactionReversalService
                     );
                 }
 
-                $buyingPrice = $stock->unit_price;
+                $buyingPrice = $math->round((string) $stock->unit_price);
+                $price = $math->round($item['price']);
+                $qty = $math->round($item['qty']);
 
                 $transaction->transactionDetails()->create([
                     'product_id' => $item['id'],
                     'product_stock_id' => $stock->id,
-                    'product_price' => $item['price'],
+                    'product_price' => $price,
                     'buying_price' => $buyingPrice,
-                    'quantity' => $item['qty'],
-                    'total_price' => $item['price'] * $item['qty'],
+                    'quantity' => $qty,
+                    'total_price' => $math->multiply($price, $qty),
                     'created_at' => $trxDate,
                     'updated_at' => $trxDate,
                 ]);
 
-                $stock->decrement('stock_opname', $item['qty']);
+                $stock->decrement('stock_opname', (float) $qty);
             }
 
             // 5. Update transaction header — only transaction_date changes; created_at stays as the original record creation timestamp.
@@ -115,19 +119,19 @@ class TransactionReversalService
 
             // 6. Recompute invoice debts for each PRC invoice tied to this trx
             foreach ($transaction->invoices()->where('type', Invoice::TYPE_PURCHASE)->get() as $invoice) {
-                $alreadyPaid = (float) DebtPaymentDetail::where('invoice_id', $invoice->id)
-                    ->sum('amount_paid');
+                $alreadyPaid = $math->round((string) DebtPaymentDetail::where('invoice_id', $invoice->id)
+                    ->sum('amount_paid'));
 
                 if ($payload['payment_method'] !== 'Kredit') {
-                    if ($alreadyPaid > 0) {
+                    if ($math->isPositive($alreadyPaid)) {
                         throw new RuntimeException(
                             'Tidak bisa ubah metode pembayaran: invoice ini sudah punya pembayaran utang. Hapus pembayaran utang dulu.'
                         );
                     }
-                    $invoice->update(['debts' => 0]);
+                    $invoice->update(['debts' => '0.000']);
                 } else {
-                    $newDebt = (float) $payload['totalAmount'] - $alreadyPaid;
-                    if ($newDebt < 0) {
+                    $newDebt = $math->subtract((string) $payload['totalAmount'], $alreadyPaid);
+                    if ($math->isNegative($newDebt)) {
                         throw new RuntimeException(
                             'Total transaksi baru lebih kecil dari pembayaran utang yang sudah dilakukan. Edit dibatalkan.'
                         );
@@ -219,7 +223,11 @@ class TransactionReversalService
                 }
             } else {
                 // Partially reduce the payment amount.
-                $newAmount = max(0, (float) $payment->amount - (float) $detail->amount_paid);
+                $math = app(DecimalMathService::class);
+                $newAmount = $math->subtract((string) $payment->amount, (string) $detail->amount_paid);
+                if ($math->isNegative($newAmount)) {
+                    $newAmount = '0.000';
+                }
                 $payment->update(['amount' => $newAmount]);
             }
         }

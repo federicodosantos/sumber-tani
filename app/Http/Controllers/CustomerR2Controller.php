@@ -713,6 +713,8 @@ class CustomerR2Controller extends Controller
             abort(404, 'Bukan invoice pembayaran hutang.');
         }
 
+        $this->normalizeDecimalInput($request);
+
         // Allow caller to override which modal re-opens on validation error
         // (e.g., when editing from inside an edit-debt modal across pagination).
         $errorModalKey = (string) $request->input('open_modal_on_error', 'edit-payment-' . $invoice->id);
@@ -723,13 +725,13 @@ class CustomerR2Controller extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'amount' => 'required|numeric|min:1',
+            'amount' => 'required|numeric|min:0.001|decimal:0,3',
             'payment_method' => 'required|string|in:Cash,Transfer,QRIS',
             'created_at' => 'required|date|before_or_equal:now',
         ], [
             'amount.required' => 'Nominal pembayaran wajib diisi.',
             'amount.numeric' => 'Nominal pembayaran harus berupa angka.',
-            'amount.min' => 'Nominal pembayaran minimal Rp 1.',
+            'amount.min' => 'Nominal pembayaran minimal Rp 0,001.',
             'payment_method.required' => 'Metode pembayaran wajib dipilih.',
             'payment_method.in' => 'Metode pembayaran tidak valid.',
             'created_at.required' => 'Tanggal wajib diisi.',
@@ -743,46 +745,56 @@ class CustomerR2Controller extends Controller
         }
 
         $validated = $validator->validated();
+        $math = app(DecimalMathService::class);
 
-        // Pre-validate: new amount must not exceed
-        // (current total debt AFTER rollback + credit used in the old payment)
-        $oldCreditUsed    = (float) $debtPayment->credit_used;
-        $oldCreditAmount  = (float) $debtPayment->credit_amount;
-        $rollbackDebt     = (float) $debtPayment->details()->sum('amount_paid');
-        $rollbackEffective = $rollbackDebt; // effective amount paid to invoices
+        $newAmount = $math->round($validated['amount']);
+        $oldCreditUsed = $math->round((string) $debtPayment->credit_used);
+        $oldCreditAmount = $math->round((string) $debtPayment->credit_amount);
+        $rollbackDebt = $math->round((string) $debtPayment->details()->sum('amount_paid'));
 
-        // The "available" after rollback = current debt + rolled-back debt + old credit used back
-        // No upper-limit check here; overpayment on edit is not supported for simplicity.
-        // The new amount must just be >= 1 (already validated).
+        // Server-side upper limit: the new amount cannot exceed the total debt
+        // that will be available after rolling back this payment's allocations.
+        $customer = $invoice->customer;
+        $currentTotalDebt = $math->round((string) $customer->invoices()
+            ->where('type', Invoice::TYPE_PURCHASE)
+            ->where('debts', '>', 0)
+            ->sum('debts'));
+
+        $maxAllowed = $math->add($currentTotalDebt, $rollbackDebt);
+
+        if ($math->compare($newAmount, $maxAllowed) > 0) {
+            return redirect()->back()->withInput()
+                ->withErrors(['general' => 'Nominal pembayaran baru (Rp ' . number_format($newAmount, 0, ',', '.') . ') melebihi total hutang tersedia (Rp ' . number_format($maxAllowed, 0, ',', '.') . ') setelah rollback.'])
+                ->with('open_modal', $errorModalKey);
+        }
 
         try {
-            DB::transaction(function () use ($validated, $invoice, $debtPayment, $oldCreditUsed, $oldCreditAmount) {
+            DB::transaction(function () use ($validated, $invoice, $debtPayment, $math, $oldCreditUsed, $oldCreditAmount, $newAmount) {
                 $customer = $invoice->customer;
 
                 // Step 1: rollback credit balance changes from the old payment
                 // Reverse: credit that was given out → take it back
-                if ($oldCreditAmount > 0) {
-                    $customer->decrement('credit_balance', $oldCreditAmount);
+                //          credit that was consumed → restore it
+                $creditBalance = $math->round((string) $customer->credit_balance);
+                if ($math->isPositive($oldCreditAmount)) {
+                    $creditBalance = $math->subtract($creditBalance, $oldCreditAmount);
                 }
-                // Reverse: credit that was consumed → restore it
-                if ($oldCreditUsed > 0) {
-                    $customer->increment('credit_balance', $oldCreditUsed);
+                if ($math->isPositive($oldCreditUsed)) {
+                    $creditBalance = $math->add($creditBalance, $oldCreditUsed);
                 }
-                $customer->refresh();
+                $customer->update(['credit_balance' => $creditBalance]);
 
                 // Step 2: rollback all details (restore debts on source invoices)
                 foreach ($debtPayment->details()->get() as $detail) {
                     $sourceInvoice = $detail->invoice()->first();
                     if ($sourceInvoice) {
-                        $sourceInvoice->update(['debts' => $sourceInvoice->debts + $detail->amount_paid]);
+                        $sourceInvoice->update(['debts' => $math->add((string) $sourceInvoice->debts, (string) $detail->amount_paid)]);
                         if ($sourceInvoice->transaction) {
                             $sourceInvoice->transaction->update(['is_paid' => false]);
                         }
                     }
                     $detail->delete();
                 }
-
-                $newAmount = (float) $validated['amount'];
 
                 // Step 3: re-FIFO (no credit usage on edit — keep it simple)
                 $remaining = $newAmount;
@@ -793,14 +805,18 @@ class CustomerR2Controller extends Controller
                     ->get();
 
                 foreach ($sourceInvoices as $src) {
-                    if ($remaining <= 0) break;
-                    $debtBefore = $src->debts;
-                    $payForThis = min($remaining, $src->debts);
+                    if ($math->compare($remaining, 0) <= 0) {
+                        break;
+                    }
+                    $debtBefore = (string) $src->debts;
+                    $payForThis = $math->compare($remaining, $src->debts) <= 0
+                        ? $remaining
+                        : (string) $src->debts;
 
-                    $src->update(['debts' => $src->debts - $payForThis]);
-                    $remaining -= $payForThis;
+                    $src->update(['debts' => $math->subtract((string) $src->debts, $payForThis)]);
+                    $remaining = $math->subtract($remaining, $payForThis);
 
-                    if ($src->fresh()->debts == 0 && $src->transaction) {
+                    if ($math->isZero((string) $src->fresh()->debts) && $src->transaction) {
                         $src->transaction->update(['is_paid' => true]);
                     }
 
@@ -809,7 +825,7 @@ class CustomerR2Controller extends Controller
                         'invoice_id'      => $src->id,
                         'amount_paid'     => $payForThis,
                         'debt_before'     => $debtBefore,
-                        'debt_after'      => $src->fresh()->debts,
+                        'debt_after'      => (string) $src->fresh()->debts,
                     ]);
                 }
 
@@ -820,9 +836,9 @@ class CustomerR2Controller extends Controller
                     'amount'         => $newAmount,
                     'payment_method' => $validated['payment_method'],
                     'payment_date'   => $newDate,
-                    'credit_amount'  => 0,
-                    'refund_amount'  => 0,
-                    'credit_used'    => 0,
+                    'credit_amount'  => '0.000',
+                    'refund_amount'  => '0.000',
+                    'credit_used'    => '0.000',
                 ]);
                 $invoice->update([
                     'created_at' => $newDate,
@@ -852,28 +868,34 @@ class CustomerR2Controller extends Controller
         }
 
         $customerId = $invoice->customer_id;
+        $math = app(DecimalMathService::class);
 
         try {
-            DB::transaction(function () use ($invoice) {
+            DB::transaction(function () use ($invoice, $math) {
                 $debtPayment = $invoice->debtPayment;
 
                 if ($debtPayment) {
                     $customer = $invoice->customer;
+                    $creditBalance = $math->round((string) $customer->credit_balance);
+
+                    $creditAmount = $math->round((string) $debtPayment->credit_amount);
+                    $creditUsed = $math->round((string) $debtPayment->credit_used);
 
                     // Reverse credit_balance changes from this payment:
-                    // If this payment had saved credit → remove it back
-                    if ((float) $debtPayment->credit_amount > 0) {
-                        $customer->decrement('credit_balance', $debtPayment->credit_amount);
+                    // credit that was saved → remove it back
+                    if ($math->isPositive($creditAmount)) {
+                        $creditBalance = $math->subtract($creditBalance, $creditAmount);
                     }
-                    // If this payment had consumed credit → restore it
-                    if ((float) $debtPayment->credit_used > 0) {
-                        $customer->increment('credit_balance', $debtPayment->credit_used);
+                    // credit that was consumed → restore it
+                    if ($math->isPositive($creditUsed)) {
+                        $creditBalance = $math->add($creditBalance, $creditUsed);
                     }
+                    $customer->update(['credit_balance' => $creditBalance]);
 
                     foreach ($debtPayment->details()->get() as $detail) {
                         $sourceInvoice = $detail->invoice()->first();
                         if ($sourceInvoice) {
-                            $sourceInvoice->update(['debts' => $sourceInvoice->debts + $detail->amount_paid]);
+                            $sourceInvoice->update(['debts' => $math->add((string) $sourceInvoice->debts, (string) $detail->amount_paid)]);
                             if ($sourceInvoice->transaction) {
                                 $sourceInvoice->transaction->update(['is_paid' => false]);
                             }
