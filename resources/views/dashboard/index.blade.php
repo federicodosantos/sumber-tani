@@ -1,3 +1,4 @@
+@php use Illuminate\Support\Number; @endphp
 <x-app-layout>
     <div class="space-y-6 font-mont">
         <div class="flex justify-end">
@@ -69,7 +70,7 @@
                         <div class="mb-1 text-sm text-gray-500">Penghasilan Bulanan</div>
                         <div class="text-2xl font-bold text-gray-800">
                             @if (!is_null($monthlyIncome))
-                                Rp {{ number_format($monthlyIncome, 0, ',', '.') }}
+                                Rp {{ Number::format((float) $monthlyIncome, null, 3, 'id') }}
                             @else
                                 <span class="text-gray-400">-</span>
                             @endif

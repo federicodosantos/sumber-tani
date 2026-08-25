@@ -1,3 +1,4 @@
+@php use Illuminate\Support\Number; @endphp
 <x-app-layout>
   <x-slot name="header">
     <h2 class="text-xl font-semibold leading-tight text-gray-800">Laporan Keuangan</h2>
@@ -126,13 +127,13 @@
     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
       <x-stats-card
         title="Penjualan Periode Ini"
-        value="Rp {{ number_format($stats['range_sales'], 0, ',', '.') }}"
+        value="Rp {{ Number::format((float) $stats['range_sales'], null, 3, 'id') }}"
         percentage="{{ $stats['range_sales_percentage'] }}%"
         :trend="$stats['range_sales_trend']" />
 
       <x-stats-card
         title="Penjualan Hari Ini"
-        value="Rp {{ number_format($stats['daily_sales'], 0, ',', '.') }}"
+        value="Rp {{ Number::format((float) $stats['daily_sales'], null, 3, 'id') }}"
         percentage="{{ $stats['daily_percentage'] }}%"
         :trend="$stats['daily_trend']" />
 
@@ -159,15 +160,15 @@
           <div class="space-y-4">
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-500">Total Pendapatan</span>
-              <span class="text-sm font-semibold text-gray-900">Rp {{ number_format($profitLoss['revenue'], 0, ',', '.') }}</span>
+              <span class="text-sm font-semibold text-gray-900">Rp {{ Number::format((float) $profitLoss['revenue'], null, 3, 'id') }}</span>
             </div>
             <div class="flex items-center justify-between border-b border-dashed border-gray-200 pb-4">
               <span class="text-sm text-gray-500">Harga Pokok Penjualan (HPP)</span>
-              <span class="text-sm font-semibold text-red-600">-Rp {{ number_format($profitLoss['cogs'], 0, ',', '.') }}</span>
+              <span class="text-sm font-semibold text-red-600">-Rp {{ Number::format((float) $profitLoss['cogs'], null, 3, 'id') }}</span>
             </div>
             <div class="flex items-center justify-between pt-2">
               <span class="text-base font-bold text-gray-900">Laba Kotor</span>
-              <span class="text-xl font-extrabold text-button-hover">Rp {{ number_format($profitLoss['gross_profit'], 0, ',', '.') }}</span>
+              <span class="text-xl font-extrabold text-button-hover">Rp {{ Number::format((float) $profitLoss['gross_profit'], null, 3, 'id') }}</span>
             </div>
           </div>
           <div class="mt-6 rounded-xl bg-button-main/30 p-4">
@@ -201,19 +202,19 @@
               <div class="space-y-2">
                 <div class="flex justify-between">
                   <span class="text-xs text-gray-500">Kas</span>
-                  <span class="text-xs font-medium text-gray-700">Rp {{ number_format($balanceSheet['assets']['cash'], 0, ',', '.') }}</span>
+                  <span class="text-xs font-medium text-gray-700">Rp {{ Number::format((float) $balanceSheet['assets']['cash'], null, 3, 'id') }}</span>
                 </div>
                 <div class="flex justify-between">
                   <span class="text-xs text-gray-500">Persediaan</span>
-                  <span class="text-xs font-medium text-gray-700">Rp {{ number_format($balanceSheet['assets']['inventory'], 0, ',', '.') }}</span>
+                  <span class="text-xs font-medium text-gray-700">Rp {{ Number::format((float) $balanceSheet['assets']['inventory'], null, 3, 'id') }}</span>
                 </div>
                 <div class="flex justify-between border-b border-gray-100 pb-2">
                   <span class="text-xs text-gray-500">Piutang</span>
-                  <span class="text-xs font-medium text-gray-700">Rp {{ number_format($balanceSheet['assets']['receivables'], 0, ',', '.') }}</span>
+                  <span class="text-xs font-medium text-gray-700">Rp {{ Number::format((float) $balanceSheet['assets']['receivables'], null, 3, 'id') }}</span>
                 </div>
                 <div class="flex justify-between pt-1">
                   <span class="text-xs font-bold text-gray-900">Total</span>
-                  <span class="text-xs font-bold text-button-hover">Rp {{ number_format($balanceSheet['assets']['total'], 0, ',', '.') }}</span>
+                  <span class="text-xs font-bold text-button-hover">Rp {{ Number::format((float) $balanceSheet['assets']['total'], null, 3, 'id') }}</span>
                 </div>
               </div>
             </div>
@@ -224,11 +225,11 @@
               <div class="space-y-2">
                 <div class="flex justify-between border-b border-gray-100 pb-2">
                   <span class="text-xs text-gray-500">Hutang</span>
-                  <span class="text-xs font-medium text-gray-700">Rp {{ number_format($balanceSheet['liabilities']['total'], 0, ',', '.') }}</span>
+                  <span class="text-xs font-medium text-gray-700">Rp {{ Number::format((float) $balanceSheet['liabilities']['total'], null, 3, 'id') }}</span>
                 </div>
                 <div class="flex justify-between pt-1">
                   <span class="text-xs font-bold text-gray-900">Ekuitas</span>
-                  <span class="text-xs font-extrabold text-button-hover">Rp {{ number_format($balanceSheet['equity'], 0, ',', '.') }}</span>
+                  <span class="text-xs font-extrabold text-button-hover">Rp {{ Number::format((float) $balanceSheet['equity'], null, 3, 'id') }}</span>
                 </div>
               </div>
             </div>

@@ -50,7 +50,7 @@
           tooltip: {
             callbacks: {
               label: function(context) {
-                return 'Rp ' + context.parsed.y.toLocaleString('id-ID');
+                return 'Rp ' + context.parsed.y.toLocaleString('id-ID', { maximumFractionDigits: 3 });
               }
             }
           }
