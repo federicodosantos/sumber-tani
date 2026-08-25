@@ -1,3 +1,4 @@
+@php use Illuminate\Support\Number; @endphp
 <x-app-layout>
     <div class="py-4 lg:py-6 flex justify-center items-start min-h-screen font-mont">
         <div class="mx-auto w-full px-4 sm:px-6 lg:px-8 space-y-6">
@@ -145,7 +146,7 @@
                         <div class="rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 flex-1">
                             <p class="text-xs font-medium uppercase tracking-wider text-gray-500">Total Hutang</p>
                             <p class="mt-1 text-2xl font-bold {{ $totalDebt > 0 ? 'text-red-600' : 'text-green-600' }}">
-                                Rp {{ number_format($totalDebt, 0, ',', '.') }}
+                                Rp {{ Number::format((float) ($totalDebt), null, 3, 'id') }}
                             </p>
                             <p class="mt-1 text-xs text-gray-400">{{ $customer->invoices->count() }} invoice</p>
 
@@ -167,7 +168,7 @@
                             <div class="rounded-xl border border-green-200 bg-green-50 px-5 py-4 flex-1">
                                 <p class="text-xs font-medium uppercase tracking-wider text-green-600">Sisa Saldo</p>
                                 <p class="mt-1 text-2xl font-bold text-green-700">
-                                    Rp {{ number_format($creditBalance, 0, ',', '.') }}
+                                    Rp {{ Number::format((float) ($creditBalance), null, 3, 'id') }}
                                 </p>
                                 <p class="mt-1 text-xs text-green-500">Kredit tersedia</p>
                                 @if ($totalDebt > 0)
@@ -359,14 +360,14 @@
                                                 <p class="text-[10px] text-gray-400">{{ $invoice->created_at->translatedFormat('H:i') }}</p>
                                             </td>
                                             <td class="px-5 py-3.5 text-right font-bold text-gray-900 text-sm">
-                                                Rp {{ number_format($rowTotal, 0, ',', '.') }}
+                                                Rp {{ Number::format((float) ($rowTotal), null, 3, 'id') }}
                                             </td>
                                             
                                             @if (!request('type') || request('type') === 'purchasement')
                                                 <td class="px-5 py-3.5 text-right font-medium text-sm">
                                                     @if ($invoice->type === 'purchasement')
                                                         <span class="{{ $invoice->debts > 0 ? 'text-red-600 font-bold' : 'text-green-600' }}">
-                                                            Rp {{ number_format($invoice->debts, 0, ',', '.') }}
+                                                            Rp {{ Number::format((float) ($invoice->debts), null, 3, 'id') }}
                                                         </span>
                                                     @else
                                                         <span class="text-gray-300">-</span>
@@ -559,7 +560,7 @@
                                                             </div>
                                                             <div class="text-right">
                                                                 <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Sisa Hutang</p>
-                                                                <p class="text-sm font-bold {{ $invoice->debts > 0 ? 'text-red-600' : 'text-green-600' }}">Rp {{ number_format($invoice->debts, 0, ',', '.') }}</p>
+                                                                <p class="text-sm font-bold {{ $invoice->debts > 0 ? 'text-red-600' : 'text-green-600' }}">Rp {{ Number::format((float) ($invoice->debts), null, 3, 'id') }}</p>
                                                             </div>
                                                         </div>
 
@@ -593,7 +594,7 @@
                                                                                 </div>
                                                                             </div>
                                                                             <div class="flex items-center gap-2 shrink-0">
-                                                                                <p class="text-xs font-bold text-blue-700 whitespace-nowrap">Rp {{ number_format($detail->amount_paid, 0, ',', '.') }}</p>
+                                                                                <p class="text-xs font-bold text-blue-700 whitespace-nowrap">Rp {{ Number::format((float) ($detail->amount_paid), null, 3, 'id') }}</p>
                                                                                 @if($payInvId && $payment)
                                                                                     <div class="flex items-center gap-0.5 border-l border-blue-200/60 pl-2">
                                                                                         <button type="button"
@@ -672,7 +673,7 @@
                                                                                         <p class="text-xs text-amber-800">
                                                                                             Mengubah pembayaran akan rollback alokasi lama lalu re-distribusi via FIFO ke invoice tertua.
                                                                                             Berpengaruh ke kas, piutang, dan status lunas invoice terkait.
-                                                                                            <br>Maks pembayaran: <strong>Rp {{ number_format($inlineMaxAllowed, 0, ',', '.') }}</strong> (sisa hutang + nominal pembayaran ini).
+                                                                                            <br>Maks pembayaran: <strong>Rp {{ Number::format((float) ($inlineMaxAllowed), null, 3, 'id') }}</strong> (sisa hutang + nominal pembayaran ini).
                                                                                         </p>
                                                                                     </div>
 
@@ -771,7 +772,7 @@
                                                                         <p class="text-xs font-bold uppercase tracking-wider text-amber-700 mb-1">Tidak Bisa Diedit / Dihapus</p>
                                                                         <p class="text-xs text-amber-800 leading-relaxed">
                                                                             Hutang ini sudah memiliki pembayaran terkait sebesar
-                                                                            <strong>Rp {{ number_format($alreadyPaidForDebt, 0, ',', '.') }}</strong>.
+                                                                            <strong>Rp {{ Number::format((float) ($alreadyPaidForDebt), null, 3, 'id') }}</strong>.
                                                                             Hapus dulu pembayaran di atas (klik tombol PAY... di tabel) sebelum mengedit hutang ini.
                                                                         </p>
                                                                     </div>
@@ -905,7 +906,7 @@
                                                                 <p class="text-xs text-amber-800">
                                                                     Mengubah pembayaran akan rollback alokasi lama lalu re-distribusi via FIFO ke invoice tertua.
                                                                     Berpengaruh ke kas, piutang, dan status lunas invoice terkait.
-                                                                    <br>Maks pembayaran: <strong>Rp {{ number_format($standaloneMaxAllowed, 0, ',', '.') }}</strong> (sisa hutang + nominal pembayaran ini).
+                                                                    <br>Maks pembayaran: <strong>Rp {{ Number::format((float) ($standaloneMaxAllowed), null, 3, 'id') }}</strong> (sisa hutang + nominal pembayaran ini).
                                                                 </p>
                                                             </div>
 
@@ -1121,7 +1122,7 @@
                     <div class="text-right">
                         <p class="text-xs font-medium uppercase tracking-wider text-gray-500">Total Hutang</p>
                         <p class="mt-0.5 text-xl font-bold text-red-600">
-                            Rp {{ number_format($totalDebt, 0, ',', '.') }}
+                            Rp {{ Number::format((float) ($totalDebt), null, 3, 'id') }}
                         </p>
                     </div>
                 </div>
@@ -1278,7 +1279,7 @@
                     </svg>
                     <div>
                         <span class="font-bold block text-amber-900">Pelanggan Memiliki Hutang Aktif!</span>
-                        Pelanggan ini masih memiliki tunggakan hutang sebesar <strong>Rp {{ number_format($totalDebt, 0, ',', '.') }}</strong>. Pelanggan tidak dapat dihapus sebelum semua hutang dilunasi.
+                        Pelanggan ini masih memiliki tunggakan hutang sebesar <strong>Rp {{ Number::format((float) ($totalDebt), null, 3, 'id') }}</strong>. Pelanggan tidak dapat dihapus sebelum semua hutang dilunasi.
                     </div>
                 </div>
             @else

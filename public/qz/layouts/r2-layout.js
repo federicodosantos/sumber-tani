@@ -34,7 +34,7 @@ function layoutR2Invoice(data) {
             cmds.push(
                 formatItemLine(
                     item.name,
-                    item.qty,
+                    formatQty(item.qty),
                     formatIDR(item.price),
                     formatIDR(item.total)
                 ) + "\n"

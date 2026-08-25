@@ -1061,7 +1061,7 @@ class CustomerR2Controller extends Controller
                 return [
                     'name' => $detail->product?->name ?? 'Unknown',
                     'price' => (float) $detail->product_price,
-                    'qty' => (int) $detail->quantity,
+                    'qty' => (float) $detail->quantity,
                     'total' => (float) $detail->total_price,
                 ];
             });

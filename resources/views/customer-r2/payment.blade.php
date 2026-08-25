@@ -1,3 +1,4 @@
+@php use Illuminate\Support\Number; @endphp
 <x-app-layout>
     <div class="py-4 lg:py-6 flex justify-center items-start min-h-screen font-mont">
         <div class="mx-auto w-full max-w-2xl px-4 sm:px-6 lg:px-8 space-y-6">
@@ -28,11 +29,11 @@
                         <div class="text-right">
                             <p class="text-xs font-medium uppercase tracking-wider text-gray-500">Total Hutang</p>
                             <p class="mt-0.5 text-xl font-bold text-red-600">
-                                Rp {{ number_format($totalDebt, 0, ',', '.') }}
+                                Rp {{ Number::format((float) ($totalDebt), null, 3, 'id') }}
                             </p>
                             @if (($creditBalance ?? 0) > 0)
                                 <p class="mt-1 text-xs font-medium text-green-600">
-                                    Sisa Saldo: Rp {{ number_format($creditBalance, 0, ',', '.') }}
+                                    Sisa Saldo: Rp {{ Number::format((float) ($creditBalance), null, 3, 'id') }}
                                 </p>
                             @endif
                         </div>

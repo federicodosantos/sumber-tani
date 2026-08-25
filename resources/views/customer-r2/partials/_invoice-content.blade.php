@@ -1,3 +1,4 @@
+@php use Illuminate\Support\Number; @endphp
 @props(['invoice', 'customer', 'transaction' => null, 'details' => collect()])
 
 <div class="invoice-content-wrapper bg-white">
@@ -64,18 +65,18 @@
             <table class="w-[280px] border-collapse">
                 <tr>
                     <td class="p-1 px-2 text-right text-xs text-gray-500">Nominal Hutang</td>
-                    <td class="p-1 px-2 text-right text-xs font-bold text-gray-900">Rp {{ number_format($originalDebt, 0, ',', '.') }}</td>
+                    <td class="p-1 px-2 text-right text-xs font-bold text-gray-900">Rp {{ Number::format((float) ($originalDebt), null, 3, 'id') }}</td>
                 </tr>
                 @if ($paidDebtSum > 0)
                     <tr>
                         <td class="p-1 px-2 text-right text-xs text-gray-500">Sudah Dibayar</td>
-                        <td class="p-1 px-2 text-right text-xs font-bold text-green-600">-Rp {{ number_format($paidDebtSum, 0, ',', '.') }}</td>
+                        <td class="p-1 px-2 text-right text-xs font-bold text-green-600">-Rp {{ Number::format((float) ($paidDebtSum), null, 3, 'id') }}</td>
                     </tr>
                 @endif
                 <tr class="total-row border-t border-gray-800">
                     <td class="p-2 px-2 text-right text-xs font-bold text-gray-900 uppercase">SISA HUTANG</td>
                     <td class="p-2 px-2 text-right text-base font-bold {{ $invoice->debts > 0 ? 'text-red-600' : 'text-green-600' }}">
-                        Rp {{ number_format($invoice->debts, 0, ',', '.') }}
+                        Rp {{ Number::format((float) ($invoice->debts), null, 3, 'id') }}
                     </td>
                 </tr>
             </table>
@@ -106,13 +107,13 @@
                                 {{ $detail->invoice->inv_code ?? 'Invoice #' . $detail->invoice_id }}
                             </td>
                             <td class="p-2.5 text-right text-xs text-gray-700">
-                                Rp {{ number_format($detail->debt_before, 0, ',', '.') }}
+                                Rp {{ Number::format((float) ($detail->debt_before), null, 3, 'id') }}
                             </td>
                             <td class="p-2.5 text-right text-xs font-bold text-green-600">
-                                Rp {{ number_format($detail->amount_paid, 0, ',', '.') }}
+                                Rp {{ Number::format((float) ($detail->amount_paid), null, 3, 'id') }}
                             </td>
                             <td class="p-2.5 text-right text-xs font-bold {{ $detail->debt_after > 0 ? 'text-red-600' : 'text-green-600' }}">
-                                Rp {{ number_format($detail->debt_after, 0, ',', '.') }}
+                                Rp {{ Number::format((float) ($detail->debt_after), null, 3, 'id') }}
                             </td>
                         </tr>
                     @empty
@@ -130,7 +131,7 @@
                 <tr class="total-row border-t border-gray-800">
                     <td class="p-2 px-2 text-right text-xs font-bold text-gray-900 uppercase">TOTAL BAYAR</td>
                     <td class="p-2 px-2 text-right text-base font-bold text-green-600">
-                        Rp {{ number_format($debtPayment?->amount ?? 0, 0, ',', '.') }}
+                        Rp {{ Number::format((float) ($debtPayment?->amount ?? 0), null, 3, 'id') }}
                     </td>
                 </tr>
             </table>
@@ -161,9 +162,9 @@
                     @forelse($details as $detail)
                         <tr class="hover:bg-gray-50/50 transition-colors">
                             <td class="p-2.5 text-xs text-gray-700">{{ $detail->product->name ?? 'Produk tidak diketahui' }}</td>
-                            <td class="p-2.5 text-xs text-gray-700">Rp {{ number_format($detail->product_price, 0, ',', '.') }}</td>
-                            <td class="p-2.5 text-center text-xs text-gray-700">{{ $detail->quantity }}</td>
-                            <td class="p-2.5 text-right text-xs font-bold text-gray-900">Rp {{ number_format($detail->total_price, 0, ',', '.') }}</td>
+                            <td class="p-2.5 text-xs text-gray-700">Rp {{ Number::format((float) ($detail->product_price), null, 3, 'id') }}</td>
+                            <td class="p-2.5 text-center text-xs text-gray-700">{{ Number::format((float) $detail->quantity, null, 3, 'id') }}</td>
+                            <td class="p-2.5 text-right text-xs font-bold text-gray-900">Rp {{ Number::format((float) ($detail->total_price), null, 3, 'id') }}</td>
                         </tr>
                     @empty
                         <tr>
@@ -180,16 +181,16 @@
                 @if ($transaction && $transaction->discount > 0)
                     <tr>
                         <td class="p-1 px-2 text-right text-xs text-gray-500">Subtotal</td>
-                        <td class="p-1 px-2 text-right text-xs font-bold text-gray-900">Rp {{ number_format($transaction->total_price + $transaction->discount, 0, ',', '.') }}</td>
+                        <td class="p-1 px-2 text-right text-xs font-bold text-gray-900">Rp {{ Number::format((float) ($transaction->total_price + $transaction->discount), null, 3, 'id') }}</td>
                     </tr>
                     <tr>
                         <td class="p-1 px-2 text-right text-xs text-gray-500">Diskon</td>
-                        <td class="p-1 px-2 text-right text-xs font-bold text-gray-900">-Rp {{ number_format($transaction->discount, 0, ',', '.') }}</td>
+                        <td class="p-1 px-2 text-right text-xs font-bold text-gray-900">-Rp {{ Number::format((float) ($transaction->discount), null, 3, 'id') }}</td>
                     </tr>
                 @endif
                 <tr class="total-row border-t border-gray-800">
                     <td class="p-2 px-2 text-right text-xs font-bold text-gray-900 uppercase">TOTAL</td>
-                    <td class="p-2 px-2 text-right text-base font-bold text-gray-900">Rp {{ number_format($transaction ? $transaction->total_price : 0, 0, ',', '.') }}</td>
+                    <td class="p-2 px-2 text-right text-base font-bold text-gray-900">Rp {{ Number::format((float) ($transaction ? $transaction->total_price : 0), null, 3, 'id') }}</td>
                 </tr>
             </table>
         </div>

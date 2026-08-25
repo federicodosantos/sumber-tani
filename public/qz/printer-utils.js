@@ -83,3 +83,13 @@ function formatIDR(value) {
         maximumFractionDigits: 3,
     });
 }
+
+/**
+ * Utility for quantity formatting (Indonesian style, max 3 decimals)
+ */
+function formatQty(value) {
+    return Number(value).toLocaleString("id-ID", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 3,
+    });
+}
