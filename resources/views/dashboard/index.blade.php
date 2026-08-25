@@ -37,7 +37,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <div class="mb-1 text-sm text-gray-500">Total Stok</div>
-                    <div class="text-3xl font-bold text-gray-800">{{ $totalStock ?? 0 }}</div>
+                    <div class="text-3xl font-bold text-gray-800">{{ Number::format((float) $totalStock, null, 3, 'id') }}</div>
                 </div>
                 <div class="rounded-lg bg-green-50 p-3">
                     <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,7 +211,7 @@
                             <td class="px-6 py-3 text-center">
                                 <span
                                     class="{{ $p->stock_opname < 10 ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800' }} inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
-                                    {{ $p->stock_opname }}
+                                    {{ Number::format((float) $p->stock_opname, null, 3, 'id') }}
                                 </span>
                             </td>
                             <td class="px-6 py-3 text-center">

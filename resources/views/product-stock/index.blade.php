@@ -1,3 +1,4 @@
+@php use Illuminate\Support\Number; @endphp
 <x-app-layout>
 
     <div class="hidden lg:flex justify-center font-mont">
@@ -14,7 +15,7 @@
                 <div>
                     <div class="text-sm text-gray-500">Total Stok</div>
                     <div class="text-xl font-semibold text-gray-900">
-                        {{ number_format($totalStock) }}
+                        {{ Number::format((float) $totalStock, null, 3, 'id') }}
                     </div>
                 </div>
             </div>
@@ -52,7 +53,7 @@
             <div>
                 <div class="text-xs text-gray-500">Total Stok</div>
                 <div class="text-md font-semibold text-gray-900">
-                    {{ number_format($totalStock) }}
+                    {{ Number::format((float) $totalStock, null, 3, 'id') }}
                 </div>
             </div>
         </div>
