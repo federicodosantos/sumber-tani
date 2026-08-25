@@ -771,9 +771,9 @@
 
                     removeFromCart(idx) { this.cart.splice(idx, 1); },
 
-                    get subtotal() { return this.cart.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 0), 0); },
-                    get grandTotal() { return Math.max(0, this.subtotal - (Number(this.discount) || 0)); },
-                    get totalQty() { return this.cart.reduce((sum, i) => sum + (Number(i.qty) || 0), 0); },
+                    get subtotal() { return Math.round(this.cart.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 0), 0) * 1000) / 1000; },
+                    get grandTotal() { return Math.max(0, Math.round((this.subtotal - (Number(this.discount) || 0)) * 1000) / 1000); },
+                    get totalQty() { return Math.round(this.cart.reduce((sum, i) => sum + (Number(i.qty) || 0), 0) * 1000) / 1000; },
 
                     formatRupiah(n) { return 'Rp ' + Number(n || 0).toLocaleString('id-ID'); },
                     formatDate(s) {
