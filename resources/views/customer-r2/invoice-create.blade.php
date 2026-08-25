@@ -217,6 +217,7 @@
                                                     <x-input-rupiah 
                                                         containerClass="w-28 inline-block"
                                                         class="!py-1 text-sm tabular-nums"
+                                                        decimals="3"
                                                         @rupiah-change="item.price = $event.detail.value"
                                                         x-init="updateValues(item.price)"
                                                     />
@@ -302,6 +303,7 @@
                                     <x-input-rupiah 
                                         label="Uang Diterima" 
                                         value="{{ old('cash_received', 0) }}"
+                                        decimals="3"
                                         @rupiah-change="cashReceived = $event.detail.value"
                                         placeholder="0"
                                     />
@@ -316,6 +318,7 @@
                             <x-input-rupiah 
                                 label="Diskon (Rp)" 
                                 value="{{ old('discount', 0) }}"
+                                decimals="3"
                                 @rupiah-change="discount = $event.detail.value"
                                 placeholder="0"
                             />

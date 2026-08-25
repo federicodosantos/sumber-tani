@@ -87,7 +87,7 @@
     @endif
 
     {{-- Nominal Pembayaran (Tunai) --}}
-    <x-input-rupiah name="amount" label="Nominal Pembayaran Tunai" placeholder="0" containerClass="mb-4" />
+    <x-input-rupiah name="amount" label="Nominal Pembayaran Tunai" placeholder="0" containerClass="mb-4" decimals="3" />
 
     {{-- Ringkasan Efektif --}}
     <template x-if="creditUsed > 0">

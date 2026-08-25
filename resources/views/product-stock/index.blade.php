@@ -364,10 +364,10 @@
                                                 'data' => [
                                                     'id' => $s->id,
                                                     'stock_opname' => $s->stock_opname,
-                                                    'price_consument' => (int)$s->price_consument,
-                                                    'price_r1' => (int)$s->price_r1,
-                                                    'price_r2' => (int)$s->price_r2,
-                                                    'unit_price' => (int)$s->unit_price,
+                                                    'price_consument' => (float) $s->price_consument,
+                                                    'price_r1' => (float) $s->price_r1,
+                                                    'price_r2' => (float) $s->price_r2,
+                                                    'unit_price' => (float) $s->unit_price,
                                                     'expired_date' => $s->expired_date ? \Carbon\Carbon::parse($s->expired_date)->format('Y-m-d') : '',
                                                 ]
                                             ])->values()->all();
@@ -382,7 +382,7 @@
                                                     'price_consument' => 0,
                                                     'price_r1' => 0,
                                                     'price_r2' => 0,
-                                                    'unit_price' => (int)($latestStock->unit_price ?? 0),
+                                                    'unit_price' => (float)($latestStock->unit_price ?? 0),
                                                     'expired_date' => '',
                                                 ]
                                             ];
@@ -394,10 +394,10 @@
                                                 currentStockId: '{{ $product->latest_stock_id }}',
                                                 currentData: {{ json_encode($latestStock ? [
                                                     'stock_opname' => $latestStock->stock_opname,
-                                                    'price_consument' => (int)$latestStock->price_consument,
-                                                    'price_r1' => (int)$latestStock->price_r1,
-                                                    'price_r2' => (int)$latestStock->price_r2,
-                                                    'unit_price' => (int)$latestStock->unit_price,
+                                                    'price_consument' => (float) $latestStock->price_consument,
+                                                    'price_r1' => (float) $latestStock->price_r1,
+                                                    'price_r2' => (float) $latestStock->price_r2,
+                                                    'unit_price' => (float) $latestStock->unit_price,
                                                     'expired_date' => $latestStock->expired_date ? \Carbon\Carbon::parse($latestStock->expired_date)->format('Y-m-d') : '',
                                                 ] : []) }},
                                                 

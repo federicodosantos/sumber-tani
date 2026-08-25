@@ -220,14 +220,15 @@
                                                     <x-input-rupiah 
                                                         containerClass="w-28 inline-block"
                                                         class="!py-1 text-sm tabular-nums"
+                                                        decimals="3"
                                                         @rupiah-change="item.price = $event.detail.value"
                                                         x-init="updateValues(item.price)"
                                                     />
                                                 </td>
                                                 <td class="px-3 py-3 text-center">
                                                     <div class="inline-flex items-center gap-1">
-                                                        <button type="button" @click="item.qty = Math.max(1, (Number(item.qty) || 1) - 1)" class="h-7 w-7 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center cursor-pointer">−</button>
-                                                        <input type="number" min="1" step="1" x-model.number="item.qty"
+                                                        <button type="button" @click="item.qty = Math.max(0.001, (Number(item.qty) || 0.001) - 1)" class="h-7 w-7 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center cursor-pointer">−</button>
+                                                        <input type="number" min="0.001" step="0.001" x-model.number="item.qty"
                                                             :max="reduceStock ? item.stockOpname : null"
                                                             :class="reduceStock && Number(item.qty) > Number(item.stockOpname) ? 'border-red-400 bg-red-50' : 'border-gray-200'"
                                                             class="w-12 rounded-md border px-1 py-1 text-center text-sm tabular-nums focus:outline-none focus:border-button-main focus:bg-white">
@@ -390,6 +391,7 @@
                                     <x-input-rupiah
                                         label="Uang Diterima"
                                         value="{{ old('cash_received', 0) }}"
+                                        decimals="3"
                                         @rupiah-change="cashReceived = $event.detail.value"
                                         placeholder="0"
                                     />
@@ -404,6 +406,7 @@
                             <x-input-rupiah
                                 label="Diskon (Rp)"
                                 value="{{ old('discount', 0) }}"
+                                decimals="3"
                                 @rupiah-change="discount = $event.detail.value"
                                 placeholder="0"
                             />

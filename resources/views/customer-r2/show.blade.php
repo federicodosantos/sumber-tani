@@ -706,6 +706,7 @@
                                                                                         label="Nominal Pembayaran"
                                                                                         id="inline-amt-{{ $invoice->id }}-{{ $payInvId }}"
                                                                                         required
+                                                                                        decimals="3"
                                                                                         value="{{ old('amount', $payment->amount) }}"
                                                                                     />
 
@@ -806,6 +807,7 @@
                                                                     label="Nominal Hutang"
                                                                     id="edit-debt-amount-{{ $invoice->id }}"
                                                                     required
+                                                                    decimals="3"
                                                                     value="{{ old('amount', $invoice->debts) }}"
                                                                 />
 
@@ -931,6 +933,7 @@
                                                                 label="Nominal Pembayaran"
                                                                 id="edit-payment-amount-{{ $invoice->id }}"
                                                                 required
+                                                                decimals="3"
                                                                 value="{{ old('amount', $invoice->debtPayment->amount) }}"
                                                             />
 
@@ -1034,6 +1037,7 @@
                 label="Nominal Hutang" 
                 id="add-debt-amount"
                 required
+                decimals="3"
                 value="{{ old('amount') }}"
             />
 
