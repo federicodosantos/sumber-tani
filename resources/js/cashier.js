@@ -970,9 +970,17 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     },
                     body: JSON.stringify(payload),
                 })
-                    .then(res => {
-                        if (!res.ok) throw new Error(res.statusText);
-                        return res.json();
+                    .then(async res => {
+                        const data = await res.json().catch(() => ({}));
+
+                        if (!res.ok || !data.success) {
+                            const message = data.message
+                                || (data.errors ? Object.values(data.errors).flat()[0] : null)
+                                || 'Transaksi ditolak server.';
+                            throw { __business: true, message };
+                        }
+
+                        return data;
                     })
                     .then(async response => {
                         await this.decrementLocalStock(cleanCart);
@@ -985,6 +993,12 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         this.forceCloseTab(this.activeTabId);
                     })
                     .catch(async error => {
+                        if (error && error.__business) {
+                            console.error('Transaksi ditolak server:', error.message);
+                            alert(error.message);
+                            return;
+                        }
+
                         console.error('Network Error, saving offline...', error);
                         await db.offline_transactions.add({ ...payload, is_synced: 0 });
 
@@ -1005,7 +1019,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         },
 
         async syncTransactions() {
-            const unsynced = await db.offline_transactions.toArray();
+            const unsynced = await db.offline_transactions.where('is_synced').equals(0).toArray();
             if (unsynced.length === 0) return;
 
             console.log(`Menyinkronkan ${unsynced.length} transaksi offline...`);
@@ -1042,9 +1056,9 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         body: JSON.stringify(payloadToSend),
                     });
 
-                        if (response.ok) {
-                            console.log('Sinkronisasi berhasil untuk ID:', trx.id);
-                            await db.offline_transactions.delete(trx.id);
+                    if (response.ok) {
+                        console.log('Sinkronisasi berhasil untuk ID:', trx.id);
+                        await db.offline_transactions.delete(trx.id);
 
                         const toast = document.createElement('div');
                         toast.className = 'fixed bottom-4 right-4 rounded bg-green-500 px-4 py-2 text-white z-[9999]';
@@ -1055,16 +1069,6 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         continue;
                     }
 
-                    if (response.status === 422) {
-                        const errorData = await response.json();
-                        console.error('Validasi gagal untuk ID:', trx.id, errorData);
-                        await db.offline_transactions.update(trx.id, {
-                            is_synced: -1,
-                            sync_error: JSON.stringify(errorData),
-                        });
-                        continue;
-                    }
-
                     if (response.status === 401 || response.status === 419) {
                         console.error('Sesi habis.');
                         authError = true;
@@ -1072,6 +1076,15 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         window.location.href = '/';
                         return;
                     }
+
+                    // Penolakan bisnis server (validasi 422 / stok kurang 500, dst):
+                    // tandai gagal agar tidak di-retry terus-menerus.
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Transaksi ditolak server, ID:', trx.id, errorData);
+                    await db.offline_transactions.update(trx.id, {
+                        is_synced: -1,
+                        sync_error: JSON.stringify(errorData),
+                    });
                 } catch (e) {
                     console.error('Gagal sync ID:', trx.id);
                     this.isOffline = true;
@@ -1080,11 +1093,15 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             }
 
             if (!authError) {
-                const sisa = await db.offline_transactions.where('is_synced').equals(0).count();
-                if (sisa === 0) {
+                const pending = await db.offline_transactions.where('is_synced').equals(0).count();
+                const failed = await db.offline_transactions.where('is_synced').equals(-1).count();
+
+                if (pending === 0 && failed === 0) {
                     alert('Semua data offline berhasil disinkronisasi!');
+                } else if (failed > 0) {
+                    alert(`Sinkronisasi selesai. ${failed} transaksi GAGAL disimpan dan perlu dihapus/diperiksa.`);
                 } else {
-                    alert(`Sinkronisasi selesai. Sisa ${sisa} transaksi gagal (cek error).`);
+                    alert(`Sinkronisasi selesai. Sisa ${pending} transaksi belum tersinkron.`);
                 }
             }
         },

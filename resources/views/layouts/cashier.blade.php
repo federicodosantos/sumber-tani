@@ -52,17 +52,27 @@
         <!-- WARNING BANNER OFFLINE -->
         <div x-data="{
                 count: 0,
+                failedCount: 0,
                 async checkDB() {
                     try {
                         if (window.db) {
                             this.count = await window.db.offline_transactions
                                 .where('is_synced').equals(0)
                                 .count();
+                            this.failedCount = await window.db.offline_transactions
+                                .where('is_synced').equals(-1)
+                                .count();
                         }
                     } catch (e) {
                     }
+                },
+                async clearFailed() {
+                    if (this.failedCount <= 0) return;
+                    if (!confirm(`Hapus ${this.failedCount} transaksi offline yang gagal?`)) return;
+                    await window.db.offline_transactions.where('is_synced').equals(-1).delete();
+                    this.checkDB();
                 }
-            }" x-init="checkDB(); setInterval(() => checkDB(), 2000);" x-show="count > 0" style="display: none;"
+            }" x-init="checkDB(); setInterval(() => checkDB(), 2000);" x-show="count > 0 || failedCount > 0" style="display: none;"
             class="z-50 shrink-0 w-full animate-pulse bg-yellow-500 py-2 text-center font-bold text-white shadow-md">
 
             <div class="flex items-center justify-center gap-2">
@@ -70,12 +80,24 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
-                <span>
-                    ⚠️ PERHATIAN: Ada <span x-text="count"
-                        class="mx-1 rounded-full bg-white px-2 text-yellow-600"></span> Transaksi Belum Tersimpan!
-                </span>
+                <template x-if="count > 0">
+                    <span>
+                        ⚠️ PERHATIAN: Ada <span x-text="count"
+                            class="mx-1 rounded-full bg-white px-2 text-yellow-600"></span> Transaksi Belum Tersimpan!
+                    </span>
+                </template>
+                <template x-if="failedCount > 0">
+                    <span class="flex items-center gap-2">
+                        <span x-text="failedCount"
+                            class="mx-1 rounded-full bg-red-600 px-2 text-white"></span> Transaksi GAGAL disimpan.
+                        <button @click="clearFailed()" type="button"
+                            class="rounded-md bg-white px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-50">
+                            Hapus
+                        </button>
+                    </span>
+                </template>
             </div>
-            <span class="mt-1 block text-sm font-normal text-yellow-100 sm:inline">Jangan tutup browser atau hapus
+            <span x-show="count > 0" class="mt-1 block text-sm font-normal text-yellow-100 sm:inline">Jangan tutup browser atau hapus
                 cache.</span>
         </div>
         
