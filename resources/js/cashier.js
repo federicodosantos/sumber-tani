@@ -973,14 +973,22 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     .then(async res => {
                         const data = await res.json().catch(() => ({}));
 
-                        if (!res.ok || !data.success) {
-                            const message = data.message
-                                || (data.errors ? Object.values(data.errors).flat()[0] : null)
-                                || 'Transaksi ditolak server.';
-                            throw { __business: true, message };
+                        if (res.ok) {
+                            return data;
                         }
 
-                        return data;
+                        // 5xx / error server: perlakukan seperti error jaringan agar
+                        // transaksi tidak hilang (disimpan offline & di-retry nanti).
+                        if (res.status >= 500) {
+                            throw new Error('ServerError');
+                        }
+
+                        // 4xx / penolakan bisnis (validasi, stok kurang, cash kurang):
+                        // jangan simpan offline; tampilkan pesan server.
+                        const message = data.message
+                            || (data.errors ? Object.values(data.errors).flat()[0] : null)
+                            || 'Transaksi ditolak server.';
+                        throw { __business: true, message };
                     })
                     .then(async response => {
                         await this.decrementLocalStock(cleanCart);
@@ -999,12 +1007,12 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                             return;
                         }
 
-                        console.error('Network Error, saving offline...', error);
+                        console.error('Network/Server Error, saving offline...', error);
                         await db.offline_transactions.add({ ...payload, is_synced: 0 });
 
                         await this.decrementLocalStock(cleanCart);
 
-                        alert('Koneksi terputus. Tersimpan offline.');
+                        alert('Transaksi tersimpan offline untuk disinkronkan nanti.');
                         if (this.activeTab) {
                             this.activeTab.pendingSync = true;
                             this.activeTab.offlineUuid = offlineUuid;
@@ -1077,14 +1085,21 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                         return;
                     }
 
-                    // Penolakan bisnis server (validasi 422 / stok kurang 500, dst):
-                    // tandai gagal agar tidak di-retry terus-menerus.
-                    const errorData = await response.json().catch(() => ({}));
-                    console.error('Transaksi ditolak server, ID:', trx.id, errorData);
-                    await db.offline_transactions.update(trx.id, {
-                        is_synced: -1,
-                        sync_error: JSON.stringify(errorData),
-                    });
+                    // Penolakan bisnis server (4xx): tandai gagal agar tidak di-retry terus.
+                    if (response.status < 500) {
+                        const errorData = await response.json().catch(() => ({}));
+                        console.error('Transaksi ditolak server, ID:', trx.id, errorData);
+                        await db.offline_transactions.update(trx.id, {
+                            is_synced: -1,
+                            sync_error: JSON.stringify(errorData),
+                        });
+                        continue;
+                    }
+
+                    // 5xx / error server sementara: biarkan pending (is_synced 0)
+                    // agar di-retry pada interval berikutnya.
+                    console.error('Server error saat sync ID:', trx.id, 'status:', response.status);
+                    break;
                 } catch (e) {
                     console.error('Gagal sync ID:', trx.id);
                     this.isOffline = true;

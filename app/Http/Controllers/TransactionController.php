@@ -188,6 +188,16 @@ class TransactionController extends Controller
                 'success' => true,
                 'transaction_id' => $transaction->id,
             ]);
+        } catch (\RuntimeException $e) {
+            DB::rollBack();
+
+            return response()->json(
+                [
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ],
+                422,
+            );
         } catch (\Exception $e) {
             DB::rollBack();
             \Illuminate\Support\Facades\Log::error('Transaction Error: '.$e->getMessage());
