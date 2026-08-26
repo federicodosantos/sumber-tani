@@ -72,42 +72,78 @@ class TransactionReversalService
                 ? Carbon::parse($payload['transaction_date'])->setTimezone(config('app.timezone'))
                 : ($transaction->transaction_date ?? $transaction->created_at);
 
-            // 4. Apply new items (decrement stock across batches FIFO, persist new details)
+            // 4. Hitung ulang total di sisi server (jangan percaya total dari client):
+            //    totalQty = Σ qty, subtotal = Σ (harga × qty), total = subtotal − diskon.
+            $discount = $math->round(($payload['discount'] ?? '') === '' ? 0 : ($payload['discount'] ?? 0));
+            $totalQty = '0.000';
+            $subtotal = '0.000';
+            $preparedItems = [];
+
             foreach ($payload['items'] as $item) {
                 $price = $math->round($item['price']);
                 $qty = $math->round($item['qty']);
+                $lineTotal = $math->multiply($price, $qty);
 
+                $totalQty = $math->add($totalQty, $qty);
+                $subtotal = $math->add($subtotal, $lineTotal);
+
+                $preparedItems[] = [
+                    'id' => (int) $item['id'],
+                    'price' => $price,
+                    'qty' => $qty,
+                ];
+            }
+
+            $totalAmount = $math->subtract($subtotal, $discount);
+            if ($math->isNegative($totalAmount)) {
+                $totalAmount = '0.000';
+            }
+
+            // 5. Apply new items (decrement stock across batches FIFO, persist new details)
+            foreach ($preparedItems as $item) {
                 $stockService = app(ProductStockService::class);
-                $allocations = $stockService->allocateStockFifo((int) $item['id'], $qty);
+                $allocations = $stockService->allocateStockFifo($item['id'], $item['qty']);
 
                 foreach ($allocations as $allocation) {
                     $transaction->transactionDetails()->create([
                         'product_id' => $item['id'],
                         'product_stock_id' => $allocation['stock_id'],
-                        'product_price' => $price,
+                        'product_price' => $item['price'],
                         'buying_price' => $allocation['unit_price'],
                         'quantity' => $allocation['quantity'],
-                        'total_price' => $math->multiply($price, $allocation['quantity']),
+                        'total_price' => $math->multiply($item['price'], $allocation['quantity']),
                         'created_at' => $trxDate,
                         'updated_at' => $trxDate,
                     ]);
                 }
             }
 
-            // 5. Update transaction header — only transaction_date changes; created_at stays as the original record creation timestamp.
+            // 6. Update transaction header — only transaction_date changes; created_at stays as the original record creation timestamp.
+            $cashReceived = (isset($payload['cash_received']) && $payload['cash_received'] !== null && $payload['cash_received'] !== '')
+                ? $math->round($payload['cash_received'])
+                : null;
+
+            $changeAmount = null;
+            if (($payload['payment_method'] ?? null) === 'Cash' && ! empty($payload['is_paid']) && $cashReceived !== null) {
+                $changeAmount = $math->subtract($cashReceived, $totalAmount);
+                if ($math->isNegative($changeAmount)) {
+                    $changeAmount = '0.000';
+                }
+            }
+
             $transaction->update([
-                'total_quantity' => $payload['totalQty'],
-                'total_price' => $payload['totalAmount'],
-                'discount' => $payload['discount'] ?? 0,
+                'total_quantity' => $totalQty,
+                'total_price' => $totalAmount,
+                'discount' => $discount,
                 'payment_method' => $payload['payment_method'],
                 'is_paid' => (bool) $payload['is_paid'],
-                'cash_received' => $payload['cash_received'] ?? null,
-                'change_amount' => $payload['change_amount'] ?? null,
+                'cash_received' => $cashReceived,
+                'change_amount' => $changeAmount,
                 'transaction_date' => $trxDate,
                 'updated_at' => Carbon::now(),
             ]);
 
-            // 6. Recompute invoice debts for each PRC invoice tied to this trx
+            // 7. Recompute invoice debts for each PRC invoice tied to this trx
             foreach ($transaction->invoices()->where('type', Invoice::TYPE_PURCHASE)->get() as $invoice) {
                 $alreadyPaid = $math->round((string) DebtPaymentDetail::where('invoice_id', $invoice->id)
                     ->sum('amount_paid'));
@@ -120,7 +156,7 @@ class TransactionReversalService
                     }
                     $invoice->update(['debts' => '0.000']);
                 } else {
-                    $newDebt = $math->subtract((string) $payload['totalAmount'], $alreadyPaid);
+                    $newDebt = $math->subtract((string) $totalAmount, $alreadyPaid);
                     if ($math->isNegative($newDebt)) {
                         throw new RuntimeException(
                             'Total transaksi baru lebih kecil dari pembayaran utang yang sudah dilakukan. Edit dibatalkan.'
