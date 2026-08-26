@@ -37,9 +37,35 @@ class DecimalMathServiceTest extends TestCase
         $this->assertSame('12.500', $this->math->multiply('10.000', '1.250'));
     }
 
+    public function test_multiply_rounds_instead_of_truncating(): void
+    {
+        // bcmul pada skala 3 memotong 15000.0015 -> 15000.001 (salah).
+        // Seharusnya dibulatkan half-away-from-zero -> 15000.002.
+        $this->assertSame('15000.002', $this->math->multiply('10000.001', '1.500'));
+    }
+
+    public function test_multiply_tie_rounds_half_away_from_zero(): void
+    {
+        $this->assertSame('0.001', $this->math->multiply('1', '0.0005'));
+        $this->assertSame('0.000', $this->math->multiply('1', '0.0004'));
+        $this->assertSame('-0.001', $this->math->multiply('1', '-0.0005'));
+    }
+
     public function test_divide_returns_scaled_result(): void
     {
         $this->assertSame('5.000', $this->math->divide('10.000', '2'));
+    }
+
+    public function test_divide_rounds_result(): void
+    {
+        $this->assertSame('3.333', $this->math->divide('10', '3'));
+        $this->assertSame('3.334', $this->math->divide('10.002', '3'));
+    }
+
+    public function test_float_input_strips_precision_noise(): void
+    {
+        $this->assertSame('0.300', $this->math->add(0.1, 0.2));
+        $this->assertSame('15000.002', $this->math->multiply(10000.001, 1.5));
     }
 
     public function test_divide_by_zero_throws(): void
