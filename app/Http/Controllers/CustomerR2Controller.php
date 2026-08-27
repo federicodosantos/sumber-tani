@@ -257,6 +257,10 @@ class CustomerR2Controller extends Controller
         try {
             DB::transaction(function () use ($customer, $math, $cashAmount, $creditUsed, $effectivePayment, $excess, $overpayAction, $paymentMethod, $paymentDate) {
 
+                // Kunci baris customer agar pembacaan/penulisan credit_balance
+                // aman dari race pembayaran hutang yang berjalan bersamaan.
+                $lockedCustomer = Customer::whereKey($customer->id)->lockForUpdate()->firstOrFail();
+
                 // 1. Create receipt invoice (debt_payment type)
                 $paymentInvoice = Invoice::create([
                     'customer_id'    => $customer->id,
@@ -284,12 +288,13 @@ class CustomerR2Controller extends Controller
                 ]);
 
                 // 3. FIFO: distribute effectivePayment across unpaid invoices (oldest first)
-                $creditBalance = (string) $customer->credit_balance;
+                $creditBalance = (string) $lockedCustomer->credit_balance;
                 $remaining = $effectivePayment;
-                $invoices  = $customer->invoices()
+                $invoices  = $lockedCustomer->invoices()
                     ->where('type', Invoice::TYPE_PURCHASE)
                     ->where('debts', '>', 0)
                     ->orderBy('created_at', 'asc')
+                    ->lockForUpdate()
                     ->get();
 
                 foreach ($invoices as $invoice) {
@@ -325,7 +330,7 @@ class CustomerR2Controller extends Controller
                 if ($math->isPositive($creditAmount)) {
                     $creditBalance = $math->add($creditBalance, $creditAmount);
                 }
-                $customer->update(['credit_balance' => $creditBalance]);
+                $lockedCustomer->update(['credit_balance' => $creditBalance]);
             });
 
             $msg = 'Pembayaran hutang berhasil diproses.';
@@ -802,6 +807,7 @@ class CustomerR2Controller extends Controller
                     ->where('type', Invoice::TYPE_PURCHASE)
                     ->where('debts', '>', 0)
                     ->orderBy('created_at', 'asc')
+                    ->lockForUpdate()
                     ->get();
 
                 foreach ($sourceInvoices as $src) {
