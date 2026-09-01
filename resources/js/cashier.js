@@ -739,6 +739,26 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             }
         },
 
+        async incrementLocalStock(soldItems) {
+            for (const item of soldItems) {
+                const product = this.products.find(p => p.id === item.id);
+
+                if (product) {
+                    product.stock_opname += item.qty;
+
+                    if (window.db) {
+                        try {
+                            await db.products.update(product.id, {
+                                stock_opname: product.stock_opname,
+                            });
+                        } catch (e) {
+                            console.error('Gagal update stok lokal:', e);
+                        }
+                    }
+                }
+            }
+        },
+
         updateQty(id, change) {
             const item = this.cart.find(cartItem => cartItem.id === id);
             if (!item) return;
@@ -1093,6 +1113,9 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                             is_synced: -1,
                             sync_error: JSON.stringify(errorData),
                         });
+                        // Stok lokal dikurangi saat checkout offline; pulihkan karena
+                        // transaksi ini ditolak server dan tidak akan diretry lagi.
+                        await this.incrementLocalStock(trx.items);
                         continue;
                     }
 
