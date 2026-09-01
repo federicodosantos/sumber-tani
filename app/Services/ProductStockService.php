@@ -181,16 +181,16 @@ class ProductStockService
 
         if (!$latestBatch) {
             return [
-                'price_consument' => 0,
-                'price_r1' => 0,
-                'price_r2' => 0,
+                'price_consument' => '0.000',
+                'price_r1' => '0.000',
+                'price_r2' => '0.000',
             ];
         }
 
         return [
-            'price_consument' => (float) $latestBatch->price_consument,
-            'price_r1' => (float) $latestBatch->price_r1,
-            'price_r2' => (float) $latestBatch->price_r2,
+            'price_consument' => (string) $latestBatch->price_consument,
+            'price_r1' => (string) $latestBatch->price_r1,
+            'price_r2' => (string) $latestBatch->price_r2,
         ];
     }
 

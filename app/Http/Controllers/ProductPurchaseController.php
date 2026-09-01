@@ -6,6 +6,7 @@ use App\Models\ProductPurchase;
 use App\Models\Product;
 use App\Models\ItemCategory;
 use App\Services\ProductStockService;
+use App\Services\DecimalMathService;
 use Illuminate\Support\Facades\DB;
  use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
@@ -96,21 +97,22 @@ class ProductPurchaseController extends Controller
      */
     public function store(Request $request)
     {
+        $math = app(DecimalMathService::class);
         $data = $this->prepareRequestData($request);
         $validated = Validator::make($data, [
             'purchase_date'      => ['required', 'date'],
-            'ppn'                => ['nullable', 'numeric', 'min:0'],
+            'ppn'                => ['nullable', 'numeric', 'min:0', 'decimal:0,3'],
             'ppn_type'           => ['required', 'in:percent,nominal'],
             'discount_type'      => ['required', 'in:percent,nominal'],
-            'discount'           => ['nullable', 'numeric', 'min:0'],
+            'discount'           => ['nullable', 'numeric', 'min:0', 'decimal:0,3'],
             'method'             => ['required', 'integer', 'in:0,12'],
-            'manual_grand_total' => ['nullable', 'numeric', 'min:0'],
+            'manual_grand_total' => ['nullable', 'numeric', 'min:0', 'decimal:0,3'],
             'products'           => ['required', 'array', 'min:1'],
             'products.*.product_id' => ['required', 'exists:products,id'],
-            'products.*.het_price'   => ['required'],
-            'products.*.basic_discount' => ['nullable'],
-            'products.*.additional_discount' => ['nullable'],
-            'products.*.quantity'    => ['required', 'numeric', 'min:0.001'],
+            'products.*.het_price'   => ['required', 'decimal:0,3'],
+            'products.*.basic_discount' => ['nullable', 'decimal:0,3'],
+            'products.*.additional_discount' => ['nullable', 'decimal:0,3'],
+            'products.*.quantity'    => ['required', 'numeric', 'decimal:0,3', 'min:0.001'],
             'products.*.unit'        => ['required', 'string', 'max:50'],
         ])->validate();
 
@@ -119,15 +121,15 @@ class ProductPurchaseController extends Controller
         $discountType = $validated['discount_type'];
         $ppnType = $validated['ppn_type'];
 
-        $items = collect($validated['products'])->map(function ($item) {
+        $items = collect($validated['products'])->map(function ($item) use ($math) {
             $product = Product::findOrFail($item['product_id']);
-            $het = $this->parseNumber($item['het_price']);
-            $basicDisc = $this->parseNumber($item['basic_discount'] ?? '0');
-            $addDisc = $this->parseNumber($item['additional_discount'] ?? '0');
-            $qty = (float) str_replace(',', '.', (string) $item['quantity']);
+            $het = $math->round($this->parseNumber($item['het_price']));
+            $basicDisc = $math->round($this->parseNumber($item['basic_discount'] ?? '0'));
+            $addDisc = $math->round($this->parseNumber($item['additional_discount'] ?? '0'));
+            $qty = $math->round(str_replace(',', '.', (string) $item['quantity']));
 
-            $netPrice = $het - $basicDisc - $addDisc;
-            $subtotal = $netPrice * $qty;
+            $netPrice = $math->subtract($math->subtract($het, $basicDisc), $addDisc);
+            $subtotal = $math->multiply($netPrice, $qty);
 
             return [
                 'product_id'   => $product->id,
@@ -144,36 +146,45 @@ class ProductPurchaseController extends Controller
             ];
         });
 
-        $subtotal = $items->sum('subtotal');
+        $subtotal = '0.000';
+        $totalItems = '0.000';
+        foreach ($items as $item) {
+            $subtotal = $math->add($subtotal, $item['subtotal']);
+            $totalItems = $math->add($totalItems, $item['quantity']);
+        }
         
         // Hitung diskon berdasarkan tipe
-        $discountInput = (float) ($validated['discount'] ?? 0);
+        $discountInput = $math->round($validated['discount'] ?? 0);
         if ($discountType === 'percent') {
             $discountPercent = $discountInput;
-            $discountValue = $subtotal * ($discountPercent / 100);
+            $discountValue = $math->multiply($subtotal, $math->divide($discountPercent, '100'));
         } else {
             $discountValue = $discountInput;
-            $discountPercent = $subtotal > 0 ? ($discountValue / $subtotal) * 100 : 0;
+            $discountPercent = $math->isPositive($subtotal)
+                ? $math->multiply($math->divide($discountValue, $subtotal), '100')
+                : '0.000';
         }
 
-        $afterDiscount = $subtotal - $discountValue;
-        $ppnInput = (float) ($validated['ppn'] ?? 0);
+        $afterDiscount = $math->subtract($subtotal, $discountValue);
+        $ppnInput = $math->round($validated['ppn'] ?? 0);
         if ($ppnType === 'percent') {
             $ppnPercent = $ppnInput;
-            $ppnValue = $afterDiscount * ($ppnPercent / 100);
+            $ppnValue = $math->multiply($afterDiscount, $math->divide($ppnPercent, '100'));
         } else {
             $ppnValue = $ppnInput;
-            $ppnPercent = $afterDiscount > 0 ? ($ppnValue / $afterDiscount) * 100 : 0;
+            $ppnPercent = $math->isPositive($afterDiscount)
+                ? $math->multiply($math->divide($ppnValue, $afterDiscount), '100')
+                : '0.000';
         }
 
         $grandTotal = !empty($validated['manual_grand_total'])
-            ? (float) $validated['manual_grand_total']
-            : $afterDiscount + $ppnValue;
+            ? $math->round($validated['manual_grand_total'])
+            : $math->add($afterDiscount, $ppnValue);
 
-        DB::transaction(function () use ($validated, $items, $subtotal, $discountType, $discountPercent, $discountValue, $ppnType, $ppnPercent, $ppnValue, $grandTotal, $paymentMethod, $isPaid) {
+        DB::transaction(function () use ($validated, $items, $subtotal, $totalItems, $discountType, $discountPercent, $discountValue, $ppnType, $ppnPercent, $ppnValue, $grandTotal, $paymentMethod, $isPaid) {
             $purchase = ProductPurchase::create([
                 'purchase_date'    => $validated['purchase_date'],
-                'total_items'      => $items->sum('quantity'),
+                'total_items'      => $totalItems,
                 'subtotal'         => $subtotal,
                 'discount_type'    => $discountType,
                 'discount_percent' => $discountPercent,
@@ -226,21 +237,22 @@ class ProductPurchaseController extends Controller
      */
     public function update(Request $request, ProductPurchase $purchase)
     {
+        $math = app(DecimalMathService::class);
         $data = $this->prepareRequestData($request);
         $validated = Validator::make($data, [
             'purchase_date'      => ['required', 'date'],
-            'ppn'                => ['nullable', 'numeric', 'min:0'],
+            'ppn'                => ['nullable', 'numeric', 'min:0', 'decimal:0,3'],
             'ppn_type'           => ['required', 'in:percent,nominal'],
             'discount_type'      => ['required', 'in:percent,nominal'],
-            'discount'           => ['nullable', 'numeric', 'min:0'],
+            'discount'           => ['nullable', 'numeric', 'min:0', 'decimal:0,3'],
             'method'             => ['required', 'integer', 'in:0,12'],
-            'manual_grand_total' => ['nullable', 'numeric', 'min:0'],
+            'manual_grand_total' => ['nullable', 'numeric', 'min:0', 'decimal:0,3'],
             'products'           => ['required', 'array', 'min:1'],
             'products.*.product_id' => ['required', 'exists:products,id'],
-            'products.*.het_price'   => ['required'],
-            'products.*.basic_discount' => ['nullable'],
-            'products.*.additional_discount' => ['nullable'],
-            'products.*.quantity'    => ['required', 'numeric', 'min:0.001'],
+            'products.*.het_price'   => ['required', 'decimal:0,3'],
+            'products.*.basic_discount' => ['nullable', 'decimal:0,3'],
+            'products.*.additional_discount' => ['nullable', 'decimal:0,3'],
+            'products.*.quantity'    => ['required', 'numeric', 'decimal:0,3', 'min:0.001'],
             'products.*.unit'        => ['required', 'string'],
         ])->validate();
 
@@ -249,15 +261,15 @@ class ProductPurchaseController extends Controller
         $discountType = $validated['discount_type'];
         $ppnType = $validated['ppn_type'];
 
-        $items = collect($validated['products'])->map(function ($item) {
+        $items = collect($validated['products'])->map(function ($item) use ($math) {
             $product = Product::findOrFail($item['product_id']);
-            $het = $this->parseNumber($item['het_price']);
-            $basicDisc = $this->parseNumber($item['basic_discount'] ?? '0');
-            $addDisc = $this->parseNumber($item['additional_discount'] ?? '0');
-            $qty = (float) str_replace(',', '.', (string) $item['quantity']);
+            $het = $math->round($this->parseNumber($item['het_price']));
+            $basicDisc = $math->round($this->parseNumber($item['basic_discount'] ?? '0'));
+            $addDisc = $math->round($this->parseNumber($item['additional_discount'] ?? '0'));
+            $qty = $math->round(str_replace(',', '.', (string) $item['quantity']));
 
-            $netPrice = $het - $basicDisc - $addDisc;
-            $subtotal = $netPrice * $qty;
+            $netPrice = $math->subtract($math->subtract($het, $basicDisc), $addDisc);
+            $subtotal = $math->multiply($netPrice, $qty);
 
             return [
                 'product_id'   => $product->id,
@@ -274,35 +286,44 @@ class ProductPurchaseController extends Controller
             ];
         });
 
-        $subtotal = $items->sum('subtotal');
-
-        $discountInput = (float) ($validated['discount'] ?? 0);
-        if ($discountType === 'percent') {
-            $discountPercent = $discountInput;
-            $discountValue = $subtotal * ($discountPercent / 100);
-        } else {
-            $discountValue = $discountInput;
-            $discountPercent = $subtotal > 0 ? ($discountValue / $subtotal) * 100 : 0;
+        $subtotal = '0.000';
+        $totalItems = '0.000';
+        foreach ($items as $item) {
+            $subtotal = $math->add($subtotal, $item['subtotal']);
+            $totalItems = $math->add($totalItems, $item['quantity']);
         }
 
-        $afterDiscount = $subtotal - $discountValue;
-        $ppnInput = (float) ($validated['ppn'] ?? 0);
+        $discountInput = $math->round($validated['discount'] ?? 0);
+        if ($discountType === 'percent') {
+            $discountPercent = $discountInput;
+            $discountValue = $math->multiply($subtotal, $math->divide($discountPercent, '100'));
+        } else {
+            $discountValue = $discountInput;
+            $discountPercent = $math->isPositive($subtotal)
+                ? $math->multiply($math->divide($discountValue, $subtotal), '100')
+                : '0.000';
+        }
+
+        $afterDiscount = $math->subtract($subtotal, $discountValue);
+        $ppnInput = $math->round($validated['ppn'] ?? 0);
         if ($ppnType === 'percent') {
             $ppnPercent = $ppnInput;
-            $ppnValue = $afterDiscount * ($ppnPercent / 100);
+            $ppnValue = $math->multiply($afterDiscount, $math->divide($ppnPercent, '100'));
         } else {
             $ppnValue = $ppnInput;
-            $ppnPercent = $afterDiscount > 0 ? ($ppnValue / $afterDiscount) * 100 : 0;
+            $ppnPercent = $math->isPositive($afterDiscount)
+                ? $math->multiply($math->divide($ppnValue, $afterDiscount), '100')
+                : '0.000';
         }
 
         $grandTotal = !empty($validated['manual_grand_total'])
-            ? (float) $validated['manual_grand_total']
-            : $afterDiscount + $ppnValue;
+            ? $math->round($validated['manual_grand_total'])
+            : $math->add($afterDiscount, $ppnValue);
 
-        DB::transaction(function () use ($purchase, $validated, $items, $subtotal, $discountType, $discountPercent, $discountValue, $ppnType, $ppnPercent, $ppnValue, $grandTotal, $paymentMethod, $isPaid) {
+        DB::transaction(function () use ($purchase, $validated, $items, $subtotal, $totalItems, $discountType, $discountPercent, $discountValue, $ppnType, $ppnPercent, $ppnValue, $grandTotal, $paymentMethod, $isPaid) {
             $purchase->update([
                 'purchase_date'    => $validated['purchase_date'],
-                'total_items'      => $items->sum('quantity'),
+                'total_items'      => $totalItems,
                 'subtotal'         => $subtotal,
                 'discount_type'    => $discountType,
                 'discount_percent' => $discountPercent,
