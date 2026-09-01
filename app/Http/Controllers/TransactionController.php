@@ -3,14 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\CustomerProductPrice;
+use App\Models\DebtPaymentDetail;
 use App\Models\Invoice;
-use App\Models\ProductStock;
 use App\Models\Transaction;
 use App\Services\DecimalMathService;
 use App\Services\ProductStockService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class TransactionController extends Controller
 {
@@ -264,19 +265,58 @@ class TransactionController extends Controller
      */
     public function updateStatus(Request $request, $id)
     {
+        $this->authorizeOwner();
+
         $transaction = Transaction::findOrFail($id);
 
-        $request->validate([
+        $validated = $request->validate([
             'is_paid' => 'required|boolean',
         ]);
 
-        $transaction->update([
-            'is_paid' => $request->is_paid,
-        ]);
+        $isPaid = (bool) $validated['is_paid'];
 
-        // If transaction is marked as paid, also clear any related invoice debts
-        if ($request->is_paid) {
-            DB::table('invoices')->where('transaction_id', $transaction->id)->update(['debts' => 0]);
+        try {
+            DB::transaction(function () use ($transaction, $isPaid) {
+                $prcInvoices = $transaction->invoices()
+                    ->where('type', Invoice::TYPE_PURCHASE)
+                    ->get();
+
+                // Blokir jika invoice sudah dibayar lewat pembayaran hutang
+                // sungguhan (debt_payment_details) agar tidak korup data.
+                foreach ($prcInvoices as $invoice) {
+                    $hasDebtPayment = DebtPaymentDetail::where('invoice_id', $invoice->id)->exists();
+
+                    if ($hasDebtPayment) {
+                        throw new RuntimeException(
+                            'Status pembayaran tidak bisa diubah: invoice #'.$invoice->inv_code.' sudah memiliki pembayaran hutang.'
+                        );
+                    }
+                }
+
+                $transaction->update(['is_paid' => $isPaid]);
+
+                $restoredDebt = $transaction->payment_method === 'Kredit'
+                    ? (string) $transaction->total_price
+                    : '0.000';
+
+                foreach ($prcInvoices as $invoice) {
+                    $invoice->update([
+                        'debts' => $isPaid ? '0.000' : $restoredDebt,
+                    ]);
+                }
+
+                activity('finance')
+                    ->causedBy(auth()->user())
+                    ->withProperties([
+                        'transaction_id' => $transaction->id,
+                        'is_paid' => $isPaid,
+                        'ip' => request()->ip(),
+                    ])
+                    ->event('transaction_status_updated')
+                    ->log('Status pembayaran Transaksi #'.$transaction->id.' diubah menjadi '.($isPaid ? 'LUNAS' : 'BELUM LUNAS'));
+            });
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         }
 
         return redirect()->back()->with('success', 'Status pembayaran berhasil diperbarui');
@@ -324,5 +364,12 @@ class TransactionController extends Controller
         }
 
         return str_replace(',', '.', trim($value));
+    }
+
+    private function authorizeOwner(): void
+    {
+        if (! auth()->check() || ! auth()->user()->isOwner()) {
+            abort(403, 'Hanya pemilik yang bisa mengubah status pembayaran.');
+        }
     }
 }
