@@ -227,6 +227,7 @@ class TransactionReversalService
             return;
         }
 
+        $math = app(DecimalMathService::class);
         $details = DebtPaymentDetail::where('invoice_id', $invoice->id)->get();
 
         foreach ($details as $detail) {
@@ -241,6 +242,24 @@ class TransactionReversalService
             $remainingDetails = DebtPaymentDetail::where('debt_payment_id', $payment->id)->count();
 
             if ($remainingDetails === 0) {
+                // Balikkan perubahan credit_balance dari payment ini (mirror
+                // destroyDebtPayment): kredit yang disimpan → kurangi, kredit
+                // yang dipakai → kembalikan.
+                $customer = $payment->customer;
+                if ($customer) {
+                    $creditBalance = $math->round((string) $customer->credit_balance);
+                    $creditAmount = $math->round((string) $payment->credit_amount);
+                    $creditUsed = $math->round((string) $payment->credit_used);
+
+                    if ($math->isPositive($creditAmount)) {
+                        $creditBalance = $math->subtract($creditBalance, $creditAmount);
+                    }
+                    if ($math->isPositive($creditUsed)) {
+                        $creditBalance = $math->add($creditBalance, $creditUsed);
+                    }
+                    $customer->update(['credit_balance' => $creditBalance]);
+                }
+
                 // Whole payment is now empty: drop it + its PAY receipt invoice.
                 $receiptInvoiceId = $payment->payment_invoice_id;
                 $payment->delete();
@@ -249,7 +268,6 @@ class TransactionReversalService
                 }
             } else {
                 // Partially reduce the payment amount.
-                $math = app(DecimalMathService::class);
                 $newAmount = $math->subtract((string) $payment->amount, (string) $detail->amount_paid);
                 if ($math->isNegative($newAmount)) {
                     $newAmount = '0.000';
