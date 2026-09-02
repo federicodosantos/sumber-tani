@@ -546,13 +546,13 @@ class CustomerR2Controller extends Controller
     public function storeDebt(Request $request, Customer $customer)
     {
         $validator = Validator::make($request->all(), [
-            'amount' => 'required|numeric|min:1',
+            'amount' => 'required|numeric|min:0.001|decimal:0,3',
             'note' => 'required|string|max:1000',
             'created_at' => 'required|date|before_or_equal:now',
         ], [
             'amount.required' => 'Nominal hutang wajib diisi.',
             'amount.numeric' => 'Nominal hutang harus berupa angka.',
-            'amount.min' => 'Nominal hutang minimal Rp 1.',
+            'amount.min' => 'Nominal hutang minimal 0.001.',
             'note.required' => 'Keterangan wajib diisi.',
             'note.max' => 'Keterangan maksimal 1000 karakter.',
             'created_at.required' => 'Tanggal wajib diisi.',
@@ -569,13 +569,14 @@ class CustomerR2Controller extends Controller
         }
 
         $validated = $validator->validated();
+        $math = app(DecimalMathService::class);
         $debtDate = $this->dateWithCurrentTime($validated['created_at']);
 
         try {
             Invoice::create([
                 'customer_id' => $customer->id,
                 'transaction_id' => null,
-                'debts' => (float) $validated['amount'],
+                'debts' => $math->round($validated['amount']),
                 'type' => Invoice::TYPE_PURCHASE,
                 'inv_code' => Invoice::generateInvCode(Invoice::TYPE_PURCHASE),
                 'note' => $validated['note'],
@@ -634,13 +635,13 @@ class CustomerR2Controller extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'amount' => 'required|numeric|min:1',
+            'amount' => 'required|numeric|min:0.001|decimal:0,3',
             'note' => 'required|string|max:1000',
             'created_at' => 'required|date|before_or_equal:now',
         ], [
             'amount.required' => 'Nominal hutang wajib diisi.',
             'amount.numeric' => 'Nominal hutang harus berupa angka.',
-            'amount.min' => 'Nominal hutang minimal Rp 1.',
+            'amount.min' => 'Nominal hutang minimal 0.001.',
             'note.required' => 'Keterangan wajib diisi.',
             'note.max' => 'Keterangan maksimal 1000 karakter.',
             'created_at.required' => 'Tanggal wajib diisi.',
@@ -654,11 +655,12 @@ class CustomerR2Controller extends Controller
         }
 
         $validated = $validator->validated();
+        $math = app(DecimalMathService::class);
 
         try {
             $debtDate = $this->dateWithCurrentTime($validated['created_at']);
             $invoice->update([
-                'debts' => (float) $validated['amount'],
+                'debts' => $math->round($validated['amount']),
                 'note' => $validated['note'],
                 'created_at' => $debtDate,
                 'updated_at' => $debtDate,

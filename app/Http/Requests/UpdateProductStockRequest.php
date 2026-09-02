@@ -29,11 +29,11 @@ class UpdateProductStockRequest extends FormRequest
                 'required',
                 Rule::exists('product_stocks', 'id'),
             ],
-            'unit_price' => 'nullable|numeric|min:0',
-            'stock_opname' => 'required|numeric|min:0',
-            'price_consument' => 'required|numeric|min:0',
-            'price_r1' => 'required|numeric|min:0',
-            'price_r2' => 'required|numeric|min:0',
+            'unit_price' => 'nullable|numeric|min:0|decimal:0,3',
+            'stock_opname' => 'required|numeric|min:0|decimal:0,3',
+            'price_consument' => 'required|numeric|min:0|decimal:0,3',
+            'price_r1' => 'required|numeric|min:0|decimal:0,3',
+            'price_r2' => 'required|numeric|min:0|decimal:0,3',
             'expired_date' => 'nullable|date|after_or_equal:today',
         ];
     }

@@ -3,6 +3,7 @@
 <div x-data="{
     displayAmount: '',
     rawAmount: '',
+    lastValidDisplay: '',
     maxDecimals: parseInt('{{ $decimals }}', 10) || 3,
     componentName: '{{ $name }}',
     getComponentName() {
@@ -78,6 +79,7 @@
 
         this.rawAmount = raw;
         this.displayAmount = this.toDisplay(raw);
+        this.lastValidDisplay = this.displayAmount;
 
         this.$nextTick(() => {
             this.$dispatch('rupiah-change', { value: raw, name: currentName });
@@ -90,6 +92,7 @@
         if (!displayVal || displayVal === '') {
             this.rawAmount = '';
             this.displayAmount = '';
+            this.lastValidDisplay = '';
             this.$dispatch('rupiah-change', { value: '', name: currentName });
             return;
         }
@@ -102,21 +105,27 @@
 
         let raw = this.toRaw(displayVal);
 
+        // Tolak input dengan > maxDecimals desimal alih-alih membulatkannya.
         if (raw.includes('.')) {
-            const pow = Math.pow(10, this.maxDecimals);
-            raw = String(Math.round(parseFloat(raw) * pow) / pow);
+            const decLen = (raw.split('.')[1] || '').length;
+            if (decLen > this.maxDecimals) {
+                this.displayAmount = this.lastValidDisplay;
+                return;
+            }
         }
 
         let numVal = parseFloat(raw);
         if (isNaN(numVal) || numVal === 0) {
             this.rawAmount = '';
             this.displayAmount = '';
+            this.lastValidDisplay = '';
             this.$dispatch('rupiah-change', { value: '', name: currentName });
             return;
         }
 
         this.rawAmount = raw;
         this.displayAmount = this.toDisplay(raw);
+        this.lastValidDisplay = this.displayAmount;
 
         this.$nextTick(() => {
             this.$dispatch('rupiah-change', { value: raw, name: currentName });

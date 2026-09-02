@@ -21,11 +21,11 @@ class StoreProductStockRequest extends FormRequest
                 Rule::unique('product_stocks', 'product_id')
                     ->whereNull('deleted_at'),
             ],
-            'unit_price' => 'nullable|numeric|min:0',
-            'stock_opname' => 'required|numeric|min:0',
-            'price_consument' => 'required|numeric|min:0',
-            'price_r1' => 'required|numeric|min:0',
-            'price_r2' => 'required|numeric|min:0',
+            'unit_price' => 'nullable|numeric|min:0|decimal:0,3',
+            'stock_opname' => 'required|numeric|min:0|decimal:0,3',
+            'price_consument' => 'required|numeric|min:0|decimal:0,3',
+            'price_r1' => 'required|numeric|min:0|decimal:0,3',
+            'price_r2' => 'required|numeric|min:0|decimal:0,3',
             'expired_date' => 'nullable|date|after_or_equal:today',
         ];
     }
