@@ -1,3 +1,5 @@
+import { add, sub, mul } from './decimal';
+
 export default (config) => ({
     products: config.products || [],
     items: JSON.parse(JSON.stringify(config.initial.items || [])),
@@ -21,22 +23,17 @@ export default (config) => ({
     },
 
     get totalQty() {
-        return Math.round(this.items.reduce((s, r) => s + (Number(r.qty) || 0), 0) * 1000) / 1000;
+        return this.items.reduce((s, r) => add(s, r.qty), 0);
     },
     get subtotal() {
-        return Math.round(
-            this.items.reduce(
-                (s, r) => s + (Number(r.price) || 0) * (Number(r.qty) || 0),
-                0
-            ) * 1000
-        ) / 1000;
+        return this.items.reduce((s, r) => add(s, mul(r.price, r.qty)), 0);
     },
     get totalAmount() {
-        return Math.max(0, Math.round((this.subtotal - (Number(this.discount) || 0)) * 1000) / 1000);
+        return Math.max(0, sub(this.subtotal, this.discount));
     },
     get changeAmount() {
         if (this.payment_method !== 'Cash' || !this.is_paid) return 0;
-        return Math.max(0, Math.round(((Number(this.cash_received) || 0) - this.totalAmount) * 1000) / 1000);
+        return Math.max(0, sub(this.cash_received, this.totalAmount));
     },
 
     formatRp(n) {

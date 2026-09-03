@@ -1,4 +1,5 @@
 import { db } from './db';
+import { add, sub, mul } from './decimal';
 
 export default function cashierHandler(initialProducts = [], initialCategories = [], initialCustomers = [], initialCustomPrices = []) {
     return {
@@ -852,7 +853,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         },
 
         get totalQty() {
-            return Math.round(this.cart.reduce((total, item) => total + (Number(item.qty) || 0), 0) * 1000) / 1000;
+            return this.cart.reduce((total, item) => add(total, item.qty), 0);
         },
 
         get totalPrice() {
@@ -862,14 +863,14 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             }
 
             if (this.manualTotal !== null) {
-                return Math.round((Number(this.manualTotal) || 0) * 1000) / 1000;
+                return add(this.manualTotal, 0);
             }
 
-            return Math.round(this.cart.reduce((total, item) => total + ((Number(item.price) || 0) * (Number(item.qty) || 0)), 0) * 1000) / 1000;
+            return this.cart.reduce((total, item) => add(total, mul(item.price, item.qty)), 0);
         },
 
         get systemCartTotal() {
-            return Math.round(this.cart.reduce((total, item) => total + ((Number(item.basePrice) || 0) * (Number(item.qty) || 0)), 0) * 1000) / 1000;
+            return this.cart.reduce((total, item) => add(total, mul(item.basePrice, item.qty)), 0);
         },
 
         get cashReceived() {
@@ -878,8 +879,8 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
         get changeAmount() {
             if (this.paymentMethod !== 'Cash') return 0;
-            const change = this.cashReceived - this.totalPrice;
-            return Math.round((change > 0 ? change : 0) * 1000) / 1000;
+            const change = sub(this.cashReceived, this.totalPrice);
+            return change > 0 ? change : 0;
         },
 
         async processCheckout() {
@@ -903,12 +904,12 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
             const cleanCart = JSON.parse(JSON.stringify(this.cart));
             const offlineUuid = self.crypto.randomUUID();
-            const originalTotal = Math.round(cleanCart.reduce((total, item) => total + ((Number(item.price) || 0) * (Number(item.qty) || 0)), 0) * 1000) / 1000;
+            const originalTotal = cleanCart.reduce((total, item) => add(total, mul(item.price, item.qty)), 0);
             const isPaid = this.paymentMethod === 'Kredit' ? 0 : 1;
 
             let discountValue = 0;
             if (this.manualTotal !== null) {
-                discountValue = Math.round((originalTotal - parseFloat(this.manualTotal)) * 1000) / 1000;
+                discountValue = sub(originalTotal, this.manualTotal);
                 if (discountValue < 0) discountValue = 0;
             }
 
