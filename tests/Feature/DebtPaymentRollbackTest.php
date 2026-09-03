@@ -26,7 +26,7 @@ class DebtPaymentRollbackTest extends TestCase
 
     private function actingAsOwner(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['role' => 'OWNER']));
     }
 
     private function makeR2Customer(float $creditBalance = 0): Customer

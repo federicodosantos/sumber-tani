@@ -26,7 +26,7 @@ class DecimalStockAllocationTest extends TestCase
 
     private function actingAsOwner(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['role' => 'OWNER']));
     }
 
     private function makeProduct(): int
@@ -103,7 +103,7 @@ class DecimalStockAllocationTest extends TestCase
 
         $response = $this->checkout($productId, 0.75);
 
-        $response->assertStatus(500)->assertJson(['success' => false]);
+        $response->assertStatus(422)->assertJson(['success' => false]);
         $this->assertDatabaseCount('transactions', 0);
         $this->assertSame('0.500', $batch1->fresh()->stock_opname);
     }
