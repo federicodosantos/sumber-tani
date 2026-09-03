@@ -143,18 +143,20 @@ class FinanceReportController extends Controller
 
     private function calculateProfitLoss(Carbon $start, Carbon $end): array
     {
+        $math = app(DecimalMathService::class);
+
         // Revenue
-        $revenue = Transaction::whereBetween('transaction_date', [$start, $end])
+        $revenue = $math->round((string) Transaction::whereBetween('transaction_date', [$start, $end])
             ->where('is_paid', 1)
-            ->sum('total_price');
+            ->sum('total_price'));
 
         // COGS (HPP)
-        $cogs = TransactionDetail::join('transactions', 'transactions.id', '=', 'transaction_details.transaction_id')
+        $cogs = $math->round((string) TransactionDetail::join('transactions', 'transactions.id', '=', 'transaction_details.transaction_id')
             ->whereBetween('transactions.transaction_date', [$start, $end])
             ->where('transactions.is_paid', 1)
-            ->sum(DB::raw('transaction_details.quantity * transaction_details.buying_price'));
+            ->sum(DB::raw('transaction_details.quantity * transaction_details.buying_price')));
 
-        $grossProfit = $revenue - $cogs;
+        $grossProfit = $math->subtract($revenue, $cogs);
 
         return [
             'revenue' => $revenue,
@@ -165,33 +167,35 @@ class FinanceReportController extends Controller
 
     private function calculateBalanceSheet(Carbon $end): array
     {
+        $math = app(DecimalMathService::class);
+
         // Assets
-        $cashIn = Transaction::where('transaction_date', '<=', $end)
+        $cashIn = $math->round((string) Transaction::where('transaction_date', '<=', $end)
             ->where('is_paid', 1)
-            ->sum('total_price');
+            ->sum('total_price'));
 
-        $cashOut = ProductPurchase::where('purchase_date', '<=', $end)
+        $cashOut = $math->round((string) ProductPurchase::where('purchase_date', '<=', $end)
             ->where('is_paid', 1)
-            ->sum('grand_total');
+            ->sum('grand_total'));
 
-        $cash = $cashIn - $cashOut;
+        $cash = $math->subtract($cashIn, $cashOut);
 
-        $inventoryValue = ProductStock::whereNull('deleted_at')
-            ->sum(DB::raw('stock_opname * unit_price'));
+        $inventoryValue = $math->round((string) ProductStock::whereNull('deleted_at')
+            ->sum(DB::raw('stock_opname * unit_price')));
 
-        $receivables = Invoice::where('type', Invoice::TYPE_PURCHASE)
-            ->sum('debts');
+        $receivables = $math->round((string) Invoice::where('type', Invoice::TYPE_PURCHASE)
+            ->sum('debts'));
 
-        $totalAssets = $cash + $inventoryValue + $receivables;
+        $totalAssets = $math->add($math->add($cash, $inventoryValue), $receivables);
 
         // Liabilities
-        $payables = ProductPurchase::where('is_paid', 0)
-            ->sum('grand_total');
+        $payables = $math->round((string) ProductPurchase::where('is_paid', 0)
+            ->sum('grand_total'));
 
         $totalLiabilities = $payables;
 
         // Equity
-        $equity = $totalAssets - $totalLiabilities;
+        $equity = $math->subtract($totalAssets, $totalLiabilities);
 
         return [
             'assets' => [
