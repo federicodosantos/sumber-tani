@@ -27,9 +27,9 @@
                         
                         // Re-init purchase form logic scoped to the edit modal
                         if (window.initPurchaseForm && editModalBody) {
-                            // Update rowIndex based on loaded rows
-                            const rows = editModalBody.querySelectorAll('.product-row');
-                            if (window.setRowIndex) window.setRowIndex(rows.length);
+                            // Update rowIndex based on the highest existing row index
+                            // (index sparse seperti [0,2] harus menghasilkan next = 3)
+                            if (window.setRowIndex) window.setRowIndex(window.computeNextRowIndex(editModalBody));
                             window.initPurchaseForm(editModalBody);
                         }
                     });
@@ -42,6 +42,7 @@
         }">
         <div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
             <!-- Header dengan button -->
+            @if(!$editPurchaseId)
             <div class="mb-4 flex justify-start">
                 <x-button.add-button @click="$dispatch('open-modal', 'create-purchase')" class="w-full sm:w-auto cursor-pointer">
                     <x-slot name="icon">
@@ -50,7 +51,9 @@
                     <span class="font-bold">TAMBAH PEMBELIAN PRODUK</span>
                 </x-button.add-button>
             </div>
+            @endif
 
+            @if(!$editPurchaseId)
             <x-modal name="create-purchase" title="TAMBAH PEMBELIAN PRODUK" maxWidth="full" 
                 x-init="{{ $errors->any() ? '$dispatch(\'open-modal\', \'create-purchase\')' : '' }}">
                 <div class="">
@@ -62,11 +65,25 @@
                     ])
                 </div>
             </x-modal>
+            @endif
 
-            <x-modal name="edit-purchase" title="UBAH DATA PEMBELIAN" maxWidth="full">
-                <div id="edit-modal-body" x-html="editContent">
-                    {{-- Content loaded via AJAX --}}
-                </div>
+            <x-modal name="edit-purchase" title="UBAH DATA PEMBELIAN" maxWidth="full"
+                x-init="{{ $pendingEditPurchase ? '$dispatch(\'open-modal\', \'edit-purchase\')' : '' }}">
+                @if($pendingEditPurchase)
+                    {{-- Validasi edit gagal: render ulang form edit purchase yang sama
+                         (dengan old input, index sparse, dan pasangan id<->expiry utuh). --}}
+                    <div id="edit-modal-body">
+                        @include('product-purchase.edit-partial', [
+                            'purchase' => $pendingEditPurchase,
+                            'products' => $products,
+                            'categories' => $categories
+                        ])
+                    </div>
+                @else
+                    <div id="edit-modal-body" x-html="editContent">
+                        {{-- Content loaded via AJAX --}}
+                    </div>
+                @endif
             </x-modal>
 
             <div class="mb-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
@@ -278,5 +295,13 @@
 
     @push('scripts')
         @include('product-purchase._form-script')
+        @if($pendingEditPurchase)
+            {{-- Recovery edit: baris yang di-render sparse; pastikan row index berikutnya = max+1 --}}
+            <script>
+                if (window.computeNextRowIndex) {
+                    window.setRowIndex(window.computeNextRowIndex(document));
+                }
+            </script>
+        @endif
     @endpush
 </x-app-layout>

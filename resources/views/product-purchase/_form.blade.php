@@ -165,7 +165,7 @@
 
         <div id="rowsContainer">
             {{-- Header Row - Hidden on Mobile --}}
-            <div class="mb-3 hidden lg:grid lg:grid-cols-[2fr_0.7fr_1fr_1.5fr_1.5fr_1.5fr_1.5fr_1.5fr_30px] gap-3 px-4 border border-transparent text-sm font-semibold text-gray-700">
+            <div class="mb-3 hidden lg:grid lg:grid-cols-[2fr_0.7fr_1fr_1.5fr_1.5fr_1.5fr_1.5fr_1.5fr_1fr_30px] gap-3 px-4 border border-transparent text-sm font-semibold text-gray-700">
                 <div>Produk</div>
                 <div>Jumlah</div>
                 <div>Satuan</div>
@@ -174,14 +174,28 @@
                 <div>Add Disc</div>
                 <div>Net Price</div>
                 <div>Sub Total</div>
+                <div>Expired</div>
                 <div></div>
             </div>
 
-            @php $rowCount = $isEdit ? $purchase->details->count() : 1; @endphp
-            @for($i = 0; $i < $rowCount; $i++)
-                @php $detail = $isEdit ? $purchase->details[$i] : null; @endphp
+            @php
+                // Saat ada old input (validasi gagal), pertahankan struktur baris submit
+                // (termasuk hidden id & expired_date) agar pasangan id<->expiry tidak
+                // bergeser ke posisi detail DB. Index submit bisa sparse (baris dihapus).
+                $oldProducts = old('products');
+                $hasOldInput = $isEdit && is_array($oldProducts) && $oldProducts !== [];
+                if ($hasOldInput) {
+                    $rowIndexes = array_keys($oldProducts);
+                    $rowCount = count($oldProducts);
+                } else {
+                    $rowCount = $isEdit ? $purchase->details->count() : 1;
+                    $rowIndexes = range(0, max(0, $rowCount - 1));
+                }
+            @endphp
+            @foreach($rowIndexes as $i)
+                @php $detail = $isEdit ? ($purchase->details[$i] ?? null) : null; @endphp
                 <div class="product-row mb-3 rounded-lg border border-gray-200 p-3 sm:p-4">
-                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[2fr_0.7fr_1fr_1.5fr_1.5fr_1.5fr_1.5fr_1.5fr_30px] lg:items-start lg:gap-3">
+                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[2fr_0.7fr_1fr_1.5fr_1.5fr_1.5fr_1.5fr_1.5fr_1fr_30px] lg:items-start lg:gap-3">
                         {{-- Product Selector --}}
                         <div class="min-w-0">
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Produk</label>
@@ -272,6 +286,14 @@
                                 readonly />
                         </div>
 
+                        <div class="min-w-0">
+                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Expired</label>
+                            <input type="hidden" name="products[{{ $i }}][id]" value="{{ old('products.' . $i . '.id', $detail?->id) }}">
+                            <input type="date" name="products[{{ $i }}][expired_date]"
+                                value="{{ old('products.' . $i . '.expired_date', $detail?->expired_date?->toDateString()) }}"
+                                class="expired-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        </div>
+
                         <div class="flex h-[42px] items-center justify-end -mr-1">
                             <button type="button"
                                 class="remove-row w-full lg:w-auto rounded-md bg-red-50 px-4 py-2 text-red-600 hover:bg-red-100 hover:text-red-800 disabled:opacity-50 lg:bg-transparent lg:p-0"
@@ -284,7 +306,7 @@
                         </div>
                     </div>
                 </div>
-            @endfor
+            @endforeach
         </div>
 
         {{-- Add Row Button & Total Summary --}}

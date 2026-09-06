@@ -9,6 +9,21 @@
         rowIndex = val;
     }
 
+    /**
+     * Hitung index baris berikutnya dari index numerik tertinggi yang sudah ada
+     * (bukan jumlah baris), karena index bisa sparse setelah baris dihapus.
+     * Contoh: [0, 2] -> next 3; [] -> 0.
+     */
+    function computeNextRowIndex(container) {
+        container = container || document;
+        let max = -1;
+        container.querySelectorAll('input[name^="products["]').forEach(el => {
+            const m = el.name && el.name.match(/products\[(\d+)\]/);
+            if (m) max = Math.max(max, parseInt(m[1], 10));
+        });
+        return max + 1;
+    }
+
     /* =========================
        UTIL
     ========================= */
@@ -550,6 +565,12 @@
             if (qtyInput) qtyInput.value = 1;
             if (unitInput) unitInput.value = 'PCS';
 
+            // Reset first row expiry + hidden detail id (validation-only)
+            const expiryInput = firstRow.querySelector('input[name="products[0][expired_date]"]');
+            if (expiryInput) expiryInput.value = '';
+            const hiddenIdInput = firstRow.querySelector('input[name="products[0][id]"]');
+            if (hiddenIdInput) hiddenIdInput.value = '';
+
             // Reset first row rupiah components
             const firstRowFields = ['het_price', 'basic_discount', 'additional_discount', 'net_price', 'subtotal'];
             firstRowFields.forEach(field => {
@@ -579,6 +600,7 @@
     // Export functions to window for modal use
     window.initPurchaseForm = initPurchaseForm;
     window.setRowIndex = setRowIndex;
+    window.computeNextRowIndex = computeNextRowIndex;
     window.resetPurchaseForm = resetPurchaseForm;
 
     // Run on initial load

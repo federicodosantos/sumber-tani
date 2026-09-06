@@ -21,16 +21,18 @@ class ProductPurchaseDetail extends Model
         'price',
         'quantity',
         'subtotal',
+        'expired_date',
     ];
 
     protected $casts = [
-        'quantity'            => 'decimal:3',
-        'het_price'           => 'decimal:3',
-        'basic_discount'      => 'decimal:3',
+        'expired_date' => 'date',
+        'quantity' => 'decimal:3',
+        'het_price' => 'decimal:3',
+        'basic_discount' => 'decimal:3',
         'additional_discount' => 'decimal:3',
-        'net_price'           => 'decimal:3',
-        'price'               => 'decimal:3',
-        'subtotal'            => 'decimal:3',
+        'net_price' => 'decimal:3',
+        'price' => 'decimal:3',
+        'subtotal' => 'decimal:3',
     ];
 
     public function purchase(): BelongsTo
