@@ -1,7 +1,6 @@
 @props(['name' => null, 'label' => null, 'value' => '', 'placeholder' => '0', 'containerClass' => '', 'decimals' => 3])
 
 <div x-data="{
-    displayAmount: '',
     rawAmount: '',
     lastValidDisplay: '',
     maxDecimals: parseInt('{{ $decimals }}', 10) || 3,
@@ -57,7 +56,9 @@
         const currentName = this.getComponentName();
         if (val === null || val === undefined || val === '') {
             this.rawAmount = '';
-            this.displayAmount = '';
+            this.lastValidDisplay = '';
+            const el = this.$refs?.display;
+            if (el) el.value = '';
             this.$dispatch('rupiah-change', { value: '', name: currentName });
             return;
         }
@@ -72,14 +73,18 @@
         let numVal = parseFloat(raw);
         if (isNaN(numVal)) {
             this.rawAmount = '';
-            this.displayAmount = '';
+            this.lastValidDisplay = '';
+            const el = this.$refs?.display;
+            if (el) el.value = '';
             this.$dispatch('rupiah-change', { value: '', name: currentName });
             return;
         }
 
         this.rawAmount = raw;
-        this.displayAmount = this.toDisplay(raw);
-        this.lastValidDisplay = this.displayAmount;
+        const display = this.toDisplay(raw);
+        this.lastValidDisplay = display;
+        const el = this.$refs?.display;
+        if (el) el.value = display;
 
         this.$nextTick(() => {
             this.$dispatch('rupiah-change', { value: raw, name: currentName });
@@ -91,8 +96,6 @@
 
         if (!displayVal || displayVal === '') {
             this.rawAmount = '';
-            this.displayAmount = '';
-            this.lastValidDisplay = '';
             this.$dispatch('rupiah-change', { value: '', name: currentName });
             return;
         }
@@ -105,31 +108,22 @@
 
         let raw = this.toRaw(displayVal);
 
-        // Tolak input dengan > maxDecimals desimal alih-alih membulatkannya.
-        if (raw.includes('.')) {
-            const decLen = (raw.split('.')[1] || '').length;
-            if (decLen > this.maxDecimals) {
-                this.displayAmount = this.lastValidDisplay;
-                return;
-            }
-        }
-
         let numVal = parseFloat(raw);
         if (isNaN(numVal) || numVal === 0) {
             this.rawAmount = '';
-            this.displayAmount = '';
-            this.lastValidDisplay = '';
             this.$dispatch('rupiah-change', { value: '', name: currentName });
             return;
         }
 
         this.rawAmount = raw;
-        this.displayAmount = this.toDisplay(raw);
-        this.lastValidDisplay = this.displayAmount;
+        this.$dispatch('rupiah-change', { value: raw, name: currentName });
+    },
 
-        this.$nextTick(() => {
-            this.$dispatch('rupiah-change', { value: raw, name: currentName });
-        });
+    finalizeDisplay() {
+        const el = this.$refs?.display;
+        if (!el) return;
+        el.value = this.rawAmount ? this.toDisplay(this.rawAmount) : '';
+        this.lastValidDisplay = el.value;
     },
 
     init() {
@@ -155,7 +149,7 @@ class="{{ $containerClass }}"
 
         <input type="text"
             @if($name) id="{{ $name }}_display" @elseif($attributes->has('id')) id="{{ $attributes->get('id') }}_display" @endif
-            x-model="displayAmount"
+            x-ref="display"
             inputmode="decimal"
             placeholder="{{ $placeholder }}"
             @if($attributes->has('readonly'))
@@ -163,10 +157,9 @@ class="{{ $containerClass }}"
             @paste.prevent
             tabindex="-1"
             @else
-            @focus="setTimeout(() => $el.setSelectionRange($el.value.length, $el.value.length), 10)"
-            @click="setTimeout(() => $el.setSelectionRange($el.value.length, $el.value.length), 10)"
-            @keydown="const k=$event.key; const nav=['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End','Enter']; const ok=/[0-9]/.test(k)||nav.includes(k)||$event.ctrlKey||$event.metaKey||(k===','&&!$el.value.includes(',')); if(!ok) $event.preventDefault();"
+            @keydown="const k=$event.key; const nav=['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End','Enter']; if(/[0-9]/.test(k)){ const cur=$el.value; const selStart=$el.selectionStart, selEnd=$el.selectionEnd; const cand=cur.slice(0,selStart)+k+cur.slice(selEnd); const ci=cand.indexOf(','); const decLen=ci===-1?0:cand.length-ci-1; if(decLen>maxDecimals){$event.preventDefault(); return;} } else if(!(nav.includes(k)||$event.ctrlKey||$event.metaKey||(k===','&&!$el.value.includes(',')))){ $event.preventDefault(); }"
             @input="onDisplayInput($el.value)"
+            @blur="finalizeDisplay()"
             @endif
             {{ $attributes->merge([
                 'class' => 'block w-full rounded-md border border-gray-300 focus:border-button-hover px-3 py-2 text-sm focus:outline-none transition-all duration-100 text-right font-semibold text-gray-900' . ($attributes->has('disabled') ? ' bg-gray-100 cursor-not-allowed' : ($attributes->has('readonly') ? ' bg-gray-50 cursor-not-allowed text-gray-500' : ' bg-white'))
