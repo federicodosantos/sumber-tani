@@ -18,6 +18,9 @@
     Open with:   $dispatch('open-modal', 'my-modal')
     Close with:  $dispatch('close-modal', 'my-modal')  OR  click backdrop  OR  press Escape
 
+    closeable=false only blocks USER dismissal (backdrop / Escape / X button).
+    Programmatic $dispatch('close-modal') always works via forceClose().
+
     Props:
         name        (required)  - Unique modal identifier for event dispatching
         title       (optional)  - Header title text
@@ -64,14 +67,21 @@ $maxWidthClass = match ($maxWidth) {
         focusable: {{ $focusable ? 'true' : 'false' }},
         closeable: {{ $closeable ? 'true' : 'false' }},
         close() {
+            // User dismissal (backdrop / Escape / X): blocked when non-closeable.
             if (this.closeable) {
                 this.show = false;
                 this.$dispatch('modal-closed', '{{ $name }}');
             }
+        },
+        forceClose() {
+            // Programmatic dismissal via $dispatch('close-modal'): always works,
+            // even when non-closeable. Keeps 'modal-closed' tracking consistent.
+            this.show = false;
+            this.$dispatch('modal-closed', '{{ $name }}');
         }
     }"
     x-on:open-modal.window="if ($event.detail === '{{ $name }}') { show = true; $nextTick(() => { if (focusable) { let el = $refs.modalPanel?.querySelector('input, select, textarea, button:not([data-modal-close])'); if (el) el.focus(); } }); }"
-    x-on:close-modal.window="if ($event.detail === '{{ $name }}') close()"
+    x-on:close-modal.window="if ($event.detail === '{{ $name }}') forceClose()"
     x-on:keydown.escape.window="if (show) close()"
     x-show="show"
     x-cloak

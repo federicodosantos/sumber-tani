@@ -760,15 +760,42 @@
         </x-modal>
 
         {{-- Success Checkout Modal --}}
-        <x-modal name="success-checkout" title="Informasi" maxWidth="sm" zIndex="z-[100]">
+        {{-- Non-closeable: wajib pilih (Cetak/Lewati untuk member, OK untuk guest),
+             tab hanya ditutup setelah memilih. --}}
+        <x-modal name="success-checkout" title="Informasi" maxWidth="sm" zIndex="z-[100]" :closeable="false">
             <div class="mt-2 text-sm text-gray-600">
-                Transaksi Berhasil!
+                <template x-if="pendingPrint && pendingPrint.isOffline">
+                    <p>Transaksi tersimpan offline. Cetak struk?</p>
+                </template>
+                <template x-if="pendingPrint && !pendingPrint.isOffline">
+                    <p>Transaksi Berhasil! Cetak struk?</p>
+                </template>
+                <template x-if="!pendingPrint">
+                    <p>Transaksi Berhasil!</p>
+                </template>
             </div>
             <x-slot name="footer">
-                <button @click="$dispatch('close-modal', 'success-checkout')" 
-                    class="rounded-lg bg-button-main px-4 py-2 text-white shadow-sm hover:bg-button-hover transition-colors font-bold">
-                    OK
-                </button>
+                {{-- Member r1/r2 (pendingPrint terisi): pilihan print --}}
+                <template x-if="pendingPrint">
+                    <div class="flex items-center justify-end gap-3">
+                        <button @click="skipPrintChoice()"
+                            class="rounded-lg bg-gray-500 px-4 py-2 text-white shadow-sm hover:bg-gray-600 transition-colors font-bold">
+                            Lewati
+                        </button>
+                        <button @click="confirmPrintChoice()" :disabled="printChoiceBusy"
+                            :class="printChoiceBusy ? 'opacity-50 cursor-not-allowed' : ''"
+                            class="rounded-lg bg-button-main px-4 py-2 text-white shadow-sm hover:bg-button-hover transition-colors font-bold">
+                            Cetak Struk
+                        </button>
+                    </div>
+                </template>
+                {{-- Guest (pendingPrint kosong): tombol OK seperti sebelumnya --}}
+                <template x-if="!pendingPrint">
+                    <button @click="$dispatch('close-modal', 'success-checkout')"
+                        class="rounded-lg bg-button-main px-4 py-2 text-white shadow-sm hover:bg-button-hover transition-colors font-bold">
+                        OK
+                    </button>
+                </template>
             </x-slot>
         </x-modal>
 

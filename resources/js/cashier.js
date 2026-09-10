@@ -1,6 +1,71 @@
 import { db } from './db';
 import { add, sub, mul } from './decimal';
 
+// ---------------------------------------------------------------------------
+// Dev-only mock for window.printReceipt (Langkah 1, testing tanpa printer).
+// Aktif hanya jika localStorage "devMockPrint" === "true".
+// Toggle tanpa rebuild:
+//   Aktifkan:     localStorage.setItem('devMockPrint', 'true')
+//   Nonaktifkan:  localStorage.removeItem('devMockPrint')
+// Ketika aktif: tidak memanggil QZ Tray sama sekali, hanya console.log +
+// toast UI, lalu return normal (tidak throw, tidak block flow).
+// Ketika nonaktif: didelegasikan ke fungsi asli (production logic utuh).
+// ---------------------------------------------------------------------------
+let __originalPrintReceipt = null;
+
+function isDevMockPrintActive() {
+    try {
+        return localStorage.getItem('devMockPrint') === 'true';
+    } catch (e) {
+        return false;
+    }
+}
+
+function showDevMockPrintToast(saleId) {
+    try {
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-4 right-4 rounded bg-purple-600 px-4 py-2 text-white z-[9999]';
+        toast.innerText = `MOCK: Print dipanggil \u2013 SaleId: ${saleId ?? 'offline'}`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    } catch (e) {
+        // Toast tidak boleh mengganggu flow utama.
+        console.warn('Gagal tampilkan mock print toast:', e);
+    }
+}
+
+function installDevMockPrint() {
+    try {
+        if (typeof window === 'undefined') return;
+        const current = window.printReceipt;
+        // Sudah terpasang: jangan bungkus ulang (hindari rekursi/wrapping ganda).
+        if (current && current.__isDevMockPrint) return;
+        // Simpan fungsi asli (dari public/qz/printer-main.js) untuk jalur produksi.
+        if (typeof current === 'function') {
+            __originalPrintReceipt = current;
+        }
+        const mocked = async function (saleId, offlineData = null) {
+            if (!isDevMockPrintActive()) {
+                if (typeof __originalPrintReceipt === 'function') {
+                    return await __originalPrintReceipt(saleId, offlineData);
+                }
+                return;
+            }
+            console.log('MOCK PRINT:', { saleId, offlineData });
+            showDevMockPrintToast(saleId);
+            return;
+        };
+        mocked.__isDevMockPrint = true;
+        window.printReceipt = mocked;
+    } catch (e) {
+        console.warn('Gagal pasang dev mock print:', e);
+    }
+}
+
+if (typeof window !== 'undefined') {
+    installDevMockPrint();
+}
+
 export default function cashierHandler(initialProducts = [], initialCategories = [], initialCustomers = [], initialCustomPrices = []) {
     return {
         products: [],
@@ -31,6 +96,14 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         // Tracks any globally-opened <x-modal> by name to disable cashier shortcuts while open
         openModals: [],
         get isAnyModalOpen() { return this.openModals.length > 0; },
+
+        // Pending print choice (transient, NOT persisted): diisi saat checkout
+        // sukses untuk customer member (r1/r2), dibaca oleh success modal
+        // (File 2) dan dikonsumsi oleh confirmPrintChoice()/skipPrintChoice().
+        // Bentuk: { saleId, offlineData, tabId, isOffline }.
+        pendingPrint: null,
+        // Guard klik-ganda tombol "Cetak Struk".
+        printChoiceBusy: false,
 
         // --- Reactive Proxies to activeTab ---
         get activeTab() { return this.tabs.find(t => t.id === this.activeTabId) || null; },
@@ -115,6 +188,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         },
 
         async init() {
+            installDevMockPrint();
             if (this.tabs.length === 0) {
                 let initialCart = [];
                 try {
@@ -902,6 +976,14 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
         async executeCheckout() {
 
+            // Klasifikasi customer untuk pilihan print (guest vs member r1/r2).
+            // Dicapture sinkron di awal: selectedCustomer/activeTab bisa berubah
+            // selama await/fetch berjalan. Type kosong/undefined => guest
+            // (fallback aman: auto-print agar struk tidak hilang diam-diam).
+            const custType = this.selectedCustomer?.type ?? null;
+            const isMember = custType === 'r1' || custType === 'r2';
+            const checkoutTabId = this.activeTabId;
+
             const cleanCart = JSON.parse(JSON.stringify(this.cart));
             const offlineUuid = self.crypto.randomUUID();
             const originalTotal = cleanCart.reduce((total, item) => add(total, mul(item.price, item.qty)), 0);
@@ -970,13 +1052,24 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
                     await this.decrementLocalStock(cleanCart);
 
-                    alert('OFFLINE: Transaksi berhasil tersimpan lokal ke dalam antrean sinkronisasi.');
+                    if (!isMember) {
+                        // Guest: behaviour lama, byte-identical.
+                        alert('OFFLINE: Transaksi berhasil tersimpan lokal ke dalam antrean sinkronisasi.');
 
-                    if (typeof window.printReceipt === 'function') {
-                        window.printReceipt(null, payload);
+                        if (typeof window.printReceipt === 'function') {
+                            window.printReceipt(null, payload);
+                        }
+
+                        this.forceCloseTab(this.activeTabId);
+                        return;
                     }
 
-                    this.forceCloseTab(this.activeTabId);
+                    // Member r1/r2: SKIP auto-print, tampilkan pilihan di
+                    // success modal (menggantikan alert). Tab close ditunda
+                    // sampai user memilih (confirmPrintChoice/skipPrintChoice).
+                    this.pendingPrint = { saleId: null, offlineData: payload, tabId: checkoutTabId, isOffline: true };
+                    this.printChoiceBusy = false;
+                    window.dispatchEvent(new CustomEvent('open-modal', { detail: 'success-checkout' }));
                 } catch (e) {
                     console.error(e);
                     alert('Gagal simpan offline');
@@ -1014,12 +1107,23 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     .then(async response => {
                         await this.decrementLocalStock(cleanCart);
 
-                        if (response.transaction_id && typeof window.printReceipt === 'function') {
-                            window.printReceipt(response.transaction_id);
+                        if (!isMember) {
+                            // Guest: behaviour lama, byte-identical.
+                            if (response.transaction_id && typeof window.printReceipt === 'function') {
+                                window.printReceipt(response.transaction_id);
+                            }
+
+                            window.dispatchEvent(new CustomEvent('open-modal', { detail: 'success-checkout' }));
+                            this.forceCloseTab(this.activeTabId);
+                            return;
                         }
 
+                        // Member r1/r2: SKIP auto-print, tampilkan pilihan di
+                        // success modal. Tab close ditunda sampai user memilih
+                        // (confirmPrintChoice/skipPrintChoice).
+                        this.pendingPrint = { saleId: response.transaction_id ?? null, offlineData: null, tabId: checkoutTabId, isOffline: false };
+                        this.printChoiceBusy = false;
                         window.dispatchEvent(new CustomEvent('open-modal', { detail: 'success-checkout' }));
-                        this.forceCloseTab(this.activeTabId);
                     })
                     .catch(async error => {
                         if (error && error.__business) {
@@ -1044,6 +1148,47 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                             if (nextTab) this.activeTabId = nextTab.id;
                         }
                     });
+            }
+        },
+
+        // --- Print choice (success modal, khusus member r1/r2) ---
+        // Dipanggil dari tombol "Cetak Struk" di success modal (File 2).
+        // Guard klik-ganda via printChoiceBusy; tab hanya ditutup setelah
+        // print dipicu. Gagal print (QZ error) tidak menggantung flow:
+        // printer-main.js menampilkannya via modal qz-error, tab tetap close
+        // (cetak ulang via Finance / pelanggan R2).
+        async confirmPrintChoice() {
+            if (this.printChoiceBusy) return;
+            this.printChoiceBusy = true;
+            const pending = this.pendingPrint;
+            try {
+                if (pending && typeof window.printReceipt === 'function') {
+                    if (pending.saleId) {
+                        await window.printReceipt(pending.saleId);
+                    } else if (pending.offlineData) {
+                        await window.printReceipt(null, pending.offlineData);
+                    }
+                }
+            } catch (e) {
+                console.error('Gagal mencetak struk:', e);
+            } finally {
+                this.pendingPrint = null;
+                this.printChoiceBusy = false;
+            }
+            window.dispatchEvent(new CustomEvent('close-modal', { detail: 'success-checkout' }));
+            if (pending && pending.tabId) {
+                this.forceCloseTab(pending.tabId);
+            }
+        },
+
+        // Dipanggil dari tombol "Lewati" di success modal (File 2).
+        skipPrintChoice() {
+            const pending = this.pendingPrint;
+            this.pendingPrint = null;
+            this.printChoiceBusy = false;
+            window.dispatchEvent(new CustomEvent('close-modal', { detail: 'success-checkout' }));
+            if (pending && pending.tabId) {
+                this.forceCloseTab(pending.tabId);
             }
         },
 
