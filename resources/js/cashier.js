@@ -1,71 +1,6 @@
 import { db } from './db';
 import { add, sub, mul } from './decimal';
 
-// ---------------------------------------------------------------------------
-// Dev-only mock for window.printReceipt (Langkah 1, testing tanpa printer).
-// Aktif hanya jika localStorage "devMockPrint" === "true".
-// Toggle tanpa rebuild:
-//   Aktifkan:     localStorage.setItem('devMockPrint', 'true')
-//   Nonaktifkan:  localStorage.removeItem('devMockPrint')
-// Ketika aktif: tidak memanggil QZ Tray sama sekali, hanya console.log +
-// toast UI, lalu return normal (tidak throw, tidak block flow).
-// Ketika nonaktif: didelegasikan ke fungsi asli (production logic utuh).
-// ---------------------------------------------------------------------------
-let __originalPrintReceipt = null;
-
-function isDevMockPrintActive() {
-    try {
-        return localStorage.getItem('devMockPrint') === 'true';
-    } catch (e) {
-        return false;
-    }
-}
-
-function showDevMockPrintToast(saleId) {
-    try {
-        const toast = document.createElement('div');
-        toast.className = 'fixed bottom-4 right-4 rounded bg-purple-600 px-4 py-2 text-white z-[9999]';
-        toast.innerText = `MOCK: Print dipanggil \u2013 SaleId: ${saleId ?? 'offline'}`;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-    } catch (e) {
-        // Toast tidak boleh mengganggu flow utama.
-        console.warn('Gagal tampilkan mock print toast:', e);
-    }
-}
-
-function installDevMockPrint() {
-    try {
-        if (typeof window === 'undefined') return;
-        const current = window.printReceipt;
-        // Sudah terpasang: jangan bungkus ulang (hindari rekursi/wrapping ganda).
-        if (current && current.__isDevMockPrint) return;
-        // Simpan fungsi asli (dari public/qz/printer-main.js) untuk jalur produksi.
-        if (typeof current === 'function') {
-            __originalPrintReceipt = current;
-        }
-        const mocked = async function (saleId, offlineData = null) {
-            if (!isDevMockPrintActive()) {
-                if (typeof __originalPrintReceipt === 'function') {
-                    return await __originalPrintReceipt(saleId, offlineData);
-                }
-                return;
-            }
-            console.log('MOCK PRINT:', { saleId, offlineData });
-            showDevMockPrintToast(saleId);
-            return;
-        };
-        mocked.__isDevMockPrint = true;
-        window.printReceipt = mocked;
-    } catch (e) {
-        console.warn('Gagal pasang dev mock print:', e);
-    }
-}
-
-if (typeof window !== 'undefined') {
-    installDevMockPrint();
-}
-
 export default function cashierHandler(initialProducts = [], initialCategories = [], initialCustomers = [], initialCustomPrices = []) {
     return {
         products: [],
@@ -188,7 +123,6 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         },
 
         async init() {
-            installDevMockPrint();
             if (this.tabs.length === 0) {
                 let initialCart = [];
                 try {
