@@ -649,8 +649,15 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             this.manualTotal = null;
         },
 
+        round3(value) {
+            const n = Number(value);
+            if (!Number.isFinite(n)) return 0;
+            return Math.round(n * 1000) / 1000;
+        },
+
         addToCart(product) {
-            if (this.getVisualStock(product) <= 0) {
+            const visualStock = this.getVisualStock(product);
+            if (visualStock < 0.001) {
                 alert('Stok habis!');
                 return;
             }
@@ -659,10 +666,23 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             const existingItem = this.cart.find(item => item.id === product.id);
 
             if (existingItem) {
-                existingItem.qty++;
+                const maxAllowed = this.round3(this.getVisualStock(product) + existingItem.qty);
+                if (maxAllowed < 0.001) {
+                    alert('Stok habis!');
+                    return;
+                }
+                const requested = this.round3(existingItem.qty + 1);
+                if (requested > maxAllowed) {
+                    existingItem.qty = maxAllowed;
+                    existingItem.isAutoClamped = true;
+                } else {
+                    existingItem.qty = requested;
+                }
+                this.tabs = [...this.tabs]; // Force global reactive refresh
                 return;
             }
 
+            const isClamped = visualStock < 1;
             this.cart.push({
                 id: product.id,
                 name: product.name,
@@ -670,7 +690,8 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                 price: activePrice,
                 isManualPrice: false,
                 stock: product.stock_opname,
-                qty: 1,
+                qty: isClamped ? this.round3(visualStock) : 1,
+                isAutoClamped: isClamped,
             });
         },
 
@@ -774,11 +795,17 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             const product = this.products.find(p => p.id === id);
             if (!product) return;
 
-            const maxAllowed = this.getVisualStock(product) + item.qty;
-            const newQty = item.qty + change;
+            const maxAllowed = this.round3(this.getVisualStock(product) + item.qty);
+            const newQty = this.round3(item.qty + change);
 
-            if (newQty > maxAllowed) {
-                alert(`Stok tidak mencukupi! Stok tersedia: ${maxAllowed}`);
+            if (change > 0 && newQty > maxAllowed) {
+                if (maxAllowed < 0.001) {
+                    alert('Stok habis!');
+                    return;
+                }
+                item.qty = maxAllowed;
+                item.isAutoClamped = true;
+                this.tabs = [...this.tabs]; // Force global reactive refresh
                 return;
             }
 
@@ -795,7 +822,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             const product = this.products.find(p => p.id === id);
             if (!product) return;
 
-            const maxAllowed = this.getVisualStock(product) + item.qty;
+            const maxAllowed = this.round3(this.getVisualStock(product) + item.qty);
 
             if (this.countDecimals(value) > 3) {
                 alert('Jumlah maksimal 3 angka desimal.');
@@ -809,10 +836,12 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             if (newQty > maxAllowed) {
                 alert(`Stok tidak mencukupi! Max: ${maxAllowed}`);
                 item.qty = maxAllowed;
+                item.isAutoClamped = true;
                 return;
             }
 
-            item.qty = newQty;
+            item.qty = this.round3(newQty);
+            item.isAutoClamped = false;
         },
 
         handleQtyBlur(id, event) {
@@ -917,6 +946,42 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             const custType = this.selectedCustomer?.type ?? null;
             const isMember = custType === 'r1' || custType === 'r2';
             const checkoutTabId = this.activeTabId;
+
+            // Safety net terakhir: pastikan tidak ada qty yang melebihi sisa
+            // stok sebelum data masuk ke server/offline db, bila 2 lapis
+            // clamp di addToCart/updateQty berhasil di-bypass.
+            // Koreksi + abort: kasir checkout ulang untuk konfirmasi angka baru.
+            const EPS = 0.0005;
+            const adjustedLines = [];
+            const removedLines = [];
+            for (const item of this.cart) {
+                const product = this.products.find(p => p.id === item.id);
+                if (!product) continue;
+                const maxAllowed = this.round3(this.getVisualStock(product) + item.qty);
+                if (maxAllowed < 0.001) {
+                    removedLines.push(`- ${item.name}`);
+                } else if (item.qty - maxAllowed > EPS) {
+                    adjustedLines.push(`- ${item.name}: qty ${this.formatQty(item.qty)} → ${this.formatQty(maxAllowed)}`);
+                    item.qty = maxAllowed;
+                    item.isAutoClamped = true;
+                }
+            }
+            if (removedLines.length > 0 || adjustedLines.length > 0) {
+                if (removedLines.length > 0) {
+                    this.cart = this.cart.filter(item => {
+                        const product = this.products.find(p => p.id === item.id);
+                        if (!product) return true;
+                        return this.round3(this.getVisualStock(product) + item.qty) >= 0.001;
+                    });
+                }
+                this.tabs = [...this.tabs]; // Force global reactive refresh
+                let message = 'Qty beberapa item melebihi sisa stok dan sudah disesuaikan otomatis:';
+                if (adjustedLines.length > 0) message += '\n' + adjustedLines.join('\n');
+                if (removedLines.length > 0) message += '\n' + removedLines.join('\n') + ' (dihapus dari cart: stok habis)';
+                message += '\n\nSilakan cek cart dan checkout ulang.';
+                alert(message);
+                return;
+            }
 
             const cleanCart = JSON.parse(JSON.stringify(this.cart));
             const offlineUuid = self.crypto.randomUUID();

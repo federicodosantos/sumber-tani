@@ -370,6 +370,9 @@
                                 <p class="text-base font-black leading-tight text-gray-900 tabular-nums" x-text="formatRupiah(item.price * item.qty)"></p>
                             </div>
                         </div>
+                        <p x-show="item.isAutoClamped" class="mt-1.5 text-[11px] font-medium text-amber-600">
+                            Qty disesuaikan otomatis ke sisa stok (<span class="tabular-nums" x-text="String(item.qty).replace('.', ',')"></span>)
+                        </p>
                     </div>
                 </template>
             </div>
