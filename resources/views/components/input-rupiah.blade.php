@@ -116,8 +116,8 @@
 
     /**
      * Dipanggil saat user mengetik langsung di input display.
-     * Hanya memperbarui nilai raw + event; TIDAK menulis ulang nilai display
-     * agar kursor tidak dibawa ke ujung saat mengetik.
+     * Hanya memperbarui nilai raw + event; penulisan ulang tampilan
+     * (pemisah ribuan) ditangani formatLiveDisplay agar kursor terjaga.
      */
     onDisplayInput(displayVal) {
         const currentName = this.getComponentName();
@@ -155,6 +155,59 @@
         this.$nextTick(() => {
             this.$dispatch('rupiah-change', { value: raw, name: currentName });
         });
+    },
+
+    /**
+     * Format ulang tampilan secara live saat mengetik: grup bagian integer
+     * dengan titik ribuan tanpa mengubah nilai raw. Posisi kursor dipulihkan
+     * berdasarkan jumlah digit sebelum kursor agar mengetik di tengah
+     * angka tidak membawa kursor ke ujung. Bagian desimal dibiarkan
+     * apa adanya (tidak di-rounding saat mengetik).
+     */
+    formatLiveDisplay(el) {
+        if (!el || !this.rawAmount) return;
+
+        const caret = el.selectionStart ?? el.value.length;
+        const cur = el.value;
+        const commaIdx = cur.indexOf(',');
+
+        // Hitung jumlah digit sebelum kursor (abaikan titik ribuan).
+        const beforeCaret = cur.slice(0, caret);
+        const digitsBeforeCaret = (beforeCaret.match(/[0-9]/g) || []).length;
+
+        const rawInt = (commaIdx === -1 ? cur : cur.slice(0, commaIdx)).replace(/[^0-9]/g, '');
+        const decPart = commaIdx === -1 ? null : cur.slice(commaIdx + 1).replace(/[^0-9]/g, '');
+        if (rawInt === '') return;
+
+        const intFormatted = rawInt.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        const hasComma = commaIdx !== -1 || cur.endsWith(',');
+        const next = decPart !== null ? intFormatted + ',' + decPart : (hasComma ? intFormatted + ',' : intFormatted);
+
+        if (next === cur) {
+            this.lastValidDisplay = cur;
+            return;
+        }
+
+        el.value = next;
+
+        // Petakan posisi kursor: digit ke-N sebelum kursor tetap di posisi digit ke-N.
+        let target;
+        if (digitsBeforeCaret <= rawInt.length) {
+            let seen = 0, pos = intFormatted.length;
+            for (let i = 0; i < intFormatted.length; i++) {
+                if (/[0-9]/.test(intFormatted[i])) seen++;
+                if (seen === digitsBeforeCaret) { pos = i + 1; break; }
+            }
+            if (digitsBeforeCaret === 0) pos = 0;
+            target = pos;
+        } else {
+            // Kursor di zona desimal: pertahankan offset dari koma.
+            target = intFormatted.length + 1 + (digitsBeforeCaret - rawInt.length);
+        }
+        target = Math.max(0, Math.min(next.length, target));
+        try { el.setSelectionRange(target, target); } catch (e) {}
+
+        this.lastValidDisplay = next;
     },
 
     /**
@@ -204,7 +257,7 @@ class="{{ $containerClass }}"
             tabindex="-1"
             @else
             @keydown="const k=$event.key; const nav=['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End','Enter']; if(/[0-9]/.test(k)){ const cur=$el.value; const selStart=$el.selectionStart, selEnd=$el.selectionEnd; const cand=cur.slice(0,selStart)+k+cur.slice(selEnd); const ci=cand.indexOf(','); const decLen=ci===-1?0:cand.length-ci-1; if(decLen>maxDecimals){$event.preventDefault(); return;} } else if(!(nav.includes(k)||$event.ctrlKey||$event.metaKey||(k===','&&!$el.value.includes(',')))){ $event.preventDefault(); }"
-            @input="onDisplayInput($el.value)"
+            @input="onDisplayInput($el.value); formatLiveDisplay($el)"
             @blur="finalizeDisplay()"
             @endif
             {{ $attributes->merge([
