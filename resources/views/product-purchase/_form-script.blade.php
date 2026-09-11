@@ -91,7 +91,7 @@
     /* =========================
        CALCULATION
     ========================= */
-    function calculateSubtotal(row) {
+    function calculateSubtotal(row, changedDetail) {
         // Find hidden value inputs of input-rupiah components
         const hetInput = row.querySelector('input[name$="[het_price]"][type="hidden"]');
         const basicDiscInput = row.querySelector('input[name$="[basic_discount]"][type="hidden"]');
@@ -101,9 +101,20 @@
         
         const quantityInput = row.querySelector('.quantity-input');
 
-        const het = parseFloat(hetInput?.value) || 0;
-        const basicDisc = parseFloat(basicDiscInput?.value) || 0;
-        const addDisc = parseFloat(addDiscInput?.value) || 0;
+        // Alpine x-model DOM updates are async (microtask): the hidden input for the
+        // field that just fired rupiah-change may still hold the previous value.
+        // Use the fresh value from the event detail for that field; fall back to the
+        // hidden input (already settled) for all other fields.
+        function readField(input) {
+            if (changedDetail && input?.name && input.name === changedDetail.name) {
+                return parseFloat(changedDetail.value) || 0;
+            }
+            return parseFloat(input?.value) || 0;
+        }
+
+        const het = readField(hetInput);
+        const basicDisc = readField(basicDiscInput);
+        const addDisc = readField(addDiscInput);
         const qty = parseFloat((quantityInput?.value || '').replace(',', '.')) || 0;
 
         const netPrice = het - basicDisc - addDisc;
@@ -312,7 +323,7 @@
             if (e.detail.name.includes('het_price') || 
                 e.detail.name.includes('basic_discount') || 
                 e.detail.name.includes('additional_discount')) {
-                calculateSubtotal(row);
+                calculateSubtotal(row, e.detail);
             }
         });
 

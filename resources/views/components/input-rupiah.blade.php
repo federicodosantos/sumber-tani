@@ -124,14 +124,19 @@
 
         if (!displayVal || displayVal === '') {
             this.rawAmount = '';
-            this.$dispatch('rupiah-change', { value: '', name: currentName });
+            this.$nextTick(() => {
+                this.$dispatch('rupiah-change', { value: '', name: currentName });
+            });
             return;
         }
 
         // Jika user sedang mengetik trailing comma (misal '25000,') — jangan proses dulu
         if (displayVal.endsWith(',')) {
-            this.rawAmount = this.fromDisplay(displayVal.slice(0, -1)) || '';
-            this.$dispatch('rupiah-change', { value: this.rawAmount, name: currentName });
+            const partialRaw = this.fromDisplay(displayVal.slice(0, -1)) || '';
+            this.rawAmount = partialRaw;
+            this.$nextTick(() => {
+                this.$dispatch('rupiah-change', { value: partialRaw, name: currentName });
+            });
             return;
         }
 
@@ -140,12 +145,16 @@
         let numVal = parseFloat(raw);
         if (isNaN(numVal) || numVal === 0) {
             this.rawAmount = '';
-            this.$dispatch('rupiah-change', { value: '', name: currentName });
+            this.$nextTick(() => {
+                this.$dispatch('rupiah-change', { value: '', name: currentName });
+            });
             return;
         }
 
         this.rawAmount = raw;
-        this.$dispatch('rupiah-change', { value: raw, name: currentName });
+        this.$nextTick(() => {
+            this.$dispatch('rupiah-change', { value: raw, name: currentName });
+        });
     },
 
     /**
