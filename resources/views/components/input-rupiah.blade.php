@@ -1,4 +1,4 @@
-@props(['name' => null, 'label' => null, 'value' => '', 'placeholder' => '0', 'containerClass' => '', 'decimals' => 2])
+@props(['name' => null, 'label' => null, 'value' => '', 'placeholder' => '0', 'containerClass' => '', 'decimals' => 2, 'useOld' => true])
 
 <div x-data="{
     rawAmount: '',
@@ -222,7 +222,7 @@
     },
 
     init() {
-        this.updateValues('{{ $name ? old($name, $value) : $value }}');
+        this.updateValues('{{ $name && $useOld ? old($name, $value) : $value }}');
     }
 }"
 @update-rupiah-value.window="if(getComponentName() && $event.detail.name === getComponentName()) updateValues($event.detail.value)"

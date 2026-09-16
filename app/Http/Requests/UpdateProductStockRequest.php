@@ -23,6 +23,7 @@ class UpdateProductStockRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'product_id' => 'nullable|integer|exists:products,id',
             'is_new_batch' => 'required|boolean',
             'batch_id' => [
                 'exclude_if:is_new_batch,1',

@@ -394,20 +394,44 @@
                                                     'expired_date' => '',
                                                 ]
                                             ];
+
+                                            // Sticky state setelah validasi gagal (di-scope per produk agar
+                                            // old() dari produk lain tidak bocor ke modal ini).
+                                            $failedHere = (string) old('product_id', '') === (string) $product->product_id;
+                                            $oldIsNew = $failedHere && (string) old('is_new_batch', '0') === '1';
+                                            $oldBatchId = $failedHere ? (string) old('batch_id', '') : '';
+                                            $comboboxValue = $oldIsNew ? 'new' : ($oldBatchId !== '' ? $oldBatchId : $product->latest_stock_id);
+                                            // Samakan target submit dengan tab yang tampil (penting untuk
+                                            // kegagalan edit batch lama agar resubmit tidak menimpa batch terakhir).
+                                            $initialStockId = $oldIsNew || $oldBatchId === '' ? $product->latest_stock_id : $oldBatchId;
+
+                                            $initialData = [
+                                                'stock_opname' => $latestStock->stock_opname ?? 0,
+                                                'price_consument' => (float) ($latestStock->price_consument ?? 0),
+                                                'price_r1' => (float) ($latestStock->price_r1 ?? 0),
+                                                'price_r2' => (float) ($latestStock->price_r2 ?? 0),
+                                                'unit_price' => (float) ($latestStock->unit_price ?? 0),
+                                                'expired_date' => $latestStock && $latestStock->expired_date ? \Carbon\Carbon::parse($latestStock->expired_date)->format('Y-m-d') : '',
+                                            ];
+                                            if ($failedHere) {
+                                                // Tampilkan kembali nilai yang gagal divalidasi (batch baru / batch 27),
+                                                // bukan data batch terakhir (batch 26) dari database.
+                                                $initialData = [
+                                                    'stock_opname' => old('stock_opname', $initialData['stock_opname']),
+                                                    'price_consument' => old('price_consument', $initialData['price_consument']),
+                                                    'price_r1' => old('price_r1', $initialData['price_r1']),
+                                                    'price_r2' => old('price_r2', $initialData['price_r2']),
+                                                    'unit_price' => old('unit_price', $initialData['unit_price']),
+                                                    'expired_date' => old('expired_date', $initialData['expired_date']),
+                                                ];
+                                            }
                                         @endphp
 
                                         <x-modal name="edit-stock-{{ $product->product_id }}" title="SESUAIKAN STOK: {{ $product->name }}" maxWidth="4xl">
                                             <div class="p-1" x-data="{
-                                                isNewBatch: false,
-                                                currentStockId: '{{ $product->latest_stock_id }}',
-                                                currentData: {{ json_encode($latestStock ? [
-                                                    'stock_opname' => $latestStock->stock_opname,
-                                                    'price_consument' => (float) $latestStock->price_consument,
-                                                    'price_r1' => (float) $latestStock->price_r1,
-                                                    'price_r2' => (float) $latestStock->price_r2,
-                                                    'unit_price' => (float) $latestStock->unit_price,
-                                                    'expired_date' => $latestStock->expired_date ? \Carbon\Carbon::parse($latestStock->expired_date)->format('Y-m-d') : '',
-                                                ] : []) }},
+                                                isNewBatch: {{ $oldIsNew ? 'true' : 'false' }},
+                                                currentStockId: '{{ $initialStockId }}',
+                                                currentData: {{ json_encode($initialData) }},
                                                 
                                                 handleBatchChange(detail) {
                                                     if (detail.value === 'new') {
@@ -432,6 +456,7 @@
                                                     @csrf
                                                     @method('PUT')
                                                     
+                                                    <input type="hidden" name="product_id" value="{{ $product->product_id }}">
                                                     <input type="hidden" name="is_new_batch" :value="isNewBatch ? '1' : '0'">
                                                     <input type="hidden" name="batch_id" :value="currentStockId">
                                                     
@@ -440,7 +465,7 @@
                                                         <div class="w-64">
                                                             <x-content.combobox 
                                                                 name="batch_selector" 
-                                                                value="{{ $product->latest_stock_id }}"
+                                                                value="{{ $comboboxValue }}"
                                                                 :options="$batchOptions"
                                                                 placeholder="Pilih Batch..."
                                                             />
@@ -463,27 +488,32 @@
                                                         {{-- Harga HPP --}}
                                                         <x-input-rupiah label="Harga HPP (Unit Price)" name="unit_price"
                                                             :value="$latestStock->unit_price ?? 0"
+                                                            :useOld="$failedHere"
                                                             placeholder="0" containerClass="" decimals="3" />
 
                                                         {{-- Jumlah Stok --}}
                                                         <x-input-decimal label="Jumlah Stok" name="stock_opname"
                                                             :value="$latestStock->stock_opname ?? 0"
+                                                            :useOld="$failedHere"
                                                             placeholder="0" containerClass="" required decimals="3"
                                                             @rupiah-change="currentData.stock_opname = $event.detail.value" />
 
                                                         {{-- Harga Konsumen --}}
                                                         <x-input-rupiah label="Harga Produk per Satuan (Konsumen)" name="price_consument"
                                                             :value="$latestStock->price_consument ?? 0"
+                                                            :useOld="$failedHere"
                                                             placeholder="0" containerClass="" required decimals="3" />
 
                                                         {{-- Harga R1 --}}
                                                         <x-input-rupiah label="Harga Produk per Satuan (R1)" name="price_r1"
                                                             :value="$latestStock->price_r1 ?? 0"
+                                                            :useOld="$failedHere"
                                                             placeholder="0" containerClass="" required decimals="3" />
 
                                                         {{-- Harga R2 --}}
                                                         <x-input-rupiah label="Harga Produk per Satuan (R2)" name="price_r2"
                                                             :value="$latestStock->price_r2 ?? 0"
+                                                            :useOld="$failedHere"
                                                             placeholder="0" containerClass="" required decimals="3" />
 
                                                         {{-- Tanggal Kadaluarsa --}}
@@ -534,5 +564,14 @@
             </x-content.data-table>
         </div>
     </div>
+
+    {{-- Buka kembali modal produk yang gagal validasi (tab + nilai sudah sticky via old()). --}}
+    @if ($errors->any() && old('product_id'))
+        <script>
+            window.addEventListener('DOMContentLoaded', function () {
+                window.dispatchEvent(new CustomEvent('open-modal', { detail: "edit-stock-{{ old('product_id') }}" }));
+            });
+        </script>
+    @endif
 
 </x-app-layout>
