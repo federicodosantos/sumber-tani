@@ -63,6 +63,10 @@ Route::middleware('auth')->group(function () {
     // PRODUCT STOCK ROUTES
     Route::get('/stock', [ProductStockController::class, 'index'])->name('stock.index');
     Route::get('/stock/create', [ProductStockController::class, 'create'])->name('stock.create');
+    // Bulk-edit HPP — didaftarkan sebelum /stock/{stock_id} agar tidak tertelan route dinamis.
+    // Akses: OWNER & EMPLOYEE (sesuai persetujuan klien).
+    Route::get('/stock/harga-beli', [ProductStockController::class, 'editBuyingPrice'])->name('stock.bulk.edit');
+    Route::put('/stock/harga-beli/{stock_id}', [ProductStockController::class, 'updateBulkBuyingPrice'])->name('stock.bulk.update');
     Route::get('/stock/{stock_id}', [ProductStockController::class, 'edit'])->name('stock.edit');
     Route::put('/stock/{stock_id}', [ProductStockController::class, 'update'])->name('stock.update');
     Route::post('/stock', [ProductStockController::class, 'store'])->name('stock.store');

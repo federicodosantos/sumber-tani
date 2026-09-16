@@ -124,6 +124,7 @@ class FinanceReportController extends Controller
 
         $profitLoss = $this->calculateProfitLoss($startDate, $endDate);
         $balanceSheet = $this->calculateBalanceSheet($endDate);
+        $incompleteStockStats = app(ProductStockService::class)->getIncompleteStockStats();
 
         return view('finance.index', compact(
             'stats',
@@ -138,6 +139,7 @@ class FinanceReportController extends Controller
             'endDate',
             'profitLoss',
             'balanceSheet',
+            'incompleteStockStats',
         ));
     }
 

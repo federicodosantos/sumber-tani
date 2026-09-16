@@ -94,6 +94,13 @@
                 </x-button.add-button>
             </div> -->
 
+            <div class="mb-4 flex justify-start">
+                <a href="{{ route('stock.bulk.edit') }}"
+                    class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100">
+                    Lengkapi Harga Beli (HPP)
+                </a>
+            </div>
+
             <x-content.data-table>
                 <x-slot name="sortOptions">
                     <option value="product_code_asc" {{ request('sort') == 'product_code_asc' ? 'selected' : '' }}>Kode

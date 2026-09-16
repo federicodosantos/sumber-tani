@@ -68,11 +68,9 @@
 
                     {{-- Data fields --}}
                     <div class="contents">
-                        {{-- Row 2: Harga HPP --}}
-                        {{-- Hidden input ensures unit_price is submitted even though display field is disabled --}}
-                        <input type="hidden" name="unit_price" x-bind:value="selectedId ? (productsMap[selectedId]?.unit_price ?? 0) : 0">
-                        <x-input-rupiah label="Harga HPP (Unit Price)"
-                            containerClass="" placeholder="0" disabled readonly decimals="3" />
+                        {{-- Row 2: Harga HPP (wajib diisi; prefill dari batch terakhir sebagai acuan, bisa diubah) --}}
+                        <x-input-rupiah label="Harga HPP (Unit Price)" name="unit_price"
+                            containerClass="" placeholder="0" required decimals="3" />
 
                         {{-- Row 2: Jumlah Stok --}}
                         <x-input-decimal label="Jumlah Stok" name="stock_opname"

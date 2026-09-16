@@ -194,6 +194,16 @@
             </span>
           </div>
         </div>
+        @if (($incompleteStockStats['batch_count'] ?? 0) > 0)
+          <div class="border-b border-amber-200 bg-amber-50 px-6 py-3">
+            <p class="text-xs leading-relaxed text-amber-900">
+              <span class="font-bold">{{ number_format($incompleteStockStats['batch_count'], 0, ',', '.') }} batch
+              ({{ Number::format((float) $incompleteStockStats['stock_qty'], null, 3, 'id') }} satuan)</span>
+              belum punya harga beli — nilai persediaan kemungkinan lebih rendah.
+              <a href="{{ route('stock.bulk.edit') }}" class="font-bold underline hover:text-amber-700">Lengkapi →</a>
+            </p>
+          </div>
+        @endif
         <div class="p-6">
           <div class="grid grid-cols-2 gap-8">
             {{-- Assets --}}

@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProductStockRequest;
 use App\Http\Requests\UpdateProductStockRequest;
-use Illuminate\Http\Request;
 use App\Models\Product;
+use App\Models\ProductStock;
 use App\Services\ProductStockService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class ProductStockController extends Controller
 {
@@ -87,7 +90,7 @@ class ProductStockController extends Controller
 
         } catch (\Exception $e) {
             return back()
-                ->withErrors(['error' => 'Terjadi kesalahan saat menyimpan data stok: ' . $e->getMessage()])
+                ->withErrors(['error' => 'Terjadi kesalahan saat menyimpan data stok: '.$e->getMessage()])
                 ->withInput();
         }
     }
@@ -107,10 +110,10 @@ class ProductStockController extends Controller
         // Get all batches for this product
         $batches = $this->stockService->getBatchesForProduct($activeStock->product_id);
 
-        $expiryValue = $activeStock->expired_date 
-            ? \Carbon\Carbon::parse($activeStock->expired_date)->format('Y-m-d') 
+        $expiryValue = $activeStock->expired_date
+            ? \Carbon\Carbon::parse($activeStock->expired_date)->format('Y-m-d')
             : null;
-        
+
         return view('product-stock.edit', [
             'activeStock' => $activeStock,
             'batches' => $batches,
@@ -132,13 +135,13 @@ class ProductStockController extends Controller
             if ($validated['is_new_batch']) {
                 $productId = $this->stockService->getProductIdFromStock($stock_id);
                 $this->stockService->createNewBatch($productId, $data);
-                
+
                 $message = 'Batch baru berhasil ditambahkan.';
-            } 
+            }
             // Mode: Update Existing Batch
             else {
                 $this->stockService->updateBatch($validated['batch_id'], $data);
-                
+
                 $message = 'Stok batch berhasil diperbarui.';
             }
 
@@ -149,6 +152,90 @@ class ProductStockController extends Controller
         } catch (\Exception $e) {
             return back()
                 ->withErrors(['error' => $e->getMessage()])
+                ->withInput();
+        }
+    }
+
+    /**
+     * Halaman bulk-edit harga beli (HPP) untuk batch yang masih 0/kosong.
+     *
+     * Dapat diakses OWNER maupun EMPLOYEE (sesuai persetujuan klien).
+     * Nilai saran hanya prefill di form — tersimpan hanya saat disubmit.
+     */
+    public function editBuyingPrice(Request $request)
+    {
+        $tab = $request->input('tab', 'in_stock');
+        if (! in_array($tab, ['in_stock', 'empty'])) {
+            $tab = 'in_stock';
+        }
+
+        $search = $request->input('search');
+
+        $batches = $this->stockService->getIncompleteBatches($search, $tab, 20);
+        $batches->appends($request->query());
+
+        $productIds = $batches->getCollection()->pluck('product_id')->unique()->values()->all();
+        $suggestions = $this->stockService->getLatestPurchasePriceMap($productIds);
+
+        $stats = $this->stockService->getIncompleteStockStats();
+
+        return view('product-stock.buying-price', [
+            'batches' => $batches,
+            'suggestions' => $suggestions,
+            'stats' => $stats,
+            'tab' => $tab,
+            'search' => $search,
+        ]);
+    }
+
+    /**
+     * Simpan harga beli satu batch dari halaman bulk-edit (mendukung AJAX per-baris).
+     *
+     * Dapat diakses OWNER maupun EMPLOYEE. Update per-model dalam satu
+     * transaksi agar LogsActivity Spatie tetap tercatat.
+     */
+    public function updateBulkBuyingPrice(Request $request, int $stock_id)
+    {
+        // 404 lebih dulu bila batch tidak ada / sudah soft-deleted.
+        ProductStock::findOrFail($stock_id);
+
+        $key = 'unit_price_'.$stock_id;
+        $raw = $request->input('unit_price', $request->input($key));
+
+        $validated = Validator::make(['unit_price' => $raw], [
+            'unit_price' => 'required|numeric|gt:0|decimal:0,3',
+        ], [
+            'unit_price.required' => 'Harga HPP wajib diisi.',
+            'unit_price.numeric' => 'Harga HPP harus berupa angka.',
+            'unit_price.gt' => 'Harga HPP harus lebih dari 0.',
+        ])->validate();
+
+        try {
+            $updated = DB::transaction(
+                fn () => $this->stockService->updateBulkUnitPrice($stock_id, $validated['unit_price'])
+            );
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Harga HPP tersimpan.',
+                    'stock_id' => $stock_id,
+                    'unit_price' => (string) $updated->unit_price,
+                    'stats' => $this->stockService->getIncompleteStockStats(),
+                ]);
+            }
+
+            return back()->with('success', 'Harga HPP batch berhasil disimpan.');
+        } catch (\Exception $e) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menyimpan: '.$e->getMessage(),
+                ], 422);
+            }
+
+            return back()
+                ->withErrors(['error' => 'Terjadi kesalahan saat menyimpan harga HPP: '.$e->getMessage()])
                 ->withInput();
         }
     }
@@ -167,7 +254,7 @@ class ProductStockController extends Controller
 
         } catch (\Exception $e) {
             return back()
-                ->withErrors(['error' => 'Terjadi kesalahan saat menghapus data stok: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Terjadi kesalahan saat menghapus data stok: '.$e->getMessage()]);
         }
     }
 }

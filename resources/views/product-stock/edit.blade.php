@@ -49,12 +49,10 @@
                         </div>
                     </div>
 
-                    {{-- Row 2: Harga HPP (Disabled) --}}
-                    {{-- Hidden input ensures unit_price is submitted even though display field is disabled --}}
-                    <input type="hidden" name="unit_price" value="{{ old('unit_price', $activeStock->unit_price) }}">
-                    <x-input-rupiah label="Harga HPP (Unit Price)"
-                        :value="old('unit_price', $activeStock->unit_price)" 
-                        containerClass="" placeholder="0" disabled readonly decimals="3" />
+                    {{-- Row 2: Harga HPP (wajib diisi) --}}
+                    <x-input-rupiah label="Harga HPP (Unit Price)" name="unit_price"
+                        :value="old('unit_price', $activeStock->unit_price)"
+                        containerClass="" placeholder="0" required decimals="3" />
 
                     {{-- Row 2: Jumlah Stok --}}
                     <x-input-decimal label="Jumlah Stok" name="stock_opname"
@@ -203,6 +201,7 @@
         const stockInput = document.getElementById('stock_opname');
         if (stockInput) stockInput.value = '0';
 
+        resetCurrencyField('unit_price', 0);
         resetCurrencyField('price_consument', 0);
         resetCurrencyField('price_r1', 0);
         resetCurrencyField('price_r2', 0);

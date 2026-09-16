@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Models\ProductStock;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -12,10 +11,8 @@ class ProductStockService
 {
     /**
      * Create new batch for a product
-     * 
-     * @param int $productId
-     * @param array $data - ['stock_opname', 'price_consument', 'price_r1', 'price_r2', 'expired_date']
-     * @return ProductStock
+     *
+     * @param  array  $data  - ['stock_opname', 'price_consument', 'price_r1', 'price_r2', 'expired_date']
      */
     public function createNewBatch(int $productId, array $data): ProductStock
     {
@@ -29,7 +26,7 @@ class ProductStockService
             'price_consument' => $data['price_consument'],
             'price_r1' => $data['price_r1'],
             'price_r2' => $data['price_r2'],
-            'expired_date' => $data["expired_date"],
+            'expired_date' => $data['expired_date'],
         ];
 
         if (isset($data['unit_price'])) {
@@ -41,10 +38,6 @@ class ProductStockService
 
     /**
      * Update existing batch
-     * 
-     * @param int $batchId
-     * @param array $data
-     * @return ProductStock
      */
     public function updateBatch(int $batchId, array $data): ProductStock
     {
@@ -73,6 +66,7 @@ class ProductStockService
     public function deleteBatch(int $stockId): bool
     {
         $stock = ProductStock::findOrFail($stockId);
+
         return $stock->delete();
     }
 
@@ -93,6 +87,7 @@ class ProductStockService
     public function getProductIdFromStock(int $stockId): int
     {
         $stock = ProductStock::findOrFail($stockId);
+
         return $stock->product_id;
     }
 
@@ -140,6 +135,7 @@ class ProductStockService
             ]);
 
             $activeStock->setRelation('product', $stock->product);
+
             return $activeStock;
         }
 
@@ -179,7 +175,7 @@ class ProductStockService
             ->orderByDesc('batch')
             ->first();
 
-        if (!$latestBatch) {
+        if (! $latestBatch) {
             return [
                 'price_consument' => '0.000',
                 'price_r1' => '0.000',
@@ -194,8 +190,6 @@ class ProductStockService
         ];
     }
 
-    
-
     /**
      * Alokasikan quantity secara FIFO melintasi batch produk dan kurangi stok.
      *
@@ -203,6 +197,7 @@ class ProductStockService
      * dengan lockForUpdate() untuk mencegah oversell pada operasi concurrent.
      *
      * @return array<int, array{stock_id: int, quantity: string, unit_price: string}>
+     *
      * @throws RuntimeException ketika total stok semua batch tidak mencukupi.
      */
     public function allocateStockFifo(int $productId, string $quantity): array
@@ -249,6 +244,132 @@ class ProductStockService
         }
 
         return $allocations;
+    }
+
+    /**
+     * Daftar batch yang harga belinya (unit_price/HPP) masih 0/kosong.
+     *
+     * Kriteria: unit_price NULL/0 AND deleted_at NULL.
+     * Urut stok terbesar dulu agar koreksi berdampak besar dikerjakan pertama.
+     *
+     * @param  'in_stock'|'empty'  $tab
+     */
+    public function getIncompleteBatches(?string $search = null, string $tab = 'in_stock', int $perPage = 20)
+    {
+        $query = ProductStock::with('product:id,code_id,name')
+            ->whereNull('deleted_at')
+            ->where(function ($q) {
+                $q->whereNull('unit_price')->orWhere('unit_price', '<=', 0);
+            });
+
+        if ($tab === 'empty') {
+            $query->where('stock_opname', '<=', 0);
+        } else {
+            $query->where('stock_opname', '>', 0);
+        }
+
+        if ($search) {
+            $query->whereHas('product', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code_id', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->orderBy('stock_opname', 'desc')->paginate($perPage);
+    }
+
+    /**
+     * Harga beli terakhir per produk sebagai saran pengisian HPP.
+     *
+     * Definisi: detail pembelian terakhir produk (purchase_date DESC, id DESC).
+     * Kandidat: net_price jika > 0, kalau tidak price jika > 0,
+     * kalau tidak → tidak ada saran (kembalikan null).
+     *
+     * Satu query untuk semua product_id (tanpa N+1), seleksi di PHP.
+     *
+     * @param  int[]  $productIds
+     * @return array<int, array{price: string, date: ?string}|null>
+     */
+    public function getLatestPurchasePriceMap(array $productIds): array
+    {
+        $result = array_fill_keys($productIds, null);
+
+        if (empty($productIds)) {
+            return $result;
+        }
+
+        $math = app(DecimalMathService::class);
+
+        $rows = DB::table('product_purchase_details as d')
+            ->join('product_purchases as p', 'p.id', '=', 'd.product_purchase_id')
+            ->whereIn('d.product_id', $productIds)
+            ->orderBy('p.purchase_date', 'desc')
+            ->orderBy('d.id', 'desc')
+            ->select([
+                'd.product_id',
+                'd.net_price',
+                'd.price',
+                'p.purchase_date',
+            ])
+            ->get();
+
+        foreach ($rows as $row) {
+            $pid = (int) $row->product_id;
+
+            if ($result[$pid] !== null) {
+                continue;
+            }
+
+            $candidate = null;
+            if ($math->compare((string) $row->net_price, 0) > 0) {
+                $candidate = $math->round((string) $row->net_price);
+            } elseif ($math->compare((string) $row->price, 0) > 0) {
+                $candidate = $math->round((string) $row->price);
+            }
+
+            if ($candidate !== null) {
+                $result[$pid] = [
+                    'price' => $candidate,
+                    'date' => $row->purchase_date,
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Update harga beli satu batch (dipakai halaman bulk-edit).
+     *
+     * Sengaja per-model (bukan mass update) agar Spatie LogsActivity
+     * tetap mencatat perubahan beserta role pelakunya.
+     */
+    public function updateBulkUnitPrice(int $stockId, string $unitPrice): ProductStock
+    {
+        $stock = ProductStock::whereNull('deleted_at')->findOrFail($stockId);
+        $stock->update(['unit_price' => $unitPrice]);
+
+        return $stock->fresh();
+    }
+
+    /**
+     * Statistik batch tanpa HPP untuk banner neraca & progres bulk-edit.
+     *
+     * @return array{batch_count: int, stock_qty: string, empty_count: int}
+     */
+    public function getIncompleteStockStats(): array
+    {
+        $base = DB::table('product_stocks')
+            ->whereNull('deleted_at')
+            ->where(function ($q) {
+                $q->whereNull('unit_price')->orWhere('unit_price', '<=', 0);
+            });
+
+        return [
+            'batch_count' => (int) (clone $base)->where('stock_opname', '>', 0)->count(),
+            'stock_qty' => (string) (clone $base)->where('stock_opname', '>', 0)->sum('stock_opname'),
+            'empty_count' => (int) (clone $base)->where('stock_opname', '<=', 0)->count(),
+        ];
     }
 
     /**
@@ -346,7 +467,7 @@ class ProductStockService
                 'lb.price_r1',
                 'lb.price_r2',
                 'ne.expired_date',
-                'ne.expiry_batch'
+                'ne.expiry_batch',
             ]);
 
         // =========================
@@ -398,14 +519,14 @@ class ProductStockService
                 $query->orderBy('lb.price_consument', 'desc');
                 break;
             case 'expired_asc':
-                $query->orderByRaw("
+                $query->orderByRaw('
                     CASE
                         WHEN ne.expired_date IS NULL THEN 1
                         WHEN ne.expired_date < CURDATE() THEN 2
                         ELSE 0
                     END
-                ")
-                ->orderBy('ne.expired_date', 'asc');
+                ')
+                    ->orderBy('ne.expired_date', 'asc');
                 break;
             default:
                 $query->orderBy('products.code_id', 'asc');

@@ -29,7 +29,7 @@ class UpdateProductStockRequest extends FormRequest
                 'required',
                 Rule::exists('product_stocks', 'id'),
             ],
-            'unit_price' => 'nullable|numeric|min:0|decimal:0,3',
+            'unit_price' => 'required|numeric|gt:0|decimal:0,3',
             'stock_opname' => 'required|numeric|min:0|decimal:0,3',
             'price_consument' => 'required|numeric|min:0|decimal:0,3',
             'price_r1' => 'required|numeric|min:0|decimal:0,3',
@@ -47,6 +47,10 @@ class UpdateProductStockRequest extends FormRequest
             'stock_opname.required' => 'Jumlah stok wajib diisi.',
             'stock_opname.numeric' => 'Jumlah stok harus berupa angka.',
             'stock_opname.min' => 'Jumlah stok tidak boleh kurang dari 0.',
+
+            'unit_price.required' => 'Harga HPP wajib diisi.',
+            'unit_price.numeric' => 'Harga HPP harus berupa angka.',
+            'unit_price.gt' => 'Harga HPP harus lebih dari 0.',
 
             'expired_date.date' => 'Tanggal kedaluwarsa tidak valid.',
             'expired_date.after_or_equal' => 'Tanggal kedaluwarsa tidak boleh sebelum hari ini.',
