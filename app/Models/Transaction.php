@@ -50,4 +50,45 @@ class Transaction extends Model
     {
         return $this->hasMany(Invoice::class, 'transaction_id');
     }
+
+    /**
+     * Scope transactions by customer types: 'r1', 'r2', and/or 'konsumen'.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  array<string>  $types
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeOfCustomerTypes($query, array $types)
+    {
+        $validTypes = ['r1', 'r2', 'konsumen'];
+        $selected = array_values(array_intersect($types, $validTypes));
+
+        // If all 3 are selected or none provided, no filter needed
+        if (count($selected) === 3 || empty($selected)) {
+            return $query;
+        }
+
+        $hasR1orR2 = array_values(array_intersect($selected, ['r1', 'r2']));
+        $hasKonsumen = in_array('konsumen', $selected, true);
+
+        if (! empty($hasR1orR2) && $hasKonsumen) {
+            return $query->where(function ($q) use ($hasR1orR2) {
+                $q->whereHas('invoices.customer', function ($cq) use ($hasR1orR2) {
+                    $cq->withTrashed()->whereIn('type', $hasR1orR2);
+                })->orWhereDoesntHave('invoices.customer');
+            });
+        }
+
+        if (! empty($hasR1orR2)) {
+            return $query->whereHas('invoices.customer', function ($cq) use ($hasR1orR2) {
+                $cq->withTrashed()->whereIn('type', $hasR1orR2);
+            });
+        }
+
+        if ($hasKonsumen) {
+            return $query->whereDoesntHave('invoices.customer');
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
 }

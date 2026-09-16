@@ -38,6 +38,11 @@
         <h3 style="font-size:12px; margin:4px 0;">
             Periode: {{ $startDate }} - {{ $endDate }}
         </h3>
+        @if (!empty($customerTypesLabel))
+            <h4 style="font-size:11px; margin:2px 0; color:#555; font-weight:normal;">
+                Tipe Pelanggan: {{ $customerTypesLabel }}
+            </h4>
+        @endif
     </div>
     @if ($isLandscape)
         {{-- === BLADE (LANDSCAPE ≤ 10) === --}}

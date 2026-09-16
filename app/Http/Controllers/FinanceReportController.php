@@ -105,24 +105,76 @@ class FinanceReportController extends Controller
         };
     }
 
+    /**
+     * Resolve selected customer types: 'r1', 'r2', 'konsumen'.
+     *
+     * @return array<string>
+     */
+    private function resolveCustomerTypes(Request $request): array
+    {
+        $raw = $request->input('customer_types');
+
+        if (is_string($raw)) {
+            $raw = explode(',', $raw);
+        }
+
+        if (! is_array($raw) || empty($raw)) {
+            return ['r1', 'r2', 'konsumen'];
+        }
+
+        // array_unique: abaikan duplikat (mis. sisa param paginasi
+        // 'customer_types[0..N]' yang tercampur dengan 'customer_types[]').
+        $valid = array_values(array_unique(array_intersect($raw, ['r1', 'r2', 'konsumen'])));
+
+        return empty($valid) ? ['r1', 'r2', 'konsumen'] : $valid;
+    }
+
+    /**
+     * Human-readable label for selected customer types.
+     *
+     * @param  array<string>  $types
+     */
+    private function getCustomerTypesLabel(array $types): string
+    {
+        $valid = array_values(array_intersect($types, ['r1', 'r2', 'konsumen']));
+        if (count($valid) === 3 || empty($valid)) {
+            return 'Semua (R1, R2, Konsumen)';
+        }
+
+        $labels = [];
+        if (in_array('konsumen', $valid, true)) {
+            $labels[] = 'Konsumen';
+        }
+        if (in_array('r1', $valid, true)) {
+            $labels[] = 'Pelanggan R1';
+        }
+        if (in_array('r2', $valid, true)) {
+            $labels[] = 'Pelanggan R2';
+        }
+
+        return implode(', ', $labels);
+    }
+
     /* ================================================================
        INDEX
     ================================================================ */
     public function index(Request $request)
     {
         [$startDate, $endDate, $rangeKey] = $this->resolveDateRange($request);
+        $customerTypes = $this->resolveCustomerTypes($request);
+        $customerTypesLabel = $this->getCustomerTypesLabel($customerTypes);
 
         $transactionFilter = $request->input('transaction_filter', 'daily');
 
-        $stats = $this->getStats($startDate, $endDate);
-        $chartData = $this->getChartData($startDate, $endDate);
-        $financeReports = $this->getFinanceReports($startDate, $endDate);
+        $stats = $this->getStats($startDate, $endDate, $customerTypes);
+        $chartData = $this->getChartData($startDate, $endDate, $customerTypes);
+        $financeReports = $this->getFinanceReports($startDate, $endDate, $customerTypes);
         $products = $this->getAllProduct();
         $categories = $this->getAllCategories();
 
         $rangeLabel = $this->getRangeLabel($rangeKey, $startDate, $endDate);
 
-        $profitLoss = $this->calculateProfitLoss($startDate, $endDate);
+        $profitLoss = $this->calculateProfitLoss($startDate, $endDate, $customerTypes);
         $balanceSheet = $this->calculateBalanceSheet($endDate);
         $incompleteStockStats = app(ProductStockService::class)->getIncompleteStockStats();
 
@@ -140,23 +192,27 @@ class FinanceReportController extends Controller
             'profitLoss',
             'balanceSheet',
             'incompleteStockStats',
+            'customerTypes',
+            'customerTypesLabel',
         ));
     }
 
-    private function calculateProfitLoss(Carbon $start, Carbon $end): array
+    private function calculateProfitLoss(Carbon $start, Carbon $end, array $customerTypes = ['r1', 'r2', 'konsumen']): array
     {
         $math = app(DecimalMathService::class);
 
         // Revenue
-        $revenue = $math->round((string) Transaction::whereBetween('transaction_date', [$start, $end])
+        $revenue = $math->round((string) Transaction::ofCustomerTypes($customerTypes)
+            ->whereBetween('transaction_date', [$start, $end])
             ->where('is_paid', 1)
             ->sum('total_price'));
 
         // COGS (HPP)
-        $cogs = $math->round((string) TransactionDetail::join('transactions', 'transactions.id', '=', 'transaction_details.transaction_id')
-            ->whereBetween('transactions.transaction_date', [$start, $end])
-            ->where('transactions.is_paid', 1)
-            ->sum(DB::raw('transaction_details.quantity * transaction_details.buying_price')));
+        $cogs = $math->round((string) TransactionDetail::whereHas('transaction', function ($q) use ($start, $end, $customerTypes) {
+            $q->ofCustomerTypes($customerTypes)
+                ->whereBetween('transaction_date', [$start, $end])
+                ->where('is_paid', 1);
+        })->sum(DB::raw('transaction_details.quantity * transaction_details.buying_price')));
 
         $grossProfit = $math->subtract($revenue, $cogs);
 
@@ -228,35 +284,47 @@ class FinanceReportController extends Controller
     }
 
     /* ================================================================
-       STATS  — filtered by date range
+       STATS  — filtered by date range & customer types
     ================================================================ */
-    private function getStats(Carbon $start, Carbon $end): array
+    private function getStats(Carbon $start, Carbon $end, array $customerTypes = ['r1', 'r2', 'konsumen']): array
     {
         $now = Carbon::now();
 
         // Total penjualan dalam range
-        $rangeSales = Transaction::whereBetween('transaction_date', [$start, $end])->sum('total_price');
+        $rangeSales = Transaction::ofCustomerTypes($customerTypes)
+            ->whereBetween('transaction_date', [$start, $end])
+            ->sum('total_price');
 
         // Periode sebelumnya (same duration, shifted back)
         $diff = $start->diffInDays($end) + 1;
         $prevStart = $start->copy()->subDays($diff);
         $prevEnd = $start->copy()->subDay()->endOfDay();
-        $prevSales = Transaction::whereBetween('transaction_date', [$prevStart, $prevEnd])->sum('total_price');
+        $prevSales = Transaction::ofCustomerTypes($customerTypes)
+            ->whereBetween('transaction_date', [$prevStart, $prevEnd])
+            ->sum('total_price');
 
         $salesPercentage = $prevSales > 0
             ? round((($rangeSales - $prevSales) / $prevSales) * 100, 1)
             : 0;
 
         // Penjualan hari ini (selalu tetap)
-        $dailySales = Transaction::whereDate('transaction_date', $now->toDateString())->sum('total_price');
-        $yesterdaySales = Transaction::whereDate('transaction_date', $now->copy()->subDay()->toDateString())->sum('total_price');
+        $dailySales = Transaction::ofCustomerTypes($customerTypes)
+            ->whereDate('transaction_date', $now->toDateString())
+            ->sum('total_price');
+        $yesterdaySales = Transaction::ofCustomerTypes($customerTypes)
+            ->whereDate('transaction_date', $now->copy()->subDay()->toDateString())
+            ->sum('total_price');
         $dailyPercentage = $yesterdaySales > 0
             ? round((($dailySales - $yesterdaySales) / $yesterdaySales) * 100, 1)
             : 0;
 
         // Total transaksi dalam range
-        $totalTransactions = Transaction::whereBetween('transaction_date', [$start, $end])->count();
-        $prevTransactions = Transaction::whereBetween('transaction_date', [$prevStart, $prevEnd])->count();
+        $totalTransactions = Transaction::ofCustomerTypes($customerTypes)
+            ->whereBetween('transaction_date', [$start, $end])
+            ->count();
+        $prevTransactions = Transaction::ofCustomerTypes($customerTypes)
+            ->whereBetween('transaction_date', [$prevStart, $prevEnd])
+            ->count();
         $transactionPercentage = $prevTransactions > 0
             ? round((($totalTransactions - $prevTransactions) / $prevTransactions) * 100, 1)
             : 0;
@@ -279,7 +347,7 @@ class FinanceReportController extends Controller
     /* ================================================================
        CHART DATA — auto-selects daily / monthly granularity
     ================================================================ */
-    private function getChartData(Carbon $start, Carbon $end): array
+    private function getChartData(Carbon $start, Carbon $end, array $customerTypes = ['r1', 'r2', 'konsumen']): array
     {
         $diffDays = $start->diffInDays($end);
 
@@ -288,7 +356,9 @@ class FinanceReportController extends Controller
             $data = collect();
             $cursor = $start->copy();
             while ($cursor->lte($end)) {
-                $total = Transaction::whereDate('transaction_date', $cursor->toDateString())->sum('total_price');
+                $total = Transaction::ofCustomerTypes($customerTypes)
+                    ->whereDate('transaction_date', $cursor->toDateString())
+                    ->sum('total_price');
                 $data->push([
                     'label' => $cursor->format('d'),
                     'value' => $total,
@@ -299,7 +369,8 @@ class FinanceReportController extends Controller
             $data = collect();
             $cursor = $start->copy()->startOfMonth();
             while ($cursor->lte($end)) {
-                $total = Transaction::whereYear('transaction_date', $cursor->year)
+                $total = Transaction::ofCustomerTypes($customerTypes)
+                    ->whereYear('transaction_date', $cursor->year)
                     ->whereMonth('transaction_date', $cursor->month)
                     ->sum('total_price');
                 $data->push([
@@ -317,9 +388,9 @@ class FinanceReportController extends Controller
     }
 
     /* ================================================================
-       FINANCE REPORTS TABLE — filtered by date range
+       FINANCE REPORTS TABLE — filtered by date range & customer types
     ================================================================ */
-    private function getFinanceReports(Carbon $start, Carbon $end)
+    private function getFinanceReports(Carbon $start, Carbon $end, array $customerTypes = ['r1', 'r2', 'konsumen'])
     {
         $sort = request('sort', 'date_new');
 
@@ -340,6 +411,7 @@ class FinanceReportController extends Controller
         }
 
         $query = Transaction::with(['invoices.customer'])
+            ->ofCustomerTypes($customerTypes)
             ->whereBetween('transaction_date', [$start, $end])
             ->orderBy($orderBy[0], $orderBy[1])
             ->orderBy('id', $orderBy[1] === 'asc' ? 'asc' : 'desc');
@@ -737,7 +809,11 @@ class FinanceReportController extends Controller
             'product_ids.*' => 'exists:products,id',
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'exists:item_categories,id',
+            'customer_types' => 'nullable|array',
+            'customer_types.*' => 'in:r1,r2,konsumen',
         ]);
+
+        $customerTypes = $this->resolveCustomerTypes($request);
 
         Carbon::setLocale('id');
 
@@ -771,6 +847,46 @@ class FinanceReportController extends Controller
             ->leftJoin('item_categories', 'item_categories.id', '=', 'products.item_category_id')
             ->where('transactions.is_paid', 1)
             ->whereBetween('transactions.transaction_date', [$startDate, $endDate]);
+
+        // Apply customer types filter
+        $validTypes = ['r1', 'r2', 'konsumen'];
+        $selectedTypes = array_values(array_intersect($customerTypes, $validTypes));
+        if (count($selectedTypes) > 0 && count($selectedTypes) < 3) {
+            $hasR1orR2 = array_values(array_intersect($selectedTypes, ['r1', 'r2']));
+            $hasKonsumen = in_array('konsumen', $selectedTypes, true);
+
+            $query->where(function ($q) use ($hasR1orR2, $hasKonsumen) {
+                if (! empty($hasR1orR2) && $hasKonsumen) {
+                    $q->whereExists(function ($sub) use ($hasR1orR2) {
+                        $sub->select(DB::raw(1))
+                            ->from('invoices')
+                            ->join('customers', 'customers.id', '=', 'invoices.customer_id')
+                            ->whereColumn('invoices.transaction_id', 'transactions.id')
+                            ->whereIn('customers.type', $hasR1orR2);
+                    })->orWhereNotExists(function ($sub) {
+                        $sub->select(DB::raw(1))
+                            ->from('invoices')
+                            ->join('customers', 'customers.id', '=', 'invoices.customer_id')
+                            ->whereColumn('invoices.transaction_id', 'transactions.id');
+                    });
+                } elseif (! empty($hasR1orR2)) {
+                    $q->whereExists(function ($sub) use ($hasR1orR2) {
+                        $sub->select(DB::raw(1))
+                            ->from('invoices')
+                            ->join('customers', 'customers.id', '=', 'invoices.customer_id')
+                            ->whereColumn('invoices.transaction_id', 'transactions.id')
+                            ->whereIn('customers.type', $hasR1orR2);
+                    });
+                } elseif ($hasKonsumen) {
+                    $q->whereNotExists(function ($sub) {
+                        $sub->select(DB::raw(1))
+                            ->from('invoices')
+                            ->join('customers', 'customers.id', '=', 'invoices.customer_id')
+                            ->whereColumn('invoices.transaction_id', 'transactions.id');
+                    });
+                }
+            });
+        }
 
         if ($request->download_by === 'product') {
             $query
@@ -849,6 +965,8 @@ class FinanceReportController extends Controller
             'downloadBy' => $request->download_by,
             'startDate' => $startDate->translatedFormat('d F Y'),
             'endDate' => $endDate->translatedFormat('d F Y'),
+            'customerTypes' => $customerTypes,
+            'customerTypesLabel' => $this->getCustomerTypesLabel($customerTypes),
         ]);
 
         if ($isLandscape) {

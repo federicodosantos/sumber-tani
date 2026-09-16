@@ -8,110 +8,216 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <h1 class="text-2xl font-semibold text-black">Laporan Keuangan</h1>
 
-      {{-- Date Range Filter --}}
-      <div x-data="{
-          open: false,
-          rangeKey: '{{ $rangeKey }}',
-          startDate: '{{ $startDate->format('Y-m-d') }}',
-          endDate: '{{ $endDate->format('Y-m-d') }}',
-          label: '{{ $rangeLabel }}',
-          presets: [
-              { key: 'this_week',    label: 'Minggu Ini' },
-              { key: 'this_month',   label: 'Bulan Ini' },
-              { key: 'last_month',   label: 'Bulan Lalu' },
-              { key: 'this_quarter', label: 'Kuartal Ini' },
-          ],
-          applyFilter(key) {
-              const url = new URL(window.location.href);
-              url.searchParams.set('range_filter', key);
-              url.searchParams.delete('start_date');
-              url.searchParams.delete('end_date');
-              url.searchParams.delete('page');
-              window.location.href = url.toString();
-          },
-          applyCustom() {
-              const url = new URL(window.location.href);
-              url.searchParams.set('range_filter', 'custom');
-              url.searchParams.set('start_date', this.startDate);
-              url.searchParams.set('end_date', this.endDate);
-              url.searchParams.delete('page');
-              window.location.href = url.toString();
-          }
-      }" id="finance-range-dropdown" class="relative cursor-pointer">
-        {{-- Trigger Button --}}
-        <button @click="open = !open" type="button"
-          class="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
-          <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <span x-text="label"></span>
-          <svg class="h-4 w-4 text-gray-400 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+      <div class="flex flex-wrap items-center gap-3">
+        {{-- Customer Types Filter --}}
+        <div x-data="{
+            open: false,
+            selected: {{ Js::from($customerTypes) }},
+            options: [
+                { key: 'konsumen', label: 'Konsumen (Umum)' },
+                { key: 'r1', label: 'Pelanggan R1' },
+                { key: 'r2', label: 'Pelanggan R2' },
+            ],
+            get isAllSelected() {
+                return this.selected.length === 3;
+            },
+            get label() {
+                if (this.selected.length === 3 || this.selected.length === 0) {
+                    return 'Semua Pelanggan';
+                }
+                const labels = [];
+                if (this.selected.includes('konsumen')) labels.push('Konsumen');
+                if (this.selected.includes('r1')) labels.push('R1');
+                if (this.selected.includes('r2')) labels.push('R2');
+                return labels.join(', ');
+            },
+            toggleAll() {
+                if (this.isAllSelected) {
+                    this.selected = [];
+                } else {
+                    this.selected = ['konsumen', 'r1', 'r2'];
+                }
+            },
+            apply() {
+                const url = new URL(window.location.href);
+                // Hapus SEMUA varian param customer_types: 'customer_types',
+                // 'customer_types[]', maupun 'customer_types[0]', '[1]', ...
+                // (varian berindeks muncul dari link paginasi Laravel via
+                // withQueryString/http_build_query; delete() butuh nama key
+                // yang persis sama, jadi varian berindeks harus dibersihkan
+                // eksplisit agar nilai lama tidak menumpuk dengan nilai baru)
+                [...url.searchParams.keys()].forEach(k => {
+                    if (k === 'customer_types' || k.startsWith('customer_types[')) {
+                        url.searchParams.delete(k);
+                    }
+                });
+                url.searchParams.delete('page');
 
-        {{-- Dropdown Panel --}}
-        <div x-show="open" @click.outside="open = false"
-          x-transition:enter="transition ease-out duration-200"
-          x-transition:enter-start="opacity-0 scale-95 translate-y-[-10px]"
-          x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-          x-transition:leave="transition ease-in duration-150"
-          x-transition:leave-start="opacity-100 scale-100"
-          x-transition:leave-end="opacity-0 scale-95"
-          class="absolute right-1 z-[100] mt-2 w-72 origin-top-right rounded-2xl border border-gray-200 bg-white shadow-xl ring-1 ring-black/5"
-          style="display: none;">
+                // If none selected, default to all
+                const types = this.selected.length > 0 ? this.selected : ['r1', 'r2', 'konsumen'];
+                types.forEach(t => url.searchParams.append('customer_types[]', t));
 
-          {{-- Preset Options --}}
-          <div class="p-2">
-            <template x-for="preset in presets" :key="preset.key">
-              <button @click="applyFilter(preset.key)"
-                :class="rangeKey === preset.key ? 'bg-button-main text-white font-bold' : 'text-gray-700 hover:bg-gray-100'"
-                class="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer">
-                <span x-text="preset.label"></span>
-                <svg x-show="rangeKey === preset.key" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-              </button>
-            </template>
-          </div>
-
-          {{-- Separator --}}
-          <div class="border-t border-gray-100 mx-2"></div>
-
-          {{-- Custom Range --}}
-          <div class="p-3">
-            <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Rentang Kustom</p>
-            <div class="flex flex-col w-full gap-2">
-              <div class="relative flex-1">
-                <label class="mb-1 block text-xs text-gray-500">Mulai</label>
-                <div class="relative">
-                    <input type="text" x-model="startDate" id="litepicker-start" readonly
-                      class="w-full rounded-lg border border-gray-300 pl-8 pr-2 py-1.5 text-sm focus:border-green-500 focus:ring-green-500 bg-white cursor-pointer shadow-sm">
-                    <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                    </div>
-                </div>
-              </div>
-              
-              <div class="relative flex-1">
-                <label class="mb-1 block text-xs text-gray-500">Sampai</label>
-                <div class="relative">
-                    <input type="text" x-model="endDate" id="litepicker-end" readonly
-                      class="w-full rounded-lg border border-gray-300 pl-8 pr-2 py-1.5 text-sm focus:border-green-500 focus:ring-green-500 bg-white cursor-pointer shadow-sm">
-                    <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                    </div>
-                </div>
-              </div>
+                window.location.href = url.toString();
+            }
+        }" id="finance-customer-types-dropdown" class="relative cursor-pointer w-48 sm:w-56 shrink-0">
+          {{-- Trigger Button --}}
+          <button @click="open = !open" type="button"
+            class="w-full flex items-center justify-between gap-2 rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
+            <div class="flex items-center gap-2 min-w-0 flex-1">
+              <svg class="h-4 w-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span class="text-xs text-gray-400 font-normal shrink-0">Tipe:</span>
+              <span x-text="label" class="font-bold text-gray-800 truncate" :title="label"></span>
             </div>
-            <button @click="applyCustom()" type="button"
-              class="mt-3 w-full rounded-lg bg-button-main hover:bg-button-hover px-3 py-2 text-sm font-semibold text-white transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-md shadow-green-200">
-              Terapkan
-            </button>
+            <svg class="h-4 w-4 text-gray-400 shrink-0 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {{-- Dropdown Panel --}}
+          <div x-show="open" @click.outside="open = false"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95 translate-y-[-10px]"
+            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+            class="absolute left-0 z-[100] mt-2 w-64 origin-top-left rounded-2xl border border-gray-200 bg-white shadow-xl ring-1 ring-black/5"
+            style="display: none;">
+
+            <div class="p-3 border-b border-gray-100 flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Filter Pelanggan</span>
+              <button type="button" @click="toggleAll()"
+                class="text-xs font-semibold text-button-main hover:text-button-hover transition-colors cursor-pointer"
+                x-text="isAllSelected ? 'Batalkan Semua' : 'Pilih Semua'"></button>
+            </div>
+
+            <div class="p-3 space-y-2">
+              <template x-for="opt in options" :key="opt.key">
+                <label class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  :class="selected.includes(opt.key) ? 'bg-green-50/60 font-semibold text-gray-900' : 'text-gray-700'">
+                  <input type="checkbox" :value="opt.key" x-model="selected"
+                    class="h-4 w-4 rounded border-gray-300 text-button-main focus:ring-button-hover">
+                  <span class="text-sm" x-text="opt.label"></span>
+                </label>
+              </template>
+            </div>
+
+            <div class="p-3 border-t border-gray-100 bg-gray-50/50 rounded-b-2xl">
+              <button @click="apply()" type="button"
+                class="w-full rounded-lg bg-button-main hover:bg-button-hover px-3 py-2 text-sm font-semibold text-white transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-md shadow-green-200 cursor-pointer">
+                Terapkan
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {{-- Date Range Filter --}}
+        <div x-data="{
+            open: false,
+            rangeKey: '{{ $rangeKey }}',
+            startDate: '{{ $startDate->format('Y-m-d') }}',
+            endDate: '{{ $endDate->format('Y-m-d') }}',
+            label: '{{ $rangeLabel }}',
+            presets: [
+                { key: 'this_week',    label: 'Minggu Ini' },
+                { key: 'this_month',   label: 'Bulan Ini' },
+                { key: 'last_month',   label: 'Bulan Lalu' },
+                { key: 'this_quarter', label: 'Kuartal Ini' },
+            ],
+            applyFilter(key) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('range_filter', key);
+                url.searchParams.delete('start_date');
+                url.searchParams.delete('end_date');
+                url.searchParams.delete('page');
+                window.location.href = url.toString();
+            },
+            applyCustom() {
+                const url = new URL(window.location.href);
+                url.searchParams.set('range_filter', 'custom');
+                url.searchParams.set('start_date', this.startDate);
+                url.searchParams.set('end_date', this.endDate);
+                url.searchParams.delete('page');
+                window.location.href = url.toString();
+            }
+        }" id="finance-range-dropdown" class="relative cursor-pointer shrink-0">
+          {{-- Trigger Button --}}
+          <button @click="open = !open" type="button"
+            class="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
+            <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span x-text="label"></span>
+            <svg class="h-4 w-4 text-gray-400 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {{-- Dropdown Panel --}}
+          <div x-show="open" @click.outside="open = false"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95 translate-y-[-10px]"
+            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+            class="absolute right-0 z-[100] mt-2 w-72 origin-top-right rounded-2xl border border-gray-200 bg-white shadow-xl ring-1 ring-black/5"
+            style="display: none;">
+
+            {{-- Preset Options --}}
+            <div class="p-2">
+              <template x-for="preset in presets" :key="preset.key">
+                <button @click="applyFilter(preset.key)"
+                  :class="rangeKey === preset.key ? 'bg-button-main text-white font-bold' : 'text-gray-700 hover:bg-gray-100'"
+                  class="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer">
+                  <span x-text="preset.label"></span>
+                  <svg x-show="rangeKey === preset.key" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+              </template>
+            </div>
+
+            {{-- Separator --}}
+            <div class="border-t border-gray-100 mx-2"></div>
+
+            {{-- Custom Range --}}
+            <div class="p-3">
+              <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Rentang Kustom</p>
+              <div class="flex flex-col w-full gap-2">
+                <div class="relative flex-1">
+                  <label class="mb-1 block text-xs text-gray-500">Mulai</label>
+                  <div class="relative">
+                      <input type="text" x-model="startDate" id="litepicker-start" readonly
+                        class="w-full rounded-lg border border-gray-300 pl-8 pr-2 py-1.5 text-sm focus:border-green-500 focus:ring-green-500 bg-white cursor-pointer shadow-sm">
+                      <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                          <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                      </div>
+                  </div>
+                </div>
+                
+                <div class="relative flex-1">
+                  <label class="mb-1 block text-xs text-gray-500">Sampai</label>
+                  <div class="relative">
+                      <input type="text" x-model="endDate" id="litepicker-end" readonly
+                        class="w-full rounded-lg border border-gray-300 pl-8 pr-2 py-1.5 text-sm focus:border-green-500 focus:ring-green-500 bg-white cursor-pointer shadow-sm">
+                      <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                          <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                      </div>
+                  </div>
+                </div>
+              </div>
+              <button @click="applyCustom()" type="button"
+                class="mt-3 w-full rounded-lg bg-button-main hover:bg-button-hover px-3 py-2 text-sm font-semibold text-white transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-md shadow-green-200">
+                Terapkan
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -121,7 +227,8 @@
     <x-finance.download-modal
       :action="route('finance.download')"
       :products="$products"
-      :categories="$categories"/>
+      :categories="$categories"
+      :customerTypes="$customerTypes"/>
 
     {{-- Stats Cards --}}
     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">

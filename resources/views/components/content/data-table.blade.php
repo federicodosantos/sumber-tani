@@ -41,9 +41,15 @@
         {{-- SORT OPTIONS --}}
         @if (isset($sortOptions))
             <form action="{{ route(Route::currentRouteName()) }}" method="GET" class="flex items-center gap-2 text-xs sm:text-sm">
-                @if (request('search'))
-                    <input type="hidden" name="search" value="{{ request('search') }}">
-                @endif
+                @foreach (request()->except(['sort', 'page']) as $key => $val)
+                    @if (is_array($val))
+                        @foreach ($val as $subVal)
+                            <input type="hidden" name="{{ $key }}[]" value="{{ $subVal }}">
+                        @endforeach
+                    @elseif (!is_null($val) && $val !== '')
+                        <input type="hidden" name="{{ $key }}" value="{{ $val }}">
+                    @endif
+                @endforeach
 
                 <span class="text-gray-600 whitespace-nowrap">Sort by:</span>
                 <select name="sort"

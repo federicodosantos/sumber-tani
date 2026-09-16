@@ -1,4 +1,4 @@
-@props(['action' => '#', 'products' => [], 'categories' => []])
+@props(['action' => '#', 'products' => [], 'categories' => [], 'customerTypes' => ['r1', 'r2', 'konsumen']])
 
 <div x-data="{ open: false }">
   <button class="bg-button-main py-2 px-4 rounded-lg text-white font-bold hover:bg-button-hover transition-all duration-200 ease-in-out cursor-pointer active:scale-95"
@@ -20,6 +20,12 @@
              endDate: '',
              downloadBy: 'category',
              selectedItems: [],
+             selectedCustomerTypes: {{ Js::from($customerTypes ?? ['r1', 'r2', 'konsumen']) }},
+             customerTypeOptions: [
+                 { key: 'konsumen', label: 'Konsumen (Umum)' },
+                 { key: 'r1', label: 'Pelanggan R1' },
+                 { key: 'r2', label: 'Pelanggan R2' },
+             ],
              
              get isCustomDate() {
                  return this.rangeType === 'custom';
@@ -27,6 +33,18 @@
              
              get availableItems() {
                  return this.downloadBy === 'product' ? {{ Js::from($products) }} : {{ Js::from($categories) }};
+             },
+
+             toggleAllCustomerTypes() {
+                 if (this.selectedCustomerTypes.length === 3) {
+                     this.selectedCustomerTypes = [];
+                 } else {
+                     this.selectedCustomerTypes = ['konsumen', 'r1', 'r2'];
+                 }
+             },
+
+             get isAllCustomerTypesSelected() {
+                 return this.selectedCustomerTypes.length === 3;
              },
              
              handleRangeChange() {
@@ -102,6 +120,7 @@
             </div>
           </div>
         </div>
+
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-2">Format Waktu</label>
           <select name="format_time" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-button-hover focus:border-button-hover transition-all">
@@ -109,6 +128,39 @@
             <option value="bulanan">Bulanan</option>
             <option value="tahunan">Tahunan</option>
           </select>
+        </div>
+
+        {{-- Tipe Pelanggan --}}
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-sm font-semibold text-gray-700">
+              Tipe Pelanggan
+              <span class="text-xs font-normal text-gray-500 ml-1" x-show="selectedCustomerTypes.length > 0">
+                (<span x-text="selectedCustomerTypes.length"></span> dipilih)
+              </span>
+            </label>
+            <button type="button" 
+                    @click="toggleAllCustomerTypes()"
+                    class="text-xs font-semibold text-button-main hover:text-button-hover transition-colors cursor-pointer">
+              <span x-text="isAllCustomerTypesSelected ? 'Batalkan Semua' : 'Pilih Semua'"></span>
+            </button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <template x-for="opt in customerTypeOptions" :key="opt.key">
+              <label class="flex items-center p-3 border-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-all"
+                     :class="selectedCustomerTypes.includes(opt.key) ? 'bg-indigo-50 border-button-main font-semibold' : 'border-gray-200'">
+                <input type="checkbox" 
+                       name="customer_types[]" 
+                       :value="opt.key" 
+                       x-model="selectedCustomerTypes"
+                       class="w-4 h-4 text-button-main focus:ring-button-hover rounded">
+                <span class="ml-2.5 text-sm text-gray-800" x-text="opt.label"></span>
+              </label>
+            </template>
+          </div>
+          <p class="mt-1 text-xs text-red-600" x-show="selectedCustomerTypes.length === 0">
+            * Pilih minimal 1 tipe pelanggan untuk melanjutkan
+          </p>
         </div>
 
         {{-- Download Berdasarkan --}}
@@ -202,18 +254,10 @@
                   class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
             Batal
           </button>
-          {{-- <div class="flex flex-row space-x-4">
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Download As</label>
-            <select name="download_as"
-                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-button-hover focus:border-button-hover transition-all">
-              <option value="excel">Excel</option>
-              <option value="pdf">PDF</option>
-            </select>
-          </div> --}}
           
           <button type="submit"
-                  :disabled="selectedItems.length === 0"
-                  :class="selectedItems.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'"
+                  :disabled="selectedItems.length === 0 || selectedCustomerTypes.length === 0"
+                  :class="(selectedItems.length === 0 || selectedCustomerTypes.length === 0) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'"
                   class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold text-white bg-button-main hover:bg-button-hover rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
