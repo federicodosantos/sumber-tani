@@ -1,4 +1,8 @@
-@php use Illuminate\Support\Number; @endphp
+@php
+    use Illuminate\Support\Number;
+    // Batas warisan: lahirnya kolom unit_price (migrasi 2026_04_19_123139).
+    $legacyCutoff = \Carbon\Carbon::parse('2026-04-19')->startOfDay();
+@endphp
 <x-app-layout>
     <x-slot name="header">
         <h2 class="text-xl font-semibold leading-tight text-gray-800">
@@ -89,6 +93,14 @@
                                 @method('PUT')
                                 <div class="flex-1">
                                     <p class="text-xs font-bold text-gray-500">BATCH {{ $batch->batch }} · Stok {{ Number::format((float) $batch->stock_opname, null, 3, 'id') }}</p>
+                                    <p class="mt-0.5 text-xs text-gray-500">
+                                        Dicatat: {{ $batch->created_at ? $batch->created_at->locale('id')->translatedFormat('d M Y') : '-' }}
+                                        @if ($batch->created_at && $batch->created_at->lt($legacyCutoff))
+                                            <span class="ml-1 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700">Data lama</span>
+                                        @else
+                                            <span class="ml-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Data baru</span>
+                                        @endif
+                                    </p>
                                     <div class="mt-1 max-w-xs">
                                         <x-input-rupiah label="" name="unit_price_{{ $batch->id }}"
                                             :value="$saran['price'] ?? ''" placeholder="0" decimals="3" />

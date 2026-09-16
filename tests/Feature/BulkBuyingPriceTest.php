@@ -8,6 +8,7 @@ use App\Models\ProductPurchase;
 use App\Models\ProductStock;
 use App\Models\User;
 use App\Services\ProductStockService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -187,6 +188,41 @@ class BulkBuyingPriceTest extends TestCase
 
         $this->assertSame(1, $stats['batch_count']);
         $this->assertSame(1, $stats['empty_count']);
+    }
+
+    public function test_failed_store_renders_error_in_flash_toast(): void
+    {
+        $product = $this->makeProduct();
+
+        $this->actingAs(User::factory()->create(['role' => 'EMPLOYEE']))
+            ->followingRedirects()
+            ->post(route('stock.store'), [
+                'product_id' => $product->id,
+                'unit_price' => '0.000',
+                'stock_opname' => '10.000',
+                'price_consument' => '20000.000',
+                'price_r1' => '19000.000',
+                'price_r2' => '18000.000',
+            ])
+            ->assertSee('Harga HPP harus lebih dari 0');
+    }
+
+    public function test_bulk_rows_show_recorded_date_and_legacy_badge(): void
+    {
+        $product = $this->makeProduct();
+        $legacy = $this->makeBatch($product, '10.000', '0.000', 1);
+        $legacy->created_at = Carbon::parse('2026-03-10 08:00:00');
+        $legacy->save();
+        $recent = $this->makeBatch($product, '5.000', '0.000', 2);
+
+        $response = $this->actingAs(User::factory()->create(['role' => 'OWNER']))
+            ->get(route('stock.bulk.edit'));
+
+        $response->assertOk();
+        $response->assertSee('Dicatat: 10 Mar 2026');
+        $response->assertSee('Data lama');
+        $response->assertSee('Data baru');
+        $response->assertSee('Dicatat: '.$recent->fresh()->created_at->locale('id')->translatedFormat('d M Y'));
     }
 
     public function test_store_and_update_reject_zero_hpp(): void
