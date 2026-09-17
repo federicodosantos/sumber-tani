@@ -32,8 +32,8 @@ export default function cashierHandler(initialProducts = [], initialCategories =
         openModals: [],
         get isAnyModalOpen() { return this.openModals.length > 0; },
 
-        // Pending print choice (transient, NOT persisted): diisi saat checkout
-        // sukses untuk customer member (r1/r2), dibaca oleh success modal
+        // Pending print choice (transient, NOT persisted): diisi saat setiap
+        // checkout sukses (semua transaksi kasir), dibaca oleh success modal
         // (File 2) dan dikonsumsi oleh confirmPrintChoice()/skipPrintChoice().
         // Bentuk: { saleId, offlineData, tabId, isOffline }.
         pendingPrint: null,
@@ -939,12 +939,9 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
         async executeCheckout() {
 
-            // Klasifikasi customer untuk pilihan print (guest vs member r1/r2).
-            // Dicapture sinkron di awal: selectedCustomer/activeTab bisa berubah
-            // selama await/fetch berjalan. Type kosong/undefined => guest
-            // (fallback aman: auto-print agar struk tidak hilang diam-diam).
-            const custType = this.selectedCustomer?.type ?? null;
-            const isMember = custType === 'r1' || custType === 'r2';
+            // Dicapture sinkron di awal: activeTab bisa berubah selama
+            // await/fetch berjalan. Pilihan print (Cetak/Lewati) berlaku untuk
+            // semua transaksi kasir, tidak terbatas pelanggan r1/r2.
             const checkoutTabId = this.activeTabId;
 
             // Safety net terakhir: pastikan tidak ada qty yang melebihi sisa
@@ -1051,20 +1048,8 @@ export default function cashierHandler(initialProducts = [], initialCategories =
 
                     await this.decrementLocalStock(cleanCart);
 
-                    if (!isMember) {
-                        // Guest: behaviour lama, byte-identical.
-                        alert('OFFLINE: Transaksi berhasil tersimpan lokal ke dalam antrean sinkronisasi.');
-
-                        if (typeof window.printReceipt === 'function') {
-                            window.printReceipt(null, payload);
-                        }
-
-                        this.forceCloseTab(this.activeTabId);
-                        return;
-                    }
-
-                    // Member r1/r2: SKIP auto-print, tampilkan pilihan di
-                    // success modal (menggantikan alert). Tab close ditunda
+                    // Tidak auto-print: tampilkan pilihan Cetak/Lewati di
+                    // success modal untuk semua transaksi. Tab close ditunda
                     // sampai user memilih (confirmPrintChoice/skipPrintChoice).
                     this.pendingPrint = { saleId: null, offlineData: payload, tabId: checkoutTabId, isOffline: true };
                     this.printChoiceBusy = false;
@@ -1106,20 +1091,9 @@ export default function cashierHandler(initialProducts = [], initialCategories =
                     .then(async response => {
                         await this.decrementLocalStock(cleanCart);
 
-                        if (!isMember) {
-                            // Guest: behaviour lama, byte-identical.
-                            if (response.transaction_id && typeof window.printReceipt === 'function') {
-                                window.printReceipt(response.transaction_id);
-                            }
-
-                            window.dispatchEvent(new CustomEvent('open-modal', { detail: 'success-checkout' }));
-                            this.forceCloseTab(this.activeTabId);
-                            return;
-                        }
-
-                        // Member r1/r2: SKIP auto-print, tampilkan pilihan di
-                        // success modal. Tab close ditunda sampai user memilih
-                        // (confirmPrintChoice/skipPrintChoice).
+                        // Tidak auto-print: tampilkan pilihan Cetak/Lewati di
+                        // success modal untuk semua transaksi. Tab close ditunda
+                        // sampai user memilih (confirmPrintChoice/skipPrintChoice).
                         this.pendingPrint = { saleId: response.transaction_id ?? null, offlineData: null, tabId: checkoutTabId, isOffline: false };
                         this.printChoiceBusy = false;
                         window.dispatchEvent(new CustomEvent('open-modal', { detail: 'success-checkout' }));
@@ -1150,7 +1124,7 @@ export default function cashierHandler(initialProducts = [], initialCategories =
             }
         },
 
-        // --- Print choice (success modal, khusus member r1/r2) ---
+        // --- Print choice (success modal, semua transaksi kasir) ---
         // Dipanggil dari tombol "Cetak Struk" di success modal (File 2).
         // Guard klik-ganda via printChoiceBusy; tab hanya ditutup setelah
         // print dipicu. Gagal print (QZ error) tidak menggantung flow:
