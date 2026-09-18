@@ -426,6 +426,14 @@
 
                 if (el.tagName === 'SELECT') {
                     el.selectedIndex = 0;
+                } else if (el.type === 'checkbox') {
+                    // cloneNode mempertahankan `checked`, dan el.value = ''
+                    // tidak meresetnya. Tanpa baris ini, baris baru akan
+                    // mewarisi centang "langsung masuk stok" dari baris pertama.
+                    el.checked = true;
+                } else if (name && name.includes('[direct_stock]')) {
+                    // Pasangan hidden dari checkbox: nilainya wajib tetap '0'.
+                    el.value = '0';
                 } else {
                     el.value = '';
                 }

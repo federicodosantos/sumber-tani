@@ -117,6 +117,26 @@
                             </a>
                         </li>
 
+                        {{-- Penerimaan Barang --}}
+                        <li>
+                            <a href="{{ url('penerimaan') }}"
+                                class="flex items-stretch flex-row transition-colors duration-200 rounded-lg group
+                                    {{ request()->is('penerimaan*') ? 'text-white' : 'text-gray-500 hover:bg-gray-100' }}">
+                                <div class="bg-white w-10"></div>
+                                <div
+                                    class="{{ request()->is('penerimaan*') ? 'bg-button-main text-white tracking-wide font-extrabold shadow-sm' : '' }} flex items-center justify-between gap-2 w-full px-4 py-2 rounded-lg">
+                                    <span x-show="!effectiveSidebarCollapsed" x-cloak class="text-sm">Penerimaan Barang</span>
+                                    @if(($pendingReceiptCount ?? 0) > 0)
+                                        <span x-show="!effectiveSidebarCollapsed" x-cloak
+                                            class="inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums
+                                                {{ request()->is('penerimaan*') ? 'bg-white text-button-hover' : 'bg-wait-tint text-wait ring-1 ring-wait-edge' }}">
+                                            {{ $pendingReceiptCount }}
+                                        </span>
+                                    @endif
+                                </div>
+                            </a>
+                        </li>
+
                         {{-- Produk --}}
                         <li>
                             <a href="{{ url('product') }}"

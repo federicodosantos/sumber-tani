@@ -305,6 +305,52 @@
                             </button>
                         </div>
                     </div>
+
+                    {{-- Keputusan per baris: barangnya sudah ada di gudang atau
+                         masih dititip di produsen. Ditaruh sebagai baris sendiri,
+                         bukan kolom ke-11, supaya terbaca sebagai keputusan dan
+                         tidak menyempitkan kolom lain di layar 1366px. --}}
+                    <div class="mt-3 border-t border-gray-100 pt-3">
+                        @if($detail)
+                            @php
+                                $badges = [
+                                    'received' => ['Sudah masuk stok', 'bg-green-50 text-green-700 ring-green-200'],
+                                    'partial' => ['Diterima sebagian', 'bg-wait-tint text-wait ring-wait-edge'],
+                                    'pending' => ['Barang belum datang', 'bg-wait-tint text-wait ring-wait-edge'],
+                                    'closed' => ['Sisa ditutup', 'bg-gray-100 text-settled ring-gray-200'],
+                                ];
+                                $status = $detail->receipt_status;
+                                [$badgeLabel, $badgeClass] = $badges[$status];
+                                $fmtQty = fn ($v) => rtrim(rtrim(number_format((float) $v, 3, ',', '.'), '0'), ',');
+                            @endphp
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 {{ $badgeClass }}">
+                                    {{ $badgeLabel }}
+                                </span>
+                                <span class="text-xs text-gray-500">
+                                    {{ $fmtQty($detail->received_quantity) }} dari {{ $fmtQty($detail->quantity) }}
+                                    {{ strtolower($detail->unit) }} sudah diterima
+                                </span>
+                                @if(in_array($status, ['pending', 'partial'], true))
+                                    <a href="{{ route('receipt.index') }}"
+                                        class="text-xs font-bold text-button-hover hover:underline">
+                                        Terima barang
+                                    </a>
+                                @endif
+                            </div>
+                        @else
+                            <label class="inline-flex cursor-pointer flex-wrap items-center gap-x-2.5 gap-y-1">
+                                {{-- Pasangan hidden agar baris yang tidak dicentang
+                                     tetap terkirim sebagai "0", bukan hilang. --}}
+                                <input type="hidden" name="products[{{ $i }}][direct_stock]" value="0">
+                                <input type="checkbox" name="products[{{ $i }}][direct_stock]" value="1"
+                                    class="direct-stock-input h-4 w-4 rounded border-gray-300 text-button-hover focus:ring-button-main"
+                                    {{ old('products.' . $i . '.direct_stock', '1') == '1' ? 'checked' : '' }}>
+                                <span class="text-sm font-medium text-gray-700">Langsung masuk stok</span>
+                                <span class="text-xs text-gray-400">lepas centang bila barang belum datang</span>
+                            </label>
+                        @endif
+                    </div>
                 </div>
             @endforeach
         </div>

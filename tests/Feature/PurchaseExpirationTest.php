@@ -431,20 +431,26 @@ class PurchaseExpirationTest extends TestCase
         );
     }
 
-    public function test_delete_purchase_leaves_stock_batch_unchanged(): void
+    /**
+     * Kontrak berubah sejak fitur penerimaan barang.
+     *
+     * Dulu hapus nota sengaja membiarkan batch stok apa adanya — nota hilang
+     * tapi barangnya tetap tercatat ada di gudang. Sekarang penghapusan nota
+     * menarik kembali stok yang lahir darinya, selama batch-nya belum
+     * terpakai transaksi kasir.
+     */
+    public function test_delete_purchase_reverses_the_stock_batch_it_created(): void
     {
         $this->actingAsOwner();
         $productId = $this->makeProduct();
 
         $purchase = $this->createPurchase([$this->line($productId, '10.000', $this->futureDate(30))]);
-        $stockCountBefore = ProductStock::count();
+        $batchId = ProductStock::where('product_id', $productId)->firstOrFail()->id;
 
         $this->delete("/purchase/{$purchase->id}")->assertRedirect();
 
-        $this->assertSame($stockCountBefore, ProductStock::count());
-        $batch = ProductStock::where('product_id', $productId)->first();
-        $this->assertNotNull($batch);
-        $this->assertSame($this->futureDate(30), $batch->expired_date?->toDateString());
+        $this->assertNull(ProductStock::find($batchId));
+        $this->assertSame(0, ProductStock::where('product_id', $productId)->count());
     }
 
     public function test_store_rolls_back_purchase_and_details_when_batch_creation_fails(): void
