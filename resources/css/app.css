@@ -8,6 +8,17 @@
     --color-button-main: #ABD36F;
     --color-button-hover: #8AB763;
     --color-cancel-button: #FC4C4C;
+
+    /* Status penerimaan barang.
+       Hijau & merah sudah punya arti tetap di aplikasi ini (aksi utama &
+       batal), jadi "menunggu barang" memakai oker — warna gabah/karung goni,
+       nyambung dengan barang dagangannya dan cukup jauh dari merah supaya
+       tidak terbaca sebagai error. Status "ditutup" sengaja tanpa warna:
+       keadaan yang sudah selesai tidak perlu menarik mata. */
+    --color-wait: #C88A2E;
+    --color-wait-tint: #FDF6E9;
+    --color-wait-edge: #EFDFC2;
+    --color-settled: #64748B;
 }
 
 @layer components {

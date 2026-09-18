@@ -183,6 +183,10 @@
                     </th>
                     <th scope="col"
                         class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                        Penerimaan
+                    </th>
+                    <th scope="col"
+                        class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
                         Dibuat Pada
                     </th>
                     <th scope="col"
@@ -246,6 +250,20 @@
                                 @endif
                             </td>
 
+                            <td class="whitespace-nowrap px-6 py-4 text-sm">
+                                @php $waiting = $purchase->outstanding_lines_count; @endphp
+                                @if ($waiting > 0)
+                                    <a href="{{ route('receipt.index') }}"
+                                        class="inline-flex items-center gap-1.5 rounded-full bg-wait-tint px-3 py-1 text-xs font-semibold text-wait ring-1 ring-wait-edge transition-colors hover:bg-wait/10">
+                                        {{ $waiting }} item belum datang
+                                    </a>
+                                @else
+                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500">
+                                        Lengkap
+                                    </span>
+                                @endif
+                            </td>
+
                             <td class="max-w-sm px-6 py-4 text-sm text-gray-600">
                                 <span class="line-clamp-2">
                                     {{ $purchase->created_at->translatedFormat('l, d M Y | H:i') }}
@@ -265,7 +283,7 @@
                                             class="inline h-5 w-5">
                                     </a>
 
-                                    <x-delete :module="'data pembelian pada waktu'" :name="$purchase->purchase_date->translatedFormat('l, d M Y') " :action="route('purchase.destroy', $purchase->id)" />
+                                    <x-delete :module="'data pembelian pada waktu'" :name="$purchase->purchase_date->translatedFormat('l, d M Y') " :action="route('purchase.destroy', $purchase->id)" :preview="route('purchase.delete-preview', $purchase->id)" />
                                 </div>
                             </td>
                         </tr>

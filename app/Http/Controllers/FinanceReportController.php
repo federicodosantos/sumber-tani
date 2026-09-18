@@ -12,6 +12,7 @@ use App\Models\ProductStock;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Services\DecimalMathService;
+use App\Services\GoodsReceiptService;
 use App\Services\ProductStockService;
 use App\Services\TransactionReversalService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -244,7 +245,15 @@ class FinanceReportController extends Controller
         $receivables = $math->round((string) Invoice::where('type', Invoice::TYPE_PURCHASE)
             ->sum('debts'));
 
-        $totalAssets = $math->add($math->add($cash, $inventoryValue), $receivables);
+        // Sudah dibayar/dipesan tapi barangnya belum sampai gudang (dititip di
+        // produsen). Tanpa pos ini, pembelian tunai atas barang titipan akan
+        // memotong kas tanpa menambah aset apa pun.
+        $goodsInTransit = app(GoodsReceiptService::class)->goodsInTransitValue();
+
+        $totalAssets = $math->add(
+            $math->add($math->add($cash, $inventoryValue), $goodsInTransit),
+            $receivables
+        );
 
         // Liabilities
         $payables = $math->round((string) ProductPurchase::where('is_paid', 0)
@@ -259,6 +268,7 @@ class FinanceReportController extends Controller
             'assets' => [
                 'cash' => $cash,
                 'inventory' => $inventoryValue,
+                'goods_in_transit' => $goodsInTransit,
                 'receivables' => $receivables,
                 'total' => $totalAssets,
             ],

@@ -1,17 +1,18 @@
 <?php
 
-use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\ActivityLogController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ProductStockController;
+use App\Http\Controllers\CustomerR2Controller;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FinanceReportController;
+use App\Http\Controllers\GoodsReceiptController;
+use App\Http\Controllers\ItemCategoryController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductPurchaseController;
+use App\Http\Controllers\ProductStockController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\QzSecurityController;
 use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\FinanceReportController;
-use App\Http\Controllers\ProductPurchaseController;
-use App\Http\Controllers\QzSecurityController;
-use App\Http\Controllers\CustomerR2Controller;
 
 Route::get('/refresh-csrf', function () {
     return csrf_token();
@@ -59,6 +60,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/purchase/{purchase}/edit', [ProductPurchaseController::class, 'edit'])->name('purchase.edit');
     Route::put('/purchase/{purchase}', [ProductPurchaseController::class, 'update'])->name('purchase.update');
     Route::delete('/purchase/{purchase}', [ProductPurchaseController::class, 'destroy'])->name('purchase.destroy');
+    // Dampak hapus nota terhadap stok, untuk modal konfirmasi.
+    Route::get('/purchase/{purchase}/hapus/pratinjau', [ProductPurchaseController::class, 'deletePreview'])->name('purchase.delete-preview');
+
+    // PENERIMAAN BARANG ROUTES
+    Route::get('/penerimaan', [GoodsReceiptController::class, 'index'])->name('receipt.index');
+    Route::post('/penerimaan/{detail}/terima', [GoodsReceiptController::class, 'store'])->name('receipt.store');
+    Route::post('/penerimaan/{detail}/tutup', [GoodsReceiptController::class, 'close'])->name('receipt.close');
+    Route::delete('/penerimaan/{receipt}', [GoodsReceiptController::class, 'destroy'])->name('receipt.destroy');
 
     // PRODUCT STOCK ROUTES
     Route::get('/stock', [ProductStockController::class, 'index'])->name('stock.index');
@@ -136,4 +145,4 @@ Route::get('/test-sign', function () {
     ]);
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\ItemCategory;
 use App\Models\Product;
 use App\Models\ProductPurchase;
+use App\Models\ProductPurchaseDetail;
 use App\Services\DecimalMathService;
+use App\Services\GoodsReceiptService;
 use App\Services\ProductStockService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -17,9 +20,12 @@ class ProductPurchaseController extends Controller
 {
     protected ProductStockService $stockService;
 
-    public function __construct(ProductStockService $stockService)
+    protected GoodsReceiptService $receiptService;
+
+    public function __construct(ProductStockService $stockService, GoodsReceiptService $receiptService)
     {
         $this->stockService = $stockService;
+        $this->receiptService = $receiptService;
     }
 
     /**
@@ -76,7 +82,8 @@ class ProductPurchaseController extends Controller
                 break;
         }
 
-        $purchases = $query->paginate(10)->withQueryString();
+        // details di-eager load untuk badge status penerimaan (hindari N+1).
+        $purchases = $query->with('details')->paginate(10)->withQueryString();
         $products = Product::select('id', 'code_id', 'name')->orderBy('code_id')->get();
         $categories = ItemCategory::orderBy('name', 'asc')->get();
 
@@ -131,6 +138,7 @@ class ProductPurchaseController extends Controller
             'products.*.quantity' => ['required', 'numeric', 'decimal:0,3', 'min:0.001'],
             'products.*.unit' => ['required', 'string', 'max:50'],
             'products.*.expired_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'products.*.direct_stock' => ['nullable', 'boolean'],
         ])->validate();
 
         $paymentMethod = (int) $validated['method'] === 0 ? 'cash' : 'credit';
@@ -161,6 +169,12 @@ class ProductPurchaseController extends Controller
                 'quantity' => $qty,
                 'subtotal' => $subtotal,
                 'expired_date' => $item['expired_date'] ?? null,
+                'receipt_mode' => $this->isDirectStock($item)
+                    ? ProductPurchaseDetail::MODE_DIRECT
+                    : ProductPurchaseDetail::MODE_PENDING,
+                // Dipakai alur update untuk mencocokkan baris lama. Dibuang
+                // sebelum persist — 'id' bukan kolom yang boleh diisi massal.
+                'id' => $item['id'] ?? null,
             ];
         });
 
@@ -215,17 +229,20 @@ class ProductPurchaseController extends Controller
                 'is_paid' => $isPaid,
             ]);
 
-            // Simpan detail + buat batch stok baru per item
+            // Simpan detail. Baris "langsung masuk stok" dicatat sebagai
+            // penerimaan penuh lewat GoodsReceiptService, bukan createNewBatch
+            // langsung, supaya jejak batch-nya sama persis dengan penerimaan
+            // manual — dan karenanya ikut bisa dibatalkan saat nota dihapus.
             $items->each(function ($item) use ($purchase) {
-                $purchase->details()->create($item);
-                $latestPrices = $this->stockService->getLatestBatchPrices($item['product_id']);
+                $detail = $purchase->details()->create($item);
 
-                $this->stockService->createNewBatch($item['product_id'], [
-                    'stock_opname' => $item['quantity'],
-                    'unit_price' => $item['net_price'],
-                    'price_consument' => $latestPrices['price_consument'],
-                    'price_r1' => $latestPrices['price_r1'],
-                    'price_r2' => $latestPrices['price_r2'],
+                if ($detail->receipt_mode !== ProductPurchaseDetail::MODE_DIRECT) {
+                    return;
+                }
+
+                $this->receiptService->receive($detail, [
+                    'quantity' => $item['quantity'],
+                    'received_date' => $purchase->purchase_date->toDateString(),
                     'expired_date' => $item['expired_date'],
                 ]);
             });
@@ -275,10 +292,12 @@ class ProductPurchaseController extends Controller
                 'products.*.quantity' => ['required', 'numeric', 'decimal:0,3', 'min:0.001'],
                 'products.*.unit' => ['required', 'string'],
                 'products.*.expired_date' => ['nullable', 'date'],
+                'products.*.direct_stock' => ['nullable', 'boolean'],
                 'products.*.id' => ['nullable', 'integer'],
             ])->validate();
 
             $this->validateExpiredDates($purchase, $validated['products']);
+            $this->validateReceiptConstraints($purchase, $validated['products']);
         } catch (ValidationException $e) {
             // Tandai bahwa validasi gagal berasal dari EDIT purchase ini, agar
             // halaman index membuka ulang modal edit (bukan modal create).
@@ -315,6 +334,12 @@ class ProductPurchaseController extends Controller
                 'quantity' => $qty,
                 'subtotal' => $subtotal,
                 'expired_date' => $item['expired_date'] ?? null,
+                'receipt_mode' => $this->isDirectStock($item)
+                    ? ProductPurchaseDetail::MODE_DIRECT
+                    : ProductPurchaseDetail::MODE_PENDING,
+                // Dipakai alur update untuk mencocokkan baris lama. Dibuang
+                // sebelum persist — 'id' bukan kolom yang boleh diisi massal.
+                'id' => $item['id'] ?? null,
             ];
         });
 
@@ -352,7 +377,7 @@ class ProductPurchaseController extends Controller
             ? $math->round($validated['manual_grand_total'])
             : $math->add($afterDiscount, $ppnValue);
 
-        DB::transaction(function () use ($purchase, $validated, $items, $subtotal, $totalItems, $discountType, $discountPercent, $discountValue, $ppnType, $ppnPercent, $ppnValue, $grandTotal, $paymentMethod, $isPaid) {
+        DB::transaction(function () use ($math, $purchase, $validated, $items, $subtotal, $totalItems, $discountType, $discountPercent, $discountValue, $ppnType, $ppnPercent, $ppnValue, $grandTotal, $paymentMethod, $isPaid) {
             $purchase->update([
                 'purchase_date' => $validated['purchase_date'],
                 'total_items' => $totalItems,
@@ -368,9 +393,57 @@ class ProductPurchaseController extends Controller
                 'is_paid' => $isPaid,
             ]);
 
-            // Reset details (note: tidak rollback stok lama)
-            $purchase->details()->delete();
-            $items->each(fn ($item) => $purchase->details()->create($item));
+            // Rekonsiliasi per id, BUKAN delete-recreate. Menghapus lalu
+            // membuat ulang detail akan melenyapkan riwayat penerimaan lewat
+            // cascade FK — dan dulu juga meninggalkan stok lama menggantung.
+            $existing = $purchase->details()->get()->keyBy('id');
+            $keptIds = [];
+
+            foreach ($items as $item) {
+                $submittedId = $item['id'] ?? null;
+                $attributes = Arr::except($item, ['id']);
+
+                $detail = $submittedId !== null && $submittedId !== ''
+                    ? $existing->get((int) $submittedId)
+                    : null;
+
+                if ($detail === null) {
+                    $created = $purchase->details()->create($attributes);
+                    $keptIds[] = $created->id;
+
+                    if ($created->receipt_mode === ProductPurchaseDetail::MODE_DIRECT) {
+                        $this->receiptService->receive($created, [
+                            'quantity' => $created->quantity,
+                            'received_date' => $purchase->purchase_date->toDateString(),
+                            'expired_date' => $created->expired_date?->toDateString(),
+                        ]);
+                    }
+
+                    continue;
+                }
+
+                // receipt_mode adalah niat saat nota dibuat; edit nota tidak
+                // mengubahnya. Menerima barang dilakukan lewat menu Penerimaan.
+                unset($attributes['receipt_mode']);
+
+                $priceChanged = $math->compare((string) $detail->net_price, (string) $attributes['net_price']) !== 0;
+
+                $detail->update($attributes);
+                $keptIds[] = $detail->id;
+
+                // Harga beli batch ikut dikoreksi karena itu barang yang sama.
+                // Transaksi kasir yang sudah tercatat sengaja tidak disentuh.
+                if ($priceChanged) {
+                    $this->receiptService->syncUnitPrice($detail);
+                }
+            }
+
+            // Baris yang tidak dikirim lagi. validateReceiptConstraints sudah
+            // memastikan tidak ada yang pernah diterima, jadi aman dihapus.
+            $purchase->details()
+                ->whereNotIn('id', $keptIds ?: [0])
+                ->get()
+                ->each(fn ($detail) => $detail->delete());
         });
 
         return redirect()->route('purchase.index')->with('success', 'Pembelian berhasil diperbarui.');
@@ -381,9 +454,145 @@ class ProductPurchaseController extends Controller
      */
     public function destroy(ProductPurchase $purchase)
     {
-        ProductPurchase::destroy($purchase->id);
+        $purchase->load('details.receipts');
 
-        return redirect()->route('purchase.index')->with('success', 'Pembelian berhasil dihapus.');
+        $blockers = $this->collectDeleteBlockers($purchase);
+
+        if ($blockers !== []) {
+            return back()->withErrors(['purchase' => $blockers]);
+        }
+
+        DB::transaction(function () use ($purchase) {
+            // Tarik kembali seluruh stok yang lahir dari nota ini sebelum
+            // notanya hilang. Tanpa ini, nota terhapus tapi barangnya tetap
+            // tercatat ada di gudang (bug perilaku lama).
+            foreach ($purchase->details as $detail) {
+                foreach ($detail->receipts as $receipt) {
+                    $this->receiptService->reverse($receipt);
+                }
+            }
+
+            $purchase->delete();
+        });
+
+        return redirect()->route('purchase.index')->with('success', 'Pembelian dihapus dan stoknya ditarik kembali.');
+    }
+
+    /**
+     * Dampak penghapusan nota terhadap stok, untuk modal konfirmasi.
+     */
+    public function deletePreview(ProductPurchase $purchase)
+    {
+        $purchase->load('details.receipts');
+
+        $impact = [];
+
+        foreach ($purchase->details as $detail) {
+            foreach ($detail->receipts as $receipt) {
+                $impact[] = [
+                    'product_name' => $detail->product_name,
+                    'quantity' => (string) $receipt->quantity,
+                    'unit' => $detail->unit,
+                ];
+            }
+        }
+
+        $blockers = $this->collectDeleteBlockers($purchase);
+
+        return response()->json([
+            'can_delete' => $blockers === [],
+            'impact' => $impact,
+            'blockers' => $blockers,
+        ]);
+    }
+
+    /**
+     * Alasan-alasan kenapa nota ini tidak bisa dihapus.
+     *
+     * @return string[]
+     */
+    private function collectDeleteBlockers(ProductPurchase $purchase): array
+    {
+        $blockers = [];
+
+        foreach ($purchase->details as $detail) {
+            foreach ($detail->receipts as $receipt) {
+                $blocker = $this->receiptService->blockerFor($receipt);
+
+                if ($blocker !== null) {
+                    $blockers[] = $detail->product_name.': '.$blocker;
+                }
+            }
+        }
+
+        return $blockers;
+    }
+
+    /**
+     * Batasan edit nota yang muncul karena barang sudah terlanjur diterima.
+     *
+     * Dipanggil sebelum DB::transaction agar penolakan tidak menyisakan
+     * perubahan setengah jalan.
+     */
+    private function validateReceiptConstraints(ProductPurchase $purchase, array $products): void
+    {
+        $math = app(DecimalMathService::class);
+        $existing = $purchase->details()->get()->keyBy('id');
+        $submitted = [];
+        $errors = [];
+
+        foreach ($products as $index => $item) {
+            $submittedId = $item['id'] ?? null;
+
+            if ($submittedId === null || $submittedId === '') {
+                continue;
+            }
+
+            $detail = $existing->get((int) $submittedId);
+
+            // Kepemilikan id sudah divalidasi validateExpiredDates.
+            if ($detail === null) {
+                continue;
+            }
+
+            $submitted[(int) $submittedId] = true;
+            $received = (string) $detail->received_quantity;
+            $quantity = $math->round(str_replace(',', '.', (string) $item['quantity']));
+
+            if ($math->compare($quantity, $received) < 0) {
+                $errors["products.$index.quantity"][] =
+                    'Jumlah tidak boleh kurang dari yang sudah diterima ('.$this->trimDecimal($received).').';
+            }
+
+            if ((int) $item['product_id'] !== (int) $detail->product_id && $math->isPositive($received)) {
+                $errors["products.$index.product_id"][] =
+                    'Produk tidak bisa diganti karena barangnya sudah diterima. Batalkan penerimaannya dulu.';
+            }
+        }
+
+        foreach ($existing as $id => $detail) {
+            if (isset($submitted[$id])) {
+                continue;
+            }
+
+            if ($math->isPositive((string) $detail->received_quantity)) {
+                $errors['products'][] = $detail->product_name
+                    .' sudah diterima sebagian dan tidak bisa dihapus. Batalkan penerimaannya dulu lewat menu Penerimaan Barang.';
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    private function trimDecimal(string $value): string
+    {
+        if (! str_contains($value, '.')) {
+            return $value;
+        }
+
+        return rtrim(rtrim($value, '0'), '.') ?: '0';
     }
 
     /**
@@ -391,6 +600,22 @@ class ProductPurchaseController extends Controller
      * Konversi koma desimal (format Indonesia) ke titik agar lolos validasi 'numeric' Laravel.
      * Contoh: "1,5" → "1.5", "25.000,50" tidak berlaku (rupiah di-parse terpisah)
      */
+    /**
+     * Apakah baris item ini ditandai "langsung masuk stok"?
+     *
+     * Key yang tidak dikirim sama sekali diperlakukan sebagai true agar
+     * klien lama (dan nota yang disimpan sebelum fitur ini ada) tetap
+     * berperilaku seperti semula: simpan nota = stok bertambah.
+     */
+    private function isDirectStock(array $item): bool
+    {
+        if (! array_key_exists('direct_stock', $item) || $item['direct_stock'] === null) {
+            return true;
+        }
+
+        return filter_var($item['direct_stock'], FILTER_VALIDATE_BOOLEAN);
+    }
+
     private function prepareRequestData(Request $request): array
     {
         $data = $request->all();

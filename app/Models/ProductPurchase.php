@@ -11,6 +11,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 class ProductPurchase extends Model
 {
     use LogsActivity;
+
     protected $table = 'product_purchases';
 
     public function getActivitylogOptions(): LogOptions
@@ -49,15 +50,15 @@ class ProductPurchase extends Model
 
     protected $casts = [
         'purchase_date' => 'date',
-        'total_items'   => 'decimal:3',
-        'subtotal'      => 'decimal:3',
+        'total_items' => 'decimal:3',
+        'subtotal' => 'decimal:3',
         'discount_percent' => 'decimal:3',
-        'discount_value'   => 'decimal:3',
-        'ppn_type'      => 'string',
-        'ppn_percent'   => 'decimal:3',
-        'ppn_value'     => 'decimal:3',
-        'grand_total'   => 'decimal:3',
-        'is_paid'       => 'boolean',
+        'discount_value' => 'decimal:3',
+        'ppn_type' => 'string',
+        'ppn_percent' => 'decimal:3',
+        'ppn_value' => 'decimal:3',
+        'grand_total' => 'decimal:3',
+        'is_paid' => 'boolean',
     ];
 
     public function getManualGrandTotalAttribute()
@@ -79,5 +80,22 @@ class ProductPurchase extends Model
     public function details(): HasMany
     {
         return $this->hasMany(ProductPurchaseDetail::class, 'product_purchase_id');
+    }
+
+    /**
+     * Berapa baris item di nota ini yang barangnya masih ditunggu.
+     *
+     * Baris yang sisanya sudah ditutup tidak dihitung — tidak ada lagi yang
+     * perlu dikerjakan untuk baris itu.
+     */
+    public function getOutstandingLinesCountAttribute(): int
+    {
+        return $this->details
+            ->filter(fn (ProductPurchaseDetail $detail) => in_array(
+                $detail->receipt_status,
+                [ProductPurchaseDetail::STATUS_PENDING, ProductPurchaseDetail::STATUS_PARTIAL],
+                true
+            ))
+            ->count();
     }
 }
