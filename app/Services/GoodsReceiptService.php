@@ -12,11 +12,11 @@ use Illuminate\Validation\ValidationException;
  * Penerimaan barang per baris item nota pembelian.
  *
  * Aturan inti:
- * - satu penerimaan melahirkan tepat satu batch stok, sehingga FIFO
- *   (ProductStockService::allocateStockFifo, urut created_at) otomatis
- *   memakai kiriman yang datang lebih dulu;
+ * - satu baris nota = satu batch stok; kiriman berikutnya menambah
+ *   stock_opname batch yang sama (expired & harga jual dikunci dari
+ *   kiriman pertama);
  * - received_quantity pada detail adalah satu-satunya sumber kebenaran;
- * - pembatalan hanya boleh kalau batch yang dilahirkan masih utuh.
+ * - pembatalan hanya boleh kalau sisa batch masih mencukupi qty penerimaan.
  */
 class GoodsReceiptService
 {
@@ -28,7 +28,7 @@ class GoodsReceiptService
     /**
      * Catat satu kedatangan barang dan masukkan ke stok.
      *
-     * @param  array{quantity: string|int|float, received_date?: string|null, expired_date?: string|null, note?: string|null, user_id?: int|null}  $data
+     * @param  array{quantity: string|int|float, received_date?: string|null, note?: string|null, user_id?: int|null}  $data
      *
      * @throws ValidationException saat baris sudah ditutup, qty <= 0, atau melebihi sisa.
      */
@@ -45,23 +45,12 @@ class GoodsReceiptService
 
             $this->guardReceivable($locked, $quantity);
 
-            $expiredDate = array_key_exists('expired_date', $data) && $data['expired_date'] !== null && $data['expired_date'] !== ''
-                ? $data['expired_date']
-                : $locked->expired_date?->toDateString();
+            // Kadaluarsa selalu milik nota — koreksi tanggal dilakukan lewat
+            // modul Stok setelah barang masuk, bukan saat penerimaan.
+            $expiredDate = $locked->expired_date?->toDateString();
 
             $unitPrice = $this->math->round((string) $locked->net_price);
-            $prices = $this->stockService->getLatestBatchPrices($locked->product_id);
-
-            // Harga jual disalin dari batch terkini saat barang datang, bukan
-            // saat nota dibuat — barang titipan bisa menunggu berminggu-minggu.
-            $batch = $this->stockService->createNewBatch($locked->product_id, [
-                'stock_opname' => $quantity,
-                'unit_price' => $unitPrice,
-                'price_consument' => $prices['price_consument'],
-                'price_r1' => $prices['price_r1'],
-                'price_r2' => $prices['price_r2'],
-                'expired_date' => $expiredDate,
-            ]);
+            $batch = $this->batchForLine($locked, $quantity, $unitPrice, $expiredDate);
 
             $receipt = ProductPurchaseReceipt::create([
                 'product_purchase_detail_id' => $locked->id,
@@ -90,9 +79,9 @@ class GoodsReceiptService
     /**
      * Batalkan satu penerimaan dan tarik kembali stoknya.
      *
-     * Hanya boleh kalau batch yang dilahirkan masih menyimpan minimal
-     * sebanyak qty penerimaan — kalau sudah terpakai kasir, membalikkannya
-     * akan membuat stok minus dan mengacaukan FIFO.
+     * Hanya boleh kalau sisa batch baris nota masih mencukupi qty
+     * penerimaan — kalau sudah terpakai kasir, membalikkannya akan
+     * membuat stok minus dan mengacaukan FIFO.
      *
      * @throws ValidationException saat batch hilang atau sudah terpakai.
      */
@@ -169,11 +158,13 @@ class GoodsReceiptService
         $unitPrice = $this->math->round((string) $detail->net_price);
 
         DB::transaction(function () use ($detail, $unitPrice) {
+            $syncedBatchIds = [];
+
             foreach ($detail->receipts()->get() as $receipt) {
                 $receipt->unit_price = $unitPrice;
                 $receipt->save();
 
-                if ($receipt->product_stock_id === null) {
+                if ($receipt->product_stock_id === null || isset($syncedBatchIds[$receipt->product_stock_id])) {
                     continue;
                 }
 
@@ -185,6 +176,7 @@ class GoodsReceiptService
 
                 $batch->unit_price = $unitPrice;
                 $batch->save();
+                $syncedBatchIds[$receipt->product_stock_id] = true;
             }
         });
     }
@@ -213,7 +205,7 @@ class GoodsReceiptService
         }
 
         if ($this->math->compare((string) $batch->stock_opname, (string) $receipt->quantity) < 0) {
-            return 'Batch '.$batch->batch.' sudah terpakai transaksi (sisa '
+            return 'Batch '.$batch->batch.' (satu batch untuk baris nota ini) sudah terpakai transaksi (sisa '
                 .$this->trim((string) $batch->stock_opname).' dari '
                 .$this->trim((string) $receipt->quantity).').';
         }
@@ -297,7 +289,55 @@ class GoodsReceiptService
     }
 
     /**
-     * Hapus/kurangi batch yang dilahirkan sebuah penerimaan.
+     * Batch stok milik baris nota: pakai yang sudah ada, atau buat baru.
+     *
+     * Expired & harga jual batch dikunci dari kiriman pertama. Receipt
+     * tetap mencatat expired/harga kiriman masing-masing.
+     */
+    private function batchForLine(
+        ProductPurchaseDetail $detail,
+        string $quantity,
+        string $unitPrice,
+        ?string $expiredDate,
+    ): ProductStock {
+        $existing = ProductPurchaseReceipt::where('product_purchase_detail_id', $detail->id)
+            ->whereNotNull('product_stock_id')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($existing as $receipt) {
+            $batch = ProductStock::whereKey($receipt->product_stock_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($batch === null) {
+                continue;
+            }
+
+            $batch->stock_opname = $this->math->add((string) $batch->stock_opname, $quantity);
+            $batch->save();
+
+            return $batch;
+        }
+
+        // Harga jual disalin dari batch terkini saat kiriman pertama datang,
+        // bukan saat nota dibuat — barang titipan bisa menunggu berminggu-minggu.
+        $prices = $this->stockService->getLatestBatchPrices($detail->product_id);
+
+        return $this->stockService->createNewBatch($detail->product_id, [
+            'stock_opname' => $quantity,
+            'unit_price' => $unitPrice,
+            'price_consument' => $prices['price_consument'],
+            'price_r1' => $prices['price_r1'],
+            'price_r2' => $prices['price_r2'],
+            'expired_date' => $expiredDate,
+        ]);
+    }
+
+    /**
+     * Kurangi qty penerimaan dari batch baris nota. Hapus batch hanya
+     * kalau sisanya nol (tidak ada kiriman lain / kelebihan manual).
      *
      * @throws ValidationException
      */
@@ -323,13 +363,11 @@ class GoodsReceiptService
         $remainder = $this->math->subtract((string) $batch->stock_opname, (string) $receipt->quantity);
 
         if ($this->math->isZero($remainder)) {
-            // Batch ini murni milik penerimaan tersebut — buang seluruhnya.
             $batch->delete();
 
             return;
         }
 
-        // Batch sempat ditambah manual lewat menu Stok; sisakan kelebihannya.
         $batch->stock_opname = $remainder;
         $batch->save();
     }

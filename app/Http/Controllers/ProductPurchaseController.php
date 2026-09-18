@@ -243,7 +243,6 @@ class ProductPurchaseController extends Controller
                 $this->receiptService->receive($detail, [
                     'quantity' => $item['quantity'],
                     'received_date' => $purchase->purchase_date->toDateString(),
-                    'expired_date' => $item['expired_date'],
                 ]);
             });
         });
@@ -415,7 +414,6 @@ class ProductPurchaseController extends Controller
                         $this->receiptService->receive($created, [
                             'quantity' => $created->quantity,
                             'received_date' => $purchase->purchase_date->toDateString(),
-                            'expired_date' => $created->expired_date?->toDateString(),
                         ]);
                     }
 

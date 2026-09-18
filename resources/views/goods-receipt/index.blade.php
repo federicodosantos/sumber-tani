@@ -7,6 +7,11 @@
         $formatted = number_format((float) $value, 3, ',', '.');
         return rtrim(rtrim($formatted, '0'), ',');
     };
+
+    $rupiah = function ($value) {
+        $formatted = number_format((float) $value, 3, ',', '.');
+        return rtrim(rtrim($formatted, '0'), ',') ?: '0';
+    };
 @endphp
 
 <x-app-layout>
@@ -98,7 +103,7 @@
                                 <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
                                     <span>Nota #{{ $detail->product_purchase_id }}</span>
                                     <span>{{ $detail->purchase?->purchase_date?->translatedFormat('j M Y') }}</span>
-                                    <span>Rp {{ number_format($detail->net_price, 0, ',', '.') }}/{{ strtolower($detail->unit) }}</span>
+                                    <span>Rp {{ $rupiah($detail->net_price) }}/{{ strtolower($detail->unit) }}</span>
                                     @if($detail->expired_date)
                                         <span>Exp {{ $detail->expired_date->translatedFormat('j M Y') }}</span>
                                     @endif
@@ -136,7 +141,7 @@
                                             outstanding: {{ (float) $detail->outstanding_quantity }},
                                             ordered: {{ $ordered }},
                                             received: {{ $received }},
-                                            expired: @js($detail->expired_date?->toDateString()),
+                                            expiredLabel: @js($detail->expired_date?->translatedFormat('j M Y')),
                                         })"
                                         class="cursor-pointer rounded-lg bg-button-main px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-button-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-button-hover focus-visible:ring-offset-2">
                                         Terima
@@ -262,12 +267,13 @@
                             </div>
 
                             <div>
-                                <label for="receive-expired" class="mb-1.5 block text-sm font-semibold text-gray-700">
-                                    Kadaluarsa kiriman ini
-                                </label>
-                                <input type="date" id="receive-expired" name="expired_date" min="{{ now()->toDateString() }}"
-                                    :value="target.expired"
-                                    class="w-full rounded-lg border-gray-300 py-2.5 text-sm focus:border-button-hover focus:ring-2 focus:ring-button-main/40">
+                                <span class="mb-1.5 block text-sm font-semibold text-gray-700">Kadaluarsa</span>
+                                <p class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
+                                    <span x-show="target.expiredLabel" class="font-semibold tabular-nums text-gray-800"
+                                        x-text="target.expiredLabel"></span>
+                                    <span x-show="!target.expiredLabel" class="italic text-gray-400">Tidak diatur</span>
+                                    <span class="text-gray-400">· dari nota, koreksi lewat modul Stok</span>
+                                </p>
                             </div>
 
                             <div>

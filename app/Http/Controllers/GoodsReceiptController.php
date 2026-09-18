@@ -45,14 +45,12 @@ class GoodsReceiptController extends Controller
         $validated = Validator::make($this->normalize($request), [
             'quantity' => ['required', 'numeric', 'decimal:0,3'],
             'received_date' => ['nullable', 'date', 'before_or_equal:today'],
-            'expired_date' => ['nullable', 'date', 'after_or_equal:today'],
             'note' => ['nullable', 'string', 'max:255'],
         ])->validate();
 
         $this->service->receive($detail, [
             'quantity' => $validated['quantity'],
             'received_date' => $validated['received_date'] ?? now()->toDateString(),
-            'expired_date' => $validated['expired_date'] ?? null,
             'note' => $validated['note'] ?? null,
         ]);
 

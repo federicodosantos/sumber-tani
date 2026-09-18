@@ -57,7 +57,7 @@ class GoodsReceiptTest extends TestCase
         $this->assertSame(ProductPurchaseDetail::STATUS_PARTIAL, $detail->receipt_status);
     }
 
-    public function test_second_receipt_completes_the_line_as_a_separate_batch(): void
+    public function test_second_receipt_adds_to_the_same_batch(): void
     {
         $this->actingAsOwner();
         $detail = $this->pendingDetail('100.000');
@@ -68,9 +68,18 @@ class GoodsReceiptTest extends TestCase
         $batches = ProductStock::where('product_id', $detail->product_id)
             ->orderBy('batch')->get();
 
-        $this->assertCount(2, $batches);
-        $this->assertSame('40.000', $batches[0]->stock_opname);
-        $this->assertSame('60.000', $batches[1]->stock_opname);
+        $this->assertCount(1, $batches);
+        $this->assertSame('100.000', $batches[0]->stock_opname);
+
+        $receipts = ProductPurchaseReceipt::where('product_purchase_detail_id', $detail->id)
+            ->orderBy('id')
+            ->get();
+
+        $this->assertCount(2, $receipts);
+        $this->assertSame($batches[0]->id, $receipts[0]->product_stock_id);
+        $this->assertSame($batches[0]->id, $receipts[1]->product_stock_id);
+        $this->assertSame('40.000', $receipts[0]->quantity);
+        $this->assertSame('60.000', $receipts[1]->quantity);
 
         $detail->refresh();
         $this->assertSame('100.000', $detail->received_quantity);
@@ -113,7 +122,7 @@ class GoodsReceiptTest extends TestCase
         $this->assertSame(0, ProductStock::where('product_id', $detail->product_id)->count());
     }
 
-    public function test_earlier_shipment_is_consumed_first_by_fifo(): void
+    public function test_fifo_consumes_the_shared_line_batch(): void
     {
         $this->actingAsOwner();
         $detail = $this->pendingDetail('100.000');
@@ -124,23 +133,121 @@ class GoodsReceiptTest extends TestCase
         $allocations = app(ProductStockService::class)
             ->allocateStockFifo($detail->product_id, '50.000');
 
-        $firstBatch = ProductStock::where('product_id', $detail->product_id)
-            ->orderBy('batch')->first();
+        $batch = ProductStock::where('product_id', $detail->product_id)->first();
 
-        $this->assertSame($firstBatch->id, $allocations[0]['stock_id']);
-        $this->assertSame('40.000', $allocations[0]['quantity']);
-        $this->assertSame('10.000', $allocations[1]['quantity']);
+        $this->assertCount(1, $allocations);
+        $this->assertSame($batch->id, $allocations[0]['stock_id']);
+        $this->assertSame('50.000', $allocations[0]['quantity']);
+        $this->assertSame('50.000', $batch->fresh()->stock_opname);
     }
 
-    public function test_receipt_can_override_expired_date_per_shipment(): void
+    public function test_expired_date_always_follows_the_purchase_line(): void
     {
         $this->actingAsOwner();
         $detail = $this->pendingDetail('100.000', $this->futureDate(30));
 
+        // expired_date yang ikut terkirim sengaja diabaikan: sumbernya nota.
         $this->receive($detail, '40', ['expired_date' => $this->futureDate(90)]);
 
         $batch = ProductStock::where('product_id', $detail->product_id)->first();
-        $this->assertSame($this->futureDate(90), $batch->expired_date->toDateString());
+        $receipt = ProductPurchaseReceipt::firstOrFail();
+
+        $this->assertSame($this->futureDate(30), $batch->expired_date->toDateString());
+        $this->assertSame($this->futureDate(30), $receipt->expired_date->toDateString());
+    }
+
+    public function test_later_shipment_keeps_first_batch_expiry_and_selling_prices(): void
+    {
+        $this->actingAsOwner();
+        $detail = $this->pendingDetail('100.000', $this->futureDate(30));
+
+        $this->receive($detail, '40');
+
+        $batch = ProductStock::where('product_id', $detail->product_id)->firstOrFail();
+        $batch->update([
+            'price_consument' => '15000.000',
+            'price_r1' => '14000.000',
+            'price_r2' => '13000.000',
+        ]);
+
+        // Batch lain yang lebih baru: kalau harga jual kiriman kedua di-refresh
+        // dari batch terkini, nilai batch baris ini akan ikut berubah.
+        ProductStock::create([
+            'product_id' => $detail->product_id,
+            'batch' => $batch->batch + 1,
+            'stock_opname' => '1.000',
+            'unit_price' => '10000.000',
+            'price_consument' => '99000.000',
+            'price_r1' => '88000.000',
+            'price_r2' => '77000.000',
+            'expired_date' => $this->futureDate(365),
+        ]);
+
+        $this->receive($detail, '60');
+
+        $batch->refresh();
+        $this->assertSame('100.000', $batch->stock_opname);
+        $this->assertSame($this->futureDate(30), $batch->expired_date->toDateString());
+        $this->assertSame('15000.000', $batch->price_consument);
+        $this->assertSame('14000.000', $batch->price_r1);
+        $this->assertSame('13000.000', $batch->price_r2);
+
+        $receipts = ProductPurchaseReceipt::where('product_purchase_detail_id', $detail->id)
+            ->orderBy('id')
+            ->get();
+        $this->assertSame($this->futureDate(30), $receipts[0]->expired_date->toDateString());
+        $this->assertSame($this->futureDate(30), $receipts[1]->expired_date->toDateString());
+        $this->assertSame($batch->id, $receipts[0]->product_stock_id);
+        $this->assertSame($batch->id, $receipts[1]->product_stock_id);
+    }
+
+    public function test_reversing_one_of_two_receipts_leaves_the_shared_batch(): void
+    {
+        $this->actingAsOwner();
+        $detail = $this->pendingDetail('100.000');
+
+        $this->receive($detail, '40');
+        $this->receive($detail, '60');
+
+        $receipts = ProductPurchaseReceipt::where('product_purchase_detail_id', $detail->id)
+            ->orderBy('id')
+            ->get();
+        $batchId = $receipts[0]->product_stock_id;
+
+        $this->delete('/penerimaan/'.$receipts[0]->id)->assertRedirect();
+
+        $batch = ProductStock::find($batchId);
+        $this->assertNotNull($batch);
+        $this->assertSame('60.000', $batch->stock_opname);
+        $this->assertSame(1, ProductPurchaseReceipt::count());
+
+        $detail->refresh();
+        $this->assertSame('60.000', $detail->received_quantity);
+        $this->assertSame(ProductPurchaseDetail::STATUS_PARTIAL, $detail->receipt_status);
+    }
+
+    public function test_reversing_the_last_receipt_deletes_the_shared_batch(): void
+    {
+        $this->actingAsOwner();
+        $detail = $this->pendingDetail('100.000');
+
+        $this->receive($detail, '40');
+        $this->receive($detail, '60');
+
+        $receipts = ProductPurchaseReceipt::where('product_purchase_detail_id', $detail->id)
+            ->orderBy('id')
+            ->get();
+        $batchId = $receipts[0]->product_stock_id;
+
+        $this->delete('/penerimaan/'.$receipts[0]->id)->assertRedirect();
+        $this->delete('/penerimaan/'.$receipts[1]->id)->assertRedirect();
+
+        $this->assertNull(ProductStock::find($batchId));
+        $this->assertSame(0, ProductPurchaseReceipt::count());
+
+        $detail->refresh();
+        $this->assertSame('0.000', $detail->received_quantity);
+        $this->assertSame(ProductPurchaseDetail::STATUS_PENDING, $detail->receipt_status);
     }
 
     public function test_reversal_removes_batch_and_restores_outstanding(): void
@@ -227,5 +334,20 @@ class GoodsReceiptTest extends TestCase
         $response->assertOk();
         $response->assertSee($pending->product_name);
         $response->assertDontSee('Produk P-999');
+    }
+
+    public function test_outstanding_list_shows_unrounded_net_price(): void
+    {
+        $this->actingAsOwner();
+        $productId = $this->makeProduct();
+
+        $this->createPurchase([
+            $this->line($productId, '100.000', directStock: false, hetPrice: '29499.670'),
+        ]);
+
+        $this->get('/penerimaan')
+            ->assertOk()
+            ->assertSee('29.499,67')
+            ->assertDontSee('29.500');
     }
 }
