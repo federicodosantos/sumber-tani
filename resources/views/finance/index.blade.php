@@ -334,13 +334,12 @@
                   <span class="text-xs text-gray-500">Persediaan</span>
                   <span class="text-xs font-medium text-gray-700">Rp {{ Number::format((float) $balanceSheet['assets']['inventory'], null, 3, 'id') }}</span>
                 </div>
-                <div class="flex justify-between">
-                  <span class="text-xs text-gray-500">
-                    Barang dalam perjalanan
-                    <span class="block text-[10px] leading-tight text-gray-400">sudah dibeli, belum sampai gudang</span>
-                  </span>
-                  <span class="text-xs font-medium text-wait">Rp {{ Number::format((float) $balanceSheet['assets']['goods_in_transit'], null, 3, 'id') }}</span>
-                </div>
+                @if ((float) $balanceSheet['assets']['goods_in_transit'] != 0)
+                  <div class="flex justify-between">
+                    <span class="text-xs text-gray-500" title="Sudah dibeli, belum sampai gudang">Barang dalam Perjalanan</span>
+                    <span class="text-xs font-medium text-wait">Rp {{ Number::format((float) $balanceSheet['assets']['goods_in_transit'], null, 3, 'id') }}</span>
+                  </div>
+                @endif
                 <div class="flex justify-between border-b border-gray-100 pb-2">
                   <span class="text-xs text-gray-500">Piutang</span>
                   <span class="text-xs font-medium text-gray-700">Rp {{ Number::format((float) $balanceSheet['assets']['receivables'], null, 3, 'id') }}</span>
