@@ -460,6 +460,32 @@ class FinanceReportController extends Controller
     }
 
     /* ================================================================
+       DOWNLOAD INVENTORY / PERSEDIAAN PDF (posisi saat ini)
+    ================================================================ */
+    public function downloadInventoryPdf()
+    {
+        Carbon::setLocale('id');
+        $printedAt = Carbon::now();
+        $math = app(DecimalMathService::class);
+
+        $inventory = app(ProductStockService::class)->getOnHandInventoryReport();
+        $inTransit = app(GoodsReceiptService::class)->goodsInTransitLines();
+        $totalGoodsAssets = $math->add($inventory['total_value'], $inTransit['total_value']);
+
+        $pdf = Pdf::loadView('finance.inventory-pdf', [
+            'printedAt' => $printedAt,
+            'inventoryRows' => $inventory['rows'],
+            'inventoryTotal' => $inventory['total_value'],
+            'incompleteCount' => $inventory['incomplete_count'],
+            'inTransitRows' => $inTransit['rows'],
+            'inTransitTotal' => $inTransit['total_value'],
+            'totalGoodsAssets' => $totalGoodsAssets,
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->download('laporan-persediaan-'.$printedAt->format('Y-m-d').'.pdf');
+    }
+
+    /* ================================================================
        DOWNLOAD INVOICE PDF (A4)
     ================================================================ */
     public function downloadInvoicePdf(Transaction $transaction)

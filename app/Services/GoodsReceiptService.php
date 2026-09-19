@@ -230,6 +230,45 @@ class GoodsReceiptService
     }
 
     /**
+     * Rincian barang dalam perjalanan untuk PDF persediaan.
+     *
+     * Total memakai `goodsInTransitValue()` agar footer PDF sama dengan
+     * pos neraca (bukan jumlah ulang nilai per baris yang sudah dibulatkan).
+     *
+     * @return array{rows: list<array<string, mixed>>, total_value: string}
+     */
+    public function goodsInTransitLines(): array
+    {
+        $details = $this->outstandingQuery()
+            ->with(['purchase:id,purchase_date', 'product:id,code_id,name'])
+            ->orderBy('product_name')
+            ->orderBy('id')
+            ->get();
+
+        $rows = [];
+
+        foreach ($details as $detail) {
+            $qty = $detail->outstanding_quantity;
+            $price = $this->math->round((string) $detail->net_price);
+
+            $rows[] = [
+                'code' => $detail->product_code ?: ($detail->product?->code_id ?? '-'),
+                'name' => $detail->product_name ?: ($detail->product?->name ?? '-'),
+                'unit' => $detail->unit ?: 'PCS',
+                'quantity' => $qty,
+                'net_price' => $price,
+                'value' => $this->math->multiply($qty, $price),
+                'purchase_date' => $detail->purchase?->purchase_date,
+            ];
+        }
+
+        return [
+            'rows' => $rows,
+            'total_value' => $this->goodsInTransitValue(),
+        ];
+    }
+
+    /**
      * Baris item yang masih menunggu barang, untuk halaman Penerimaan Barang.
      */
     public function outstandingQuery(?string $search = null)

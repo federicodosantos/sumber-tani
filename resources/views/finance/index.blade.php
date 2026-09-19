@@ -223,12 +223,21 @@
       </div>
     </div>
 
-    {{-- Download Modal --}}
-    <x-finance.download-modal
-      :action="route('finance.download')"
-      :products="$products"
-      :categories="$categories"
-      :customerTypes="$customerTypes"/>
+    {{-- Download Buttons --}}
+    <div class="flex flex-wrap items-center gap-3">
+      <x-finance.download-modal
+        :action="route('finance.download')"
+        :products="$products"
+        :categories="$categories"
+        :customerTypes="$customerTypes"/>
+      <a href="{{ route('finance.download.inventory') }}"
+         class="bg-white py-2 px-4 rounded-lg text-button-hover font-bold border border-button-main hover:bg-button-main/10 transition-all duration-200 ease-in-out cursor-pointer active:scale-95 inline-flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Download PDF Persediaan
+      </a>
+    </div>
 
     {{-- Stats Cards --}}
     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">

@@ -353,6 +353,68 @@ class ProductStockService
     }
 
     /**
+     * Posisi persediaan gudang saat ini untuk PDF aset barang.
+     *
+     * Hanya batch dengan qty sisa > 0. Nilai baris = qty × HPP (`unit_price`),
+     * sama dengan pos Persediaan di neraca.
+     *
+     * @return array{rows: list<array<string, mixed>>, total_value: string, incomplete_count: int}
+     */
+    public function getOnHandInventoryReport(): array
+    {
+        $math = app(DecimalMathService::class);
+
+        $batches = ProductStock::query()
+            ->with(['product:id,code_id,name,item_category_id', 'product.category:id,name'])
+            ->whereNull('deleted_at')
+            ->where('stock_opname', '>', 0)
+            ->get()
+            ->sortBy([
+                fn (ProductStock $batch) => mb_strtolower((string) ($batch->product?->category?->name ?? '')),
+                fn (ProductStock $batch) => mb_strtolower((string) ($batch->product?->name ?? '')),
+                fn (ProductStock $batch) => (int) $batch->batch,
+            ])
+            ->values();
+
+        $rows = [];
+        $totalValue = '0.000';
+        $incompleteCount = 0;
+
+        foreach ($batches as $batch) {
+            $qty = $math->round((string) $batch->stock_opname);
+            $hpp = $math->round((string) ($batch->unit_price ?? 0));
+            $missingHpp = ! $math->isPositive($hpp);
+            if ($missingHpp) {
+                $incompleteCount++;
+            }
+
+            $value = $math->multiply($qty, $hpp);
+            $totalValue = $math->add($totalValue, $value);
+
+            $rows[] = [
+                'code' => $batch->product?->code_id ?? '-',
+                'name' => $batch->product?->name ?? 'Produk tidak diketahui',
+                'category' => $batch->product?->category?->name ?? '-',
+                'batch' => $batch->batch,
+                'quantity' => $qty,
+                'unit_price' => $hpp,
+                'value' => $value,
+                'price_consument' => $math->round((string) ($batch->price_consument ?? 0)),
+                'price_r1' => $math->round((string) ($batch->price_r1 ?? 0)),
+                'price_r2' => $math->round((string) ($batch->price_r2 ?? 0)),
+                'expired_date' => $batch->expired_date,
+                'missing_hpp' => $missingHpp,
+            ];
+        }
+
+        return [
+            'rows' => $rows,
+            'total_value' => $totalValue,
+            'incomplete_count' => $incompleteCount,
+        ];
+    }
+
+    /**
      * Statistik batch tanpa HPP untuk banner neraca & progres bulk-edit.
      *
      * @return array{batch_count: int, stock_qty: string, empty_count: int}
