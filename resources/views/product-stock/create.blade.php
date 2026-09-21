@@ -89,20 +89,23 @@
                         <x-input-rupiah label="Harga Produk per Satuan (R2)" name="price_r2"
                             placeholder="0" containerClass="" required decimals="3" />
 
-                        {{-- Row 4: Tanggal Kadaluarsa --}}
+                        {{-- Row 4: Tanggal Kadaluarsa (opsional) --}}
                         <div x-data="expiryHandler()">
                             <label for="expired_date" class="mb-2 block text-sm font-semibold text-gray-900">
-                                Tanggal Kadaluarsa <br>
-                                <span class="text-xs font-normal text-gray-600">
-                                    Hari ini: {{ \Carbon\Carbon::today()->locale('id')->translatedFormat('l, d F Y') }}
-                                </span>
+                                Tanggal Kadaluarsa (opsional)
                             </label>
 
-                            <div class="relative">
+                            <div class="flex items-center gap-2">
                                 <input type="date" id="expired_date" name="expired_date"
-                                    min="{{ date('Y-m-d') }}" value="{{ old('expired_date', $expiryValue ?? '') }}"
+                                    value="{{ old('expired_date', $expiryValue ?? '') }}"
                                     x-model="selectedDate" @change="calculateRemaining()"
+                                    title="Kosong = tanpa kadaluarsa"
                                     class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
+                                <button type="button" @click="selectedDate = ''; calculateRemaining()"
+                                    class="shrink-0 rounded-lg border-2 border-red-500 px-3 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
+                                    title="Hapus tanggal kadaluarsa (kosong = tanpa kadaluarsa)">
+                                    Hapus
+                                </button>
                             </div>
 
                             <p class="mt-2 text-xs font-medium text-gray-700">

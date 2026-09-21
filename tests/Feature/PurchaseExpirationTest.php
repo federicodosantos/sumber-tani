@@ -432,6 +432,127 @@ class PurchaseExpirationTest extends TestCase
     }
 
     /**
+     * Tombol Hapus di form mengirim expired_date sebagai string kosong
+     * (Safari tidak punya clear pada date input). Harus tersimpan NULL,
+     * bukan hari ini.
+     */
+    public function test_store_empty_string_expiry_propagates_as_null(): void
+    {
+        $this->actingAsOwner();
+        $productId = $this->makeProduct();
+
+        $this->createPurchase([$this->line($productId, '10.000', '')]);
+
+        $purchase = ProductPurchase::latest('id')->first();
+        $this->assertNull($purchase->details()->first()->expired_date);
+
+        $batch = ProductStock::where('product_id', $productId)->first();
+        $this->assertNotNull($batch);
+        $this->assertNull($batch->expired_date);
+    }
+
+    /**
+     * Kontrol negatif: payload hari ini (simulasi Safari tanpa klik Hapus)
+     * tetap tersimpan sebagai hari ini — membuktikan harness bisa
+     * membedakan rusak vs sembuh.
+     */
+    public function test_safari_payload_without_clear_stores_today(): void
+    {
+        $this->actingAsOwner();
+        $productId = $this->makeProduct();
+
+        $this->createPurchase([$this->line($productId, '10.000', $this->currentDate())]);
+
+        $batch = ProductStock::where('product_id', $productId)->first();
+        $this->assertSame($this->currentDate(), $batch->expired_date?->toDateString());
+    }
+
+    /**
+     * Hasil tombol Hapus di edit stok: expired_date '' → batch NULL,
+     * detail pembelian tidak ikut berubah (independen).
+     */
+    public function test_clear_stock_expiry_via_endpoint_persists_null(): void
+    {
+        $this->actingAsOwner();
+        $productId = $this->makeProduct();
+
+        $purchaseExpiry = $this->futureDate(30);
+        $purchase = $this->createPurchase([$this->line($productId, '10.000', $purchaseExpiry)]);
+
+        $batch = ProductStock::where('product_id', $productId)->first();
+
+        $this->put("/stock/{$batch->id}", [
+            'is_new_batch' => 0,
+            'batch_id' => $batch->id,
+            'stock_opname' => '10.000',
+            'unit_price' => '10000.000',
+            'price_consument' => '0.000',
+            'price_r1' => '0.000',
+            'price_r2' => '0.000',
+            'expired_date' => '',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertNull($batch->fresh()->expired_date);
+        $this->assertSame(
+            $purchaseExpiry,
+            $purchase->fresh()->details()->first()->expired_date?->toDateString()
+        );
+    }
+
+    /**
+     * Nilai historis (sudah lewat) yang tidak diubah tetap lolos validasi
+     * update stok — mensimulasikan data lama era sebelum opsional.
+     */
+    public function test_update_stock_unchanged_historical_expiry_passes(): void
+    {
+        $this->actingAsOwner();
+        $productId = $this->makeProduct();
+
+        $this->createPurchase([$this->line($productId, '10.000', $this->futureDate(30))]);
+
+        $batch = ProductStock::where('product_id', $productId)->first();
+        $historical = $this->pastDate(30);
+        $batch->update(['expired_date' => $historical]);
+
+        $this->put("/stock/{$batch->id}", [
+            'is_new_batch' => 0,
+            'batch_id' => $batch->id,
+            'stock_opname' => '10.000',
+            'unit_price' => '10000.000',
+            'price_consument' => '0.000',
+            'price_r1' => '0.000',
+            'price_r2' => '0.000',
+            'expired_date' => $historical,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame($historical, $batch->fresh()->expired_date?->toDateString());
+    }
+
+    /**
+     * Nilai yang diubah ke tanggal lampau tetap ditolak update stok.
+     */
+    public function test_update_stock_changed_past_expiry_rejected(): void
+    {
+        $this->actingAsOwner();
+        $productId = $this->makeProduct();
+
+        $this->createPurchase([$this->line($productId, '10.000', $this->futureDate(30))]);
+
+        $batch = ProductStock::where('product_id', $productId)->first();
+
+        $this->put("/stock/{$batch->id}", [
+            'is_new_batch' => 0,
+            'batch_id' => $batch->id,
+            'stock_opname' => '10.000',
+            'unit_price' => '10000.000',
+            'price_consument' => '0.000',
+            'price_r1' => '0.000',
+            'price_r2' => '0.000',
+            'expired_date' => $this->pastDate(10),
+        ])->assertSessionHasErrors(['expired_date']);
+    }
+
+    /**
      * Kontrak berubah sejak fitur penerimaan barang.
      *
      * Dulu hapus nota sengaja membiarkan batch stok apa adanya — nota hilang

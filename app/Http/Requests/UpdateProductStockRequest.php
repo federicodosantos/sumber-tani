@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Models\ProductStock;
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateProductStockRequest extends FormRequest
 {
@@ -18,7 +21,11 @@ class UpdateProductStockRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * expired_date opsional dan boleh dikosongkan (tombol Hapus di form,
+     * penting untuk Safari yang tidak punya clear pada date input).
+     * Batas after_or_equal:today hanya untuk nilai baru/berubah — nilai
+     * historis yang tidak diubah tetap lolos (pola yang sama dengan
+     * validasi kondisional edit pembelian).
      */
     public function rules(): array
     {
@@ -35,8 +42,70 @@ class UpdateProductStockRequest extends FormRequest
             'price_consument' => 'required|numeric|min:0|decimal:0,3',
             'price_r1' => 'required|numeric|min:0|decimal:0,3',
             'price_r2' => 'required|numeric|min:0|decimal:0,3',
-            'expired_date' => 'nullable|date|after_or_equal:today',
+            'expired_date' => 'nullable|date',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $submitted = $this->normalizeExpiry($this->input('expired_date'));
+
+            // Kosong (hasil tombol Hapus) selalu valid.
+            if ($submitted === null) {
+                return;
+            }
+
+            $stored = $this->storedExpiry();
+
+            // Nilai historis yang tidak berubah tetap lolos.
+            if ($submitted === $stored) {
+                return;
+            }
+
+            if ($submitted < Carbon::today()->toDateString()) {
+                $validator->errors()->add(
+                    'expired_date',
+                    'Tanggal kedaluwarsa tidak boleh sebelum hari ini.'
+                );
+            }
+        });
+    }
+
+    /**
+     * Kadaluarsa tersimpan pada batch target: batch yang diedit, atau
+     * stok acuan route saat membuat batch baru.
+     */
+    private function storedExpiry(): ?string
+    {
+        $targetId = $this->boolean('is_new_batch')
+            ? $this->route('stock_id')
+            : $this->input('batch_id');
+
+        if (empty($targetId)) {
+            return null;
+        }
+
+        $stock = ProductStock::find($targetId);
+
+        return $stock?->expired_date?->toDateString();
+    }
+
+    /**
+     * String kosong dan null diperlakukan sama (tidak ada expiry).
+     */
+    private function normalizeExpiry(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->toDateString();
+        } catch (\Throwable) {
+            // Format tidak valid sudah ditolak rule `date`.
+            return null;
+        }
     }
 
     public function messages(): array

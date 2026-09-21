@@ -174,7 +174,7 @@
                 <div>Add Disc</div>
                 <div>Net Price</div>
                 <div>Sub Total</div>
-                <div>Expired</div>
+                <div>Expired (opsional)</div>
                 <div></div>
             </div>
 
@@ -287,11 +287,19 @@
                         </div>
 
                         <div class="min-w-0">
-                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Expired</label>
+                            <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Expired (opsional)</label>
                             <input type="hidden" name="products[{{ $i }}][id]" value="{{ old('products.' . $i . '.id', $detail?->id) }}">
-                            <input type="date" name="products[{{ $i }}][expired_date]"
-                                value="{{ old('products.' . $i . '.expired_date', $detail?->expired_date?->toDateString()) }}"
-                                class="expired-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                            <div class="flex flex-col gap-1">
+                                <input type="date" name="products[{{ $i }}][expired_date]"
+                                    value="{{ old('products.' . $i . '.expired_date', $detail?->expired_date?->toDateString()) }}"
+                                    title="Kosong = tanpa kadaluarsa"
+                                    class="expired-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                <button type="button"
+                                    class="btn-clear-expiry self-end text-xs font-semibold text-red-600 hover:text-red-800 hover:underline"
+                                    title="Hapus tanggal kadaluarsa (kosong = tanpa kadaluarsa)">
+                                    Hapus
+                                </button>
+                            </div>
                         </div>
 
                         <div class="flex h-[42px] items-center justify-end -mr-1">

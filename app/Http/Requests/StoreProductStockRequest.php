@@ -45,7 +45,6 @@ class StoreProductStockRequest extends FormRequest
             'unit_price.numeric' => 'Harga HPP harus berupa angka.',
             'unit_price.gt' => 'Harga HPP harus lebih dari 0.',
 
-            'expired_date.required' => 'Tanggal kedaluwarsa wajib diisi.',
             'expired_date.date' => 'Tanggal kedaluwarsa tidak valid.',
             'expired_date.after_or_equal' => 'Tanggal kedaluwarsa tidak boleh sebelum hari ini.',
         ];

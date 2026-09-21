@@ -77,22 +77,20 @@
                         remainingText: '- Pilih tanggal -'
                     }">
                         <label for="expired_date" class="mb-2 block text-sm font-semibold text-gray-900">
-                            Tanggal Kadaluarsa 
-                            <span class="text-xs font-normal text-gray-600">
-                                Hari ini: {{ \Carbon\Carbon::today()->locale('id')->translatedFormat('l, d F Y') }}
-                            </span>
+                            Tanggal Kadaluarsa (opsional)
                         </label>
 
                         <div class="flex gap-2">
                             <div class="relative w-full">
                                 <input type="date" id="expired_date" name="expired_date"
-                                    min="{{ date('Y-m-d') }}" value="{{ old('expired_date', $expiryValue ?? '') }}"
+                                    value="{{ old('expired_date', $expiryValue ?? '') }}"
+                                    title="Kosong = tanpa kadaluarsa"
                                     class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
                             </div>
 
                             <button type="button" onclick="clearExpiry()"
                                 class="rounded-lg border-2 border-red-500 px-3 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
-                                title="Hapus Tanggal">
+                                title="Hapus tanggal kadaluarsa (kosong = tanpa kadaluarsa)">
                                 Hapus
                             </button>
                         </div>

@@ -335,11 +335,20 @@
                                                     <x-input-rupiah label="Harga Produk per Satuan (R2)" name="price_r2"
                                                         placeholder="0" containerClass="" required decimals="3" />
 
-                                                    {{-- Row 4: Tanggal Kadaluarsa --}}
+                                                    {{-- Row 4: Tanggal Kadaluarsa (opsional) --}}
                                                     <div>
-                                                        <label class="mb-2 block text-sm font-semibold text-gray-900">Tanggal Kadaluarsa</label>
-                                                        <input type="date" name="expired_date" min="{{ date('Y-m-d') }}"
-                                                            class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
+                                                        <label class="mb-2 block text-sm font-semibold text-gray-900">Tanggal Kadaluarsa (opsional)</label>
+                                                        <div class="flex items-center gap-2">
+                                                            <input type="date" name="expired_date"
+                                                                title="Kosong = tanpa kadaluarsa"
+                                                                class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
+                                                            <button type="button"
+                                                                onclick="this.previousElementSibling.value='';this.previousElementSibling.dispatchEvent(new Event('input',{bubbles:true}));this.previousElementSibling.dispatchEvent(new Event('change',{bubbles:true}))"
+                                                                class="shrink-0 rounded-lg border-2 border-red-500 px-3 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
+                                                                title="Hapus tanggal kadaluarsa (kosong = tanpa kadaluarsa)">
+                                                                Hapus
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -516,12 +525,20 @@
                                                             :useOld="$failedHere"
                                                             placeholder="0" containerClass="" required decimals="3" />
 
-                                                        {{-- Tanggal Kadaluarsa --}}
+                                                        {{-- Tanggal Kadaluarsa (opsional) --}}
                                                         <div>
-                                                            <label class="mb-2 block text-sm font-semibold text-gray-900">Tanggal Kadaluarsa</label>
-                                                            <input type="date" name="expired_date" min="{{ date('Y-m-d') }}"
-                                                                x-model="currentData.expired_date"
-                                                                class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
+                                                            <label class="mb-2 block text-sm font-semibold text-gray-900">Tanggal Kadaluarsa (opsional)</label>
+                                                            <div class="flex items-center gap-2">
+                                                                <input type="date" name="expired_date"
+                                                                    x-model="currentData.expired_date"
+                                                                    title="Kosong = tanpa kadaluarsa"
+                                                                    class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
+                                                                <button type="button" @click="currentData.expired_date = ''"
+                                                                    class="shrink-0 rounded-lg border-2 border-red-500 px-3 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
+                                                                    title="Hapus tanggal kadaluarsa (kosong = tanpa kadaluarsa)">
+                                                                    Hapus
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
 

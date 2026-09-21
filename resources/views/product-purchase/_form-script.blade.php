@@ -355,6 +355,30 @@
     }
 
     /* =========================
+       TOMBOL HAPUS EXPIRED (opsional, ramah Safari)
+       Safari macOS tidak punya clear pada <input type="date"> dan sering
+       mengisi hari ini. Delegasi di container agar ikut berlaku untuk
+       baris hasil clone (tanpa listener per-tombol).
+    ========================= */
+    function initClearExpiryButtons(ctx) {
+        if (!ctx) ctx = activeFormContext || document;
+        const container = findInContext(ctx, 'rowsContainer');
+        if (!container || container.dataset.expiryClearBound === '1') return;
+        container.dataset.expiryClearBound = '1';
+
+        container.addEventListener('click', function (e) {
+            const btn = e.target.closest('.btn-clear-expiry');
+            if (!btn || !container.contains(btn)) return;
+            const row = btn.closest('.product-row');
+            const dateInput = row?.querySelector('input[name*="[expired_date]"]');
+            if (!dateInput) return;
+            dateInput.value = '';
+            dateInput.dispatchEvent(new Event('input', { bubbles: true }));
+            dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    }
+
+    /* =========================
        ADD ROW
     ========================= */
     function initAddRowButton(ctx) {
@@ -533,6 +557,9 @@
 
         // Initialize add row button within this context
         initAddRowButton(ctx);
+
+        // Tombol Hapus tanggal kadaluarsa (delegasi, termasuk baris clone)
+        initClearExpiryButtons(ctx);
         
         // Initialize header events (PPN, discount inputs)
         initHeaderEvents(ctx);
