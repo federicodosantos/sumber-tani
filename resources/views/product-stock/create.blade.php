@@ -95,17 +95,23 @@
                                 Tanggal Kadaluarsa (opsional)
                             </label>
 
-                            <div class="flex items-center gap-2">
+                            <div class="flex flex-col gap-1">
                                 <input type="date" id="expired_date" name="expired_date"
                                     value="{{ old('expired_date', $expiryValue ?? '') }}"
                                     x-model="selectedDate" @change="calculateRemaining()"
                                     title="Kosong = tanpa kadaluarsa"
-                                    class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
-                                <button type="button" @click="selectedDate = ''; calculateRemaining()"
-                                    class="shrink-0 rounded-lg border-2 border-red-500 px-3 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
-                                    title="Hapus tanggal kadaluarsa (kosong = tanpa kadaluarsa)">
-                                    Hapus
-                                </button>
+                                    {{ !empty(old('expired_date', $expiryValue ?? '')) ? 'data-filled' : '' }}
+                                    {{ empty(old('expired_date', $expiryValue ?? '')) ? 'disabled' : '' }}
+                                    class="expiry-optional focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm disabled:cursor-not-allowed disabled:bg-gray-100" />
+                                <div class="flex items-center justify-end">
+                                    <label class="flex cursor-pointer items-center gap-1 text-xs font-semibold text-gray-600">
+                                        <input type="checkbox" name="no_expiry" value="1" x-ref="noExpiryCheck"
+                                            onchange="setNoExpiry(this)"
+                                            {{ empty(old('expired_date', $expiryValue ?? '')) ? 'checked' : '' }}
+                                            class="h-3.5 w-3.5 accent-red-600">
+                                        Tanpa kadaluarsa
+                                    </label>
+                                </div>
                             </div>
 
                             <p class="mt-2 text-xs font-medium text-gray-700">

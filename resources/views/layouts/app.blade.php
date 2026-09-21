@@ -73,6 +73,41 @@
 </div>
 
 @stack('scripts')
+
+{{-- Sinkronisasi penanda data-filled untuk trik anti-ghost Safari + helper
+     checkbox "Tanpa kadaluarsa". Delegasi di document agar mencakup baris
+     clone dan modal yang dimuat via AJAX. --}}
+<script>
+    function syncExpiryFilled(input) {
+        if (!input || !input.matches || !input.matches('input[type="date"].expiry-optional')) return;
+        if (input.value) { input.setAttribute('data-filled', ''); }
+        else { input.removeAttribute('data-filled'); }
+    }
+    document.addEventListener('input', function (e) { syncExpiryFilled(e.target); }, true);
+    document.addEventListener('change', function (e) { syncExpiryFilled(e.target); }, true);
+
+    // Checkbox "Tanpa kadaluarsa": kunci + kosongkan input tanggal.
+    // Input yang disabled tidak disertakan browser saat submit (semua browser,
+    // termasuk Safari) sehingga backend menerima null. Mencari input tanggal
+    // dalam form yang sama (tiap form stok hanya punya satu). Dipakai form
+    // stok; form pembelian memakai delegasi sendiri di _form-script.
+    function setNoExpiry(checkbox) {
+        if (!checkbox) return;
+        var form = checkbox.closest('form');
+        var dateInput = form
+            ? form.querySelector('input[type="date"].expiry-optional')
+            : null;
+        if (!dateInput) return;
+        dateInput.disabled = checkbox.checked;
+        if (checkbox.checked) {
+            dateInput.value = '';
+            dateInput.defaultValue = '';
+            dateInput.removeAttribute('data-filled');
+            dateInput.dispatchEvent(new Event('input', { bubbles: true }));
+            dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+</script>
 </body>
 
 </html>

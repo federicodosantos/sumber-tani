@@ -289,16 +289,30 @@
                         <div class="min-w-0">
                             <label class="mb-1 block text-xs font-semibold text-gray-600 lg:hidden">Expired (opsional)</label>
                             <input type="hidden" name="products[{{ $i }}][id]" value="{{ old('products.' . $i . '.id', $detail?->id) }}">
+                            @php
+                                // Nilai expiry efektif baris ini. Jika baris ada di old input tapi
+                                // key expired_date absen, berarti user mengosongkannya (input dalam
+                                // keadaan disabled saat submit) — jangan bangkitkan nilai lama.
+                                $oldRow = isset($oldProducts[$i]) && is_array($oldProducts[$i]) ? $oldProducts[$i] : null;
+                                $rowExpiryVal = $oldRow !== null
+                                    ? ($oldRow['expired_date'] ?? null)
+                                    : old('products.' . $i . '.expired_date', $detail?->expired_date?->toDateString());
+                            @endphp
                             <div class="flex flex-col gap-1">
                                 <input type="date" name="products[{{ $i }}][expired_date]"
-                                    value="{{ old('products.' . $i . '.expired_date', $detail?->expired_date?->toDateString()) }}"
+                                    value="{{ $rowExpiryVal }}"
                                     title="Kosong = tanpa kadaluarsa"
-                                    class="expired-input w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-                                <button type="button"
-                                    class="btn-clear-expiry self-end text-xs font-semibold text-red-600 hover:text-red-800 hover:underline"
-                                    title="Hapus tanggal kadaluarsa (kosong = tanpa kadaluarsa)">
-                                    Hapus
-                                </button>
+                                    {{ !empty($rowExpiryVal) ? 'data-filled' : '' }}
+                                    {{ empty($rowExpiryVal) ? 'disabled' : '' }}
+                                    class="expired-input expiry-optional w-full rounded-md border border-gray-300 px-3 py-2 shadow-lg focus:border-indigo-500 focus:ring-indigo-500 text-sm disabled:cursor-not-allowed disabled:bg-gray-100">
+                                <div class="flex items-center justify-end">
+                                    <label class="flex cursor-pointer items-center gap-1 text-xs font-semibold text-gray-600">
+                                        <input type="checkbox" name="products[{{ $i }}][no_expiry]" value="1"
+                                            class="no-expiry-check h-3.5 w-3.5 accent-red-600"
+                                            {{ empty($rowExpiryVal) ? 'checked' : '' }}>
+                                        Tanpa kadaluarsa
+                                    </label>
+                                </div>
                             </div>
                         </div>
 

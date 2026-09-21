@@ -42,3 +42,21 @@ input::-webkit-inner-spin-button {
 input[type=number] {
     -moz-appearance: textfield;
 }
+
+/* Anti "tanggal hantu" Safari: <input type="date"> yang kosong tetap
+   menampilkan hari ini di Safari macOS (placeholder visual, bukan nilai).
+   Atribut data-filled diset dari server (first paint) dan dijaga lewat JS
+   (delegasi input/change + checkbox "Tanpa kadaluarsa"). Blok media di bawah
+   hanya cocok di Safari (Chrome/Chromium tidak cocok) supaya placeholder
+   dd/mm/yyyy dan nilai terisi di Chrome tetap tampil normal. Indikator
+   kalender sengaja tidak disembunyikan agar field tetap bisa diklik. */
+@media not all and (min-resolution: .001dpcm) {
+    @supports (-webkit-appearance: none) {
+        input[type="date"].expiry-optional:not([data-filled]):not(:focus)::-webkit-datetime-edit-day-field,
+        input[type="date"].expiry-optional:not([data-filled]):not(:focus)::-webkit-datetime-edit-month-field,
+        input[type="date"].expiry-optional:not([data-filled]):not(:focus)::-webkit-datetime-edit-year-field,
+        input[type="date"].expiry-optional:not([data-filled]):not(:focus)::-webkit-datetime-edit-text {
+            color: transparent;
+        }
+    }
+}

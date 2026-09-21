@@ -355,10 +355,13 @@
     }
 
     /* =========================
-       TOMBOL HAPUS EXPIRED (opsional, ramah Safari)
-       Safari macOS tidak punya clear pada <input type="date"> dan sering
-       mengisi hari ini. Delegasi di container agar ikut berlaku untuk
-       baris hasil clone (tanpa listener per-tombol).
+       CHECKBOX "TANPA KADALUARSA" (ramah Safari)
+       Safari macOS tidak punya clear pada <input type="date"> dan
+       menampilkan "tanggal hantu" (hari ini) pada field kosong.
+       Checkbox mengunci (disabled) + mengosongkan input: field yang
+       disabled tidak disertakan browser saat submit sehingga backend
+       menerima null. Delegasi di container agar ikut berlaku untuk
+       baris hasil clone (tanpa listener per-checkbox).
     ========================= */
     function initClearExpiryButtons(ctx) {
         if (!ctx) ctx = activeFormContext || document;
@@ -366,15 +369,20 @@
         if (!container || container.dataset.expiryClearBound === '1') return;
         container.dataset.expiryClearBound = '1';
 
-        container.addEventListener('click', function (e) {
-            const btn = e.target.closest('.btn-clear-expiry');
-            if (!btn || !container.contains(btn)) return;
-            const row = btn.closest('.product-row');
+        container.addEventListener('change', function (e) {
+            const box = e.target.closest('.no-expiry-check');
+            if (!box || !container.contains(box)) return;
+            const row = box.closest('.product-row');
             const dateInput = row?.querySelector('input[name*="[expired_date]"]');
             if (!dateInput) return;
-            dateInput.value = '';
-            dateInput.dispatchEvent(new Event('input', { bubbles: true }));
-            dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+            dateInput.disabled = box.checked;
+            if (box.checked) {
+                dateInput.value = '';
+                dateInput.defaultValue = '';
+                dateInput.removeAttribute('data-filled');
+                dateInput.dispatchEvent(new Event('input', { bubbles: true }));
+                dateInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         });
     }
 
@@ -462,6 +470,18 @@
                     el.value = '';
                 }
             });
+
+            // Baris baru selalu kosong: paksa state "tanpa kadaluarsa"
+            // (cloneNode mewarisi checked/disabled/data-filled baris sumber).
+            const newExpiry = newRow.querySelector('input[name*="[expired_date]"]');
+            const newNoExpiry = newRow.querySelector('.no-expiry-check');
+            if (newExpiry) {
+                newExpiry.value = '';
+                newExpiry.defaultValue = '';
+                newExpiry.removeAttribute('data-filled');
+                newExpiry.disabled = true;
+            }
+            if (newNoExpiry) newNoExpiry.checked = true;
 
             container.appendChild(newRow);
             
@@ -613,7 +633,14 @@
 
             // Reset first row expiry + hidden detail id (validation-only)
             const expiryInput = firstRow.querySelector('input[name="products[0][expired_date]"]');
-            if (expiryInput) expiryInput.value = '';
+            if (expiryInput) {
+                expiryInput.value = '';
+                expiryInput.defaultValue = '';
+                expiryInput.removeAttribute('data-filled');
+                expiryInput.disabled = true;
+            }
+            const noExpiryCheck = firstRow.querySelector('.no-expiry-check');
+            if (noExpiryCheck) noExpiryCheck.checked = true;
             const hiddenIdInput = firstRow.querySelector('input[name="products[0][id]"]');
             if (hiddenIdInput) hiddenIdInput.value = '';
 

@@ -80,19 +80,25 @@
                             Tanggal Kadaluarsa (opsional)
                         </label>
 
-                        <div class="flex gap-2">
+                        <div class="flex flex-col gap-1">
                             <div class="relative w-full">
                                 <input type="date" id="expired_date" name="expired_date"
                                     value="{{ old('expired_date', $expiryValue ?? '') }}"
                                     title="Kosong = tanpa kadaluarsa"
-                                    class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
+                                    {{ !empty(old('expired_date', $expiryValue ?? '')) ? 'data-filled' : '' }}
+                                    {{ empty(old('expired_date', $expiryValue ?? '')) ? 'disabled' : '' }}
+                                    class="expiry-optional focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm disabled:cursor-not-allowed disabled:bg-gray-100" />
                             </div>
 
-                            <button type="button" onclick="clearExpiry()"
-                                class="rounded-lg border-2 border-red-500 px-3 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
-                                title="Hapus tanggal kadaluarsa (kosong = tanpa kadaluarsa)">
-                                Hapus
-                            </button>
+                            <div class="flex items-center justify-end">
+                                <label class="flex cursor-pointer items-center gap-1 text-xs font-semibold text-gray-600">
+                                    <input type="checkbox" id="no_expiry_check" name="no_expiry" value="1"
+                                        onchange="setNoExpiry(this); updatePreview()"
+                                        {{ empty(old('expired_date', $expiryValue ?? '')) ? 'checked' : '' }}
+                                        class="h-3.5 w-3.5 accent-red-600">
+                                    Tanpa kadaluarsa
+                                </label>
+                            </div>
                         </div>
 
                         <p id="expiredPreview" class="mt-2 text-xs font-medium text-gray-700">
@@ -127,14 +133,6 @@
                 value: value
             }
         }));
-    }
-
-    function clearExpiry() {
-        const dateInput = document.getElementById('expired_date');
-        if (dateInput) {
-            dateInput.value = ''; // Kosongkan value
-            updatePreview(); // Reset tulisan status jadi "- Pilih Tanggal -"
-        }
     }
 
     // FUNGSI PREVIEW KADALUARSA
@@ -204,12 +202,13 @@
         resetCurrencyField('price_r1', 0);
         resetCurrencyField('price_r2', 0);
 
-        // Reset Tanggal (Langsung akses Element ID)
-        const dateInput = document.getElementById('expired_date');
-        if (dateInput) {
-            dateInput.value = '';
-            updatePreview();
+        // Reset Tanggal (batch baru = tanpa kadaluarsa: kunci + kosongkan)
+        const box = document.getElementById('no_expiry_check');
+        if (box) {
+            box.checked = true;
+            setNoExpiry(box);
         }
+        updatePreview();
     }
 
     // EVENT LISTENER

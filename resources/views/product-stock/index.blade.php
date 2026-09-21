@@ -338,16 +338,18 @@
                                                     {{-- Row 4: Tanggal Kadaluarsa (opsional) --}}
                                                     <div>
                                                         <label class="mb-2 block text-sm font-semibold text-gray-900">Tanggal Kadaluarsa (opsional)</label>
-                                                        <div class="flex items-center gap-2">
+                                                        <div class="flex flex-col gap-1">
                                                             <input type="date" name="expired_date"
-                                                                title="Kosong = tanpa kadaluarsa"
-                                                                class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
-                                                            <button type="button"
-                                                                onclick="this.previousElementSibling.value='';this.previousElementSibling.dispatchEvent(new Event('input',{bubbles:true}));this.previousElementSibling.dispatchEvent(new Event('change',{bubbles:true}))"
-                                                                class="shrink-0 rounded-lg border-2 border-red-500 px-3 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
-                                                                title="Hapus tanggal kadaluarsa (kosong = tanpa kadaluarsa)">
-                                                                Hapus
-                                                            </button>
+                                                                title="Kosong = tanpa kadaluarsa" disabled
+                                                                class="expiry-optional focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm disabled:cursor-not-allowed disabled:bg-gray-100" />
+                                                            <div class="flex items-center justify-end">
+                                                                <label class="flex cursor-pointer items-center gap-1 text-xs font-semibold text-gray-600">
+                                                                    <input type="checkbox" name="no_expiry" value="1" checked
+                                                                        onchange="setNoExpiry(this)"
+                                                                        class="h-3.5 w-3.5 accent-red-600">
+                                                                    Tanpa kadaluarsa
+                                                                </label>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -441,6 +443,7 @@
                                                 isNewBatch: {{ $oldIsNew ? 'true' : 'false' }},
                                                 currentStockId: '{{ $initialStockId }}',
                                                 currentData: {{ json_encode($initialData) }},
+                                                noExpiry: {{ empty($initialData['expired_date']) ? 'true' : 'false' }},
                                                 
                                                 handleBatchChange(detail) {
                                                     if (detail.value === 'new') {
@@ -451,6 +454,10 @@
                                                     }
                                                     
                                                     this.currentData = detail.selected.data;
+
+                                                    // Sinkronkan checkbox + kunci input + penanda ghost Safari.
+                                                    this.noExpiry = !this.currentData.expired_date;
+                                                    this.$nextTick(() => this.syncExpiryState());
                                                     
                                                     // Sync display components
                                                     this.$dispatch('update-rupiah-value', { name: 'unit_price', value: this.currentData.unit_price });
@@ -458,8 +465,23 @@
                                                     this.$dispatch('update-rupiah-value', { name: 'price_r1', value: this.currentData.price_r1 });
                                                     this.$dispatch('update-rupiah-value', { name: 'price_r2', value: this.currentData.price_r2 });
                                                     this.$dispatch('update-rupiah-value', { name: 'stock_opname', value: this.currentData.stock_opname });
+                                                },
+
+                                                syncExpiryState() {
+                                                    const input = this.$refs.expiryInput;
+                                                    if (input) {
+                                                        input.disabled = this.noExpiry;
+                                                        if (this.noExpiry) {
+                                                            input.value = '';
+                                                            input.defaultValue = '';
+                                                        }
+                                                        if (input.value) { input.setAttribute('data-filled', ''); }
+                                                        else { input.removeAttribute('data-filled'); }
+                                                    }
+                                                    const box = this.$refs.noExpiryCheck;
+                                                    if (box) box.checked = this.noExpiry;
                                                 }
-                                            }" @combobox-change="if($event.detail.value) handleBatchChange($event.detail)">
+                                            }" x-init="syncExpiryState()" @combobox-change="if($event.detail.value) handleBatchChange($event.detail)">
                                                 
                                                 <form :action="'{{ url('stock') }}/' + currentStockId" method="POST">
                                                     @csrf
@@ -528,16 +550,23 @@
                                                         {{-- Tanggal Kadaluarsa (opsional) --}}
                                                         <div>
                                                             <label class="mb-2 block text-sm font-semibold text-gray-900">Tanggal Kadaluarsa (opsional)</label>
-                                                            <div class="flex items-center gap-2">
-                                                                <input type="date" name="expired_date"
+                                                            <div class="flex flex-col gap-1">
+                                                                <input type="date" name="expired_date" x-ref="expiryInput"
                                                                     x-model="currentData.expired_date"
+                                                                    :disabled="noExpiry"
                                                                     title="Kosong = tanpa kadaluarsa"
-                                                                    class="focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm" />
-                                                                <button type="button" @click="currentData.expired_date = ''"
-                                                                    class="shrink-0 rounded-lg border-2 border-red-500 px-3 py-2 text-sm font-bold text-red-500 transition hover:bg-red-500 hover:text-white"
-                                                                    title="Hapus tanggal kadaluarsa (kosong = tanpa kadaluarsa)">
-                                                                    Hapus
-                                                                </button>
+                                                                    {{ !empty($initialData['expired_date']) ? 'data-filled' : '' }}
+                                                                    {{ empty($initialData['expired_date']) ? 'disabled' : '' }}
+                                                                    class="expiry-optional focus:border-button-main focus:ring-button-main w-full rounded-lg border-2 border-black px-2 py-2 text-sm disabled:cursor-not-allowed disabled:bg-gray-100" />
+                                                                <div class="flex items-center justify-end">
+                                                                    <label class="flex cursor-pointer items-center gap-1 text-xs font-semibold text-gray-600">
+                                                                        <input type="checkbox" name="no_expiry" value="1" x-ref="noExpiryCheck"
+                                                                            x-model="noExpiry"
+                                                                            @change="if (noExpiry) { currentData.expired_date = ''; } $nextTick(() => syncExpiryState())"
+                                                                            class="h-3.5 w-3.5 accent-red-600">
+                                                                        Tanpa kadaluarsa
+                                                                    </label>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>

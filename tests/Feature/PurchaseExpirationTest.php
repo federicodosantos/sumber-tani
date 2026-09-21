@@ -452,6 +452,62 @@ class PurchaseExpirationTest extends TestCase
     }
 
     /**
+     * Output persis browser saat checkbox "Tanpa kadaluarsa" dicentang:
+     * input disabled tidak disubmit (key absen) + no_expiry=1 (diabaikan
+     * validator). Harus tersimpan NULL, bukan hari ini.
+     */
+    public function test_store_checked_no_expiry_omits_key_and_propagates_as_null(): void
+    {
+        $this->actingAsOwner();
+        $productId = $this->makeProduct();
+
+        $lines = [$this->line($productId, '10.000', null)];
+        unset($lines[0]['expired_date']);
+        $lines[0]['no_expiry'] = 1;
+
+        $this->createPurchase($lines);
+
+        $purchase = ProductPurchase::latest('id')->first();
+        $this->assertNull($purchase->details()->first()->expired_date);
+
+        $batch = ProductStock::where('product_id', $productId)->first();
+        $this->assertNotNull($batch);
+        $this->assertNull($batch->expired_date);
+    }
+
+    /**
+     * Checkbox "Tanpa kadaluarsa" di edit stok: key absen → batch NULL,
+     * detail pembelian tidak ikut berubah (independen).
+     */
+    public function test_update_stock_checked_no_expiry_omits_key_and_persists_null(): void
+    {
+        $this->actingAsOwner();
+        $productId = $this->makeProduct();
+
+        $purchaseExpiry = $this->futureDate(30);
+        $purchase = $this->createPurchase([$this->line($productId, '10.000', $purchaseExpiry)]);
+
+        $batch = ProductStock::where('product_id', $productId)->first();
+
+        $this->put("/stock/{$batch->id}", [
+            'is_new_batch' => 0,
+            'batch_id' => $batch->id,
+            'stock_opname' => '10.000',
+            'unit_price' => '10000.000',
+            'price_consument' => '0.000',
+            'price_r1' => '0.000',
+            'price_r2' => '0.000',
+            'no_expiry' => 1,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertNull($batch->fresh()->expired_date);
+        $this->assertSame(
+            $purchaseExpiry,
+            $purchase->fresh()->details()->first()->expired_date?->toDateString()
+        );
+    }
+
+    /**
      * Kontrol negatif: payload hari ini (simulasi Safari tanpa klik Hapus)
      * tetap tersimpan sebagai hari ini — membuktikan harness bisa
      * membedakan rusak vs sembuh.
