@@ -202,17 +202,17 @@ class FinanceReportController extends Controller
     {
         $math = app(DecimalMathService::class);
 
-        // Revenue
+        // Revenue — mencakup semua transaksi (lunas maupun hutang/belum lunas),
+        // sama seperti "Penjualan Periode Ini" di getStats().
         $revenue = $math->round((string) Transaction::ofCustomerTypes($customerTypes)
             ->whereBetween('transaction_date', [$start, $end])
-            ->where('is_paid', 1)
             ->sum('total_price'));
 
-        // COGS (HPP)
+        // COGS (HPP) — ikut mencakup transaksi hutang agar konsisten dengan
+        // revenue (Opsi A): laba kotor = pendapatan − modal semua barang terjual.
         $cogs = $math->round((string) TransactionDetail::whereHas('transaction', function ($q) use ($start, $end, $customerTypes) {
             $q->ofCustomerTypes($customerTypes)
-                ->whereBetween('transaction_date', [$start, $end])
-                ->where('is_paid', 1);
+                ->whereBetween('transaction_date', [$start, $end]);
         })->sum(DB::raw('transaction_details.quantity * transaction_details.buying_price')));
 
         $grossProfit = $math->subtract($revenue, $cogs);
@@ -835,6 +835,11 @@ class FinanceReportController extends Controller
     ================================================================ */
     public function download(Request $request)
     {
+        // Laporan besar (mis. harian x banyak produk sebulan) membuat Dompdf
+        // memakai memori jauh di atas default 128M. Naikkan hanya untuk request ini.
+        ini_set('memory_limit', '512M');
+        set_time_limit(120);
+
         $request->validate([
             'range_type' => 'required|string',
             'start_date' => 'nullable|date',
@@ -865,8 +870,10 @@ class FinanceReportController extends Controller
         ];
 
         if ($request->range_type === 'custom') {
-            $startDate = Carbon::parse($request->start_date);
-            $endDate = Carbon::parse($request->end_date);
+            // startOfDay/endOfDay: tanpa ini, transaksi di tanggal akhir
+            // (00:00:01–23:59:59) terbuang karena parse() default ke 00:00:00.
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate = Carbon::parse($request->end_date)->endOfDay();
         } else {
             $startDate = $rangeMap[$request->range_type]();
         }
@@ -881,7 +888,8 @@ class FinanceReportController extends Controller
             ->join('transaction_details', 'transaction_details.transaction_id', '=', 'transactions.id')
             ->join('products', 'products.id', '=', 'transaction_details.product_id')
             ->leftJoin('item_categories', 'item_categories.id', '=', 'products.item_category_id')
-            ->where('transactions.is_paid', 1)
+            // Mencakup semua transaksi (lunas maupun hutang/belum lunas),
+            // sama seperti "Penjualan Periode Ini" di getStats().
             ->whereBetween('transactions.transaction_date', [$startDate, $endDate]);
 
         // Apply customer types filter

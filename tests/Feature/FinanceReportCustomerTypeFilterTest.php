@@ -9,7 +9,10 @@ use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery;
 use Tests\TestCase;
 
 class FinanceReportCustomerTypeFilterTest extends TestCase
@@ -292,5 +295,56 @@ class FinanceReportCustomerTypeFilterTest extends TestCase
 
         $response->assertOk();
         $response->assertHeader('content-disposition', 'attachment; filename=laporan-penjualan.pdf');
+    }
+
+    public function test_download_custom_range_includes_end_date_transactions(): void
+    {
+        // Regresi: end_date custom dulu di-parse ke 00:00:00 sehingga seluruh
+        // transaksi di tanggal akhir (00:00:01–23:59:59) hilang dari PDF.
+        $this->actingAsOwner();
+
+        $category = ItemCategory::firstOrCreate(['name' => 'Kategori Test']);
+        $product = Product::firstOrCreate(
+            ['code_id' => 'PRD-TEST-ENDDATE'],
+            ['name' => 'Produk Enddate', 'item_category_id' => $category->id]
+        );
+
+        $trxDate = Carbon::parse('2026-08-31 23:59:00');
+        $trx = Transaction::create([
+            'total_quantity' => 1.000,
+            'total_price' => 75000,
+            'discount' => 0,
+            'payment_method' => 'Cash',
+            'is_paid' => true,
+            'transaction_date' => $trxDate,
+        ]);
+
+        TransactionDetail::create([
+            'transaction_id' => $trx->id,
+            'product_id' => $product->id,
+            'product_price' => 75000,
+            'buying_price' => 50000,
+            'quantity' => 1.000,
+            'total_price' => 75000,
+            'created_at' => $trxDate,
+            'updated_at' => $trxDate,
+        ]);
+
+        Pdf::shouldReceive('loadView')->once()->with('finance.report', Mockery::on(
+            fn ($data) => abs((float) $data['grandTotalSales'] - 75000) < 0.001
+        ))->andReturnSelf();
+        Pdf::shouldReceive('setPaper')->andReturnSelf();
+        Pdf::shouldReceive('download')->once()->andReturn(response('pdf-bytes'));
+
+        $response = $this->post('/laporan-keuangan/download', [
+            'range_type' => 'custom',
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-31',
+            'format_time' => 'harian',
+            'download_by' => 'product',
+            'product_ids' => [$product->id],
+        ]);
+
+        $response->assertOk();
     }
 }

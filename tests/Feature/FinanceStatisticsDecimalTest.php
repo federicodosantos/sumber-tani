@@ -113,4 +113,44 @@ class FinanceStatisticsDecimalTest extends TestCase
 
         $this->assertContains(100.125, $values);
     }
+
+    public function test_unpaid_transactions_included_in_sales_and_profit_loss(): void
+    {
+        $this->actingAsOwner();
+        $productId = $this->makeProduct();
+
+        $paidTrx = $this->makeTransaction(100.000, true);
+        TransactionDetail::create([
+            'transaction_id' => $paidTrx->id,
+            'product_id' => $productId,
+            'product_price' => 100.000,
+            'buying_price' => 50.000,
+            'quantity' => 1.000,
+            'total_price' => 100.000,
+        ]);
+
+        $unpaidTrx = $this->makeTransaction(200.000, false);
+        TransactionDetail::create([
+            'transaction_id' => $unpaidTrx->id,
+            'product_id' => $productId,
+            'product_price' => 200.000,
+            'buying_price' => 120.000,
+            'quantity' => 1.000,
+            'total_price' => 200.000,
+        ]);
+
+        $response = $this->get('/laporan-keuangan');
+
+        $response->assertOk();
+
+        $stats = $response->viewData('stats');
+        $profitLoss = $response->viewData('profitLoss');
+
+        // Penjualan Periode Ini dan Total Pendapatan mencakup lunas + hutang.
+        $this->assertEquals(300.000, (float) $stats['range_sales']);
+        $this->assertEquals(300.000, (float) $profitLoss['revenue']);
+        // HPP ikut mencakup transaksi hutang (Opsi A).
+        $this->assertEquals(170.000, (float) $profitLoss['cogs']);
+        $this->assertEquals(130.000, (float) $profitLoss['gross_profit']);
+    }
 }
