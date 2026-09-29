@@ -285,12 +285,24 @@ class FinanceReportController extends Controller
     ================================================================ */
     public function getAllProduct()
     {
-        return Product::select('id', 'name')->get();
+        // withTrashed: produk terhapus tetap bisa dipilih di LAPORAN download
+        // karena riwayat penjualannya valid. Kasir/form manual tidak memakai
+        // method ini sehingga tetap aktif-saja.
+        return Product::withTrashed()->select('id', 'name', 'deleted_at')->get()
+            ->map(fn ($p) => [
+                'id' => $p->id,
+                'name' => $p->deleted_at ? $p->name.' (dihapus)' : $p->name,
+            ]);
     }
 
     public function getAllCategories()
     {
-        return ItemCategory::select('id', 'name')->get();
+        // Sama seperti produk: kategori terhapus tetap bisa dipilih di laporan.
+        return ItemCategory::withTrashed()->select('id', 'name', 'deleted_at')->get()
+            ->map(fn ($c) => [
+                'id' => $c->id,
+                'name' => $c->deleted_at ? $c->name.' (dihapus)' : $c->name,
+            ]);
     }
 
     /* ================================================================
@@ -955,6 +967,25 @@ class FinanceReportController extends Controller
 
             return $row;
         });
+
+        // Tandai baris terhapus agar terbedakan di PDF
+        // (mis. "Noxone 276 SL 1L (dihapus)" vs pengganti aktif "NOXONE 1L").
+        // Hanya string nama yang diubah; grouping, qty, dan total tidak tersentuh.
+        if ($request->download_by === 'product') {
+            $trashedIds = Product::onlyTrashed()->pluck('id')->flip();
+            $data->each(function ($row) use ($trashedIds) {
+                if (isset($trashedIds[$row->product_id])) {
+                    $row->product_name .= ' (dihapus)';
+                }
+            });
+        } else {
+            $trashedIds = ItemCategory::onlyTrashed()->pluck('id')->flip();
+            $data->each(function ($row) use ($trashedIds) {
+                if (isset($trashedIds[$row->category_id])) {
+                    $row->category_name .= ' (dihapus)';
+                }
+            });
+        }
 
         $columnCount = $request->download_by === 'product'
             ? $data->pluck('product_id')->unique()->count()

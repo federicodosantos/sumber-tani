@@ -347,4 +347,138 @@ class FinanceReportCustomerTypeFilterTest extends TestCase
 
         $response->assertOk();
     }
+
+    public function test_download_product_includes_trashed_product(): void
+    {
+        // Produk terhapus (soft-delete) yang dicentang harus tetap masuk PDF.
+        $this->actingAsOwner();
+
+        $category = ItemCategory::firstOrCreate(['name' => 'Kategori Test']);
+        $product = Product::firstOrCreate(
+            ['code_id' => 'PRD-TEST-TRASHED'],
+            ['name' => 'Produk Terhapus', 'item_category_id' => $category->id]
+        );
+
+        $trxDate = Carbon::parse('2026-08-15 10:00:00');
+        $trx = Transaction::create([
+            'total_quantity' => 2.000,
+            'total_price' => 50000,
+            'discount' => 0,
+            'payment_method' => 'Cash',
+            'is_paid' => true,
+            'transaction_date' => $trxDate,
+        ]);
+
+        TransactionDetail::create([
+            'transaction_id' => $trx->id,
+            'product_id' => $product->id,
+            'product_price' => 25000,
+            'buying_price' => 15000,
+            'quantity' => 2.000,
+            'total_price' => 50000,
+            'created_at' => $trxDate,
+            'updated_at' => $trxDate,
+        ]);
+
+        // Produk dihapus SETELAH terjual — riwayatnya harus tetap terlapor.
+        $product->delete();
+
+        // Daftar modal harus memuatnya berlabel (dihapus).
+        $response = $this->get('/laporan-keuangan');
+        $response->assertOk();
+        $products = $response->viewData('products');
+        $listed = $products->firstWhere('id', $product->id);
+        $this->assertNotNull($listed);
+        $this->assertStringEndsWith('(dihapus)', $listed['name']);
+
+        Pdf::shouldReceive('loadView')->once()->with('finance.report', Mockery::on(
+            function ($data) {
+                $totalOk = abs((float) $data['grandTotalSales'] - 50000) < 0.001;
+                $labelOk = collect($data['columns'])->contains(
+                    fn ($name) => str_ends_with($name, 'Produk Terhapus (dihapus)')
+                );
+
+                return $totalOk && $labelOk;
+            }
+        ))->andReturnSelf();
+        Pdf::shouldReceive('setPaper')->andReturnSelf();
+        Pdf::shouldReceive('download')->once()->andReturn(response('pdf-bytes'));
+
+        $response = $this->post('/laporan-keuangan/download', [
+            'range_type' => 'custom',
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-31',
+            'format_time' => 'harian',
+            'download_by' => 'product',
+            'product_ids' => [$product->id],
+        ]);
+
+        $response->assertOk();
+    }
+
+    public function test_download_category_includes_trashed_category(): void
+    {
+        // Kategori terhapus (soft-delete) yang dicentang harus tetap masuk PDF.
+        $this->actingAsOwner();
+
+        $category = ItemCategory::create(['name' => 'Kategori Terhapus']);
+        $product = Product::firstOrCreate(
+            ['code_id' => 'PRD-TEST-TRASHED-CAT'],
+            ['name' => 'Produk Kategori Terhapus', 'item_category_id' => $category->id]
+        );
+
+        $trxDate = Carbon::parse('2026-08-15 10:00:00');
+        $trx = Transaction::create([
+            'total_quantity' => 1.000,
+            'total_price' => 30000,
+            'discount' => 0,
+            'payment_method' => 'Cash',
+            'is_paid' => true,
+            'transaction_date' => $trxDate,
+        ]);
+
+        TransactionDetail::create([
+            'transaction_id' => $trx->id,
+            'product_id' => $product->id,
+            'product_price' => 30000,
+            'buying_price' => 20000,
+            'quantity' => 1.000,
+            'total_price' => 30000,
+            'created_at' => $trxDate,
+            'updated_at' => $trxDate,
+        ]);
+
+        $category->delete();
+
+        $response = $this->get('/laporan-keuangan');
+        $response->assertOk();
+        $categories = $response->viewData('categories');
+        $listed = $categories->firstWhere('id', $category->id);
+        $this->assertNotNull($listed);
+        $this->assertStringEndsWith('(dihapus)', $listed['name']);
+
+        Pdf::shouldReceive('loadView')->once()->with('finance.report', Mockery::on(
+            function ($data) {
+                $totalOk = abs((float) $data['grandTotalSales'] - 30000) < 0.001;
+                $labelOk = collect($data['columns'])->contains(
+                    fn ($name) => str_ends_with($name, 'Kategori Terhapus (dihapus)')
+                );
+
+                return $totalOk && $labelOk;
+            }
+        ))->andReturnSelf();
+        Pdf::shouldReceive('setPaper')->andReturnSelf();
+        Pdf::shouldReceive('download')->once()->andReturn(response('pdf-bytes'));
+
+        $response = $this->post('/laporan-keuangan/download', [
+            'range_type' => 'custom',
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-31',
+            'format_time' => 'harian',
+            'download_by' => 'category',
+            'category_ids' => [$category->id],
+        ]);
+
+        $response->assertOk();
+    }
 }
