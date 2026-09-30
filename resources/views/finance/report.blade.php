@@ -89,6 +89,24 @@
                     @endforeach
                     <td><b>Rp {{ Number::format((float) $grandTotalSales, null, 3, 'id') }}</b></td>
                 </tr>
+                {{-- REKONSILIASI KE BASIS NOTA (sama seperti halaman & laba rugi) --}}
+                {{-- Baris nol disembunyikan agar tidak membingungkan. --}}
+                @if ((float) $discountTotal != 0)
+                <tr>
+                    <td colspan="{{ count($columns) + 1 }}"><b>TOTAL DISKON</b></td>
+                    <td><b>&minus;Rp {{ Number::format((float) $discountTotal, null, 3, 'id') }}</b></td>
+                </tr>
+                @endif
+                @if ((float) $adjustmentTotal != 0)
+                <tr>
+                    <td colspan="{{ count($columns) + 1 }}"><b>PENYESUAIAN NOTA *</b></td>
+                    <td><b>{{ (float) $adjustmentTotal < 0 ? '−' : '+' }}Rp {{ Number::format(abs((float) $adjustmentTotal), null, 3, 'id') }}</b></td>
+                </tr>
+                @endif
+                <tr style="background: #e8f5e9; font-weight: bold;">
+                    <td colspan="{{ count($columns) + 1 }}"><b>PENDAPATAN BERSIH</b></td>
+                    <td><b>Rp {{ Number::format((float) $netRevenue, null, 3, 'id') }}</b></td>
+                </tr>
             </tbody>
         </table>
     @else
@@ -140,8 +158,52 @@
                     <td><b>{{ Number::format((float) $totalQtySum, null, 3, 'id') }}</b></td>
                     <td><b>Rp {{ Number::format((float) $totalSalesSum, null, 3, 'id') }}</b></td>
                 </tr>
+                {{-- REKONSILIASI KE BASIS NOTA (sama seperti halaman & laba rugi) --}}
+                {{-- Baris nol disembunyikan agar tidak membingungkan. --}}
+                @if ((float) $discountTotal != 0)
+                <tr>
+                    <td></td>
+                    <td style="text-align: left;"><b>TOTAL DISKON</b></td>
+                    <td></td>
+                    <td><b>&minus;Rp {{ Number::format((float) $discountTotal, null, 3, 'id') }}</b></td>
+                </tr>
+                @endif
+                @if ((float) $adjustmentTotal != 0)
+                <tr>
+                    <td></td>
+                    <td style="text-align: left;"><b>PENYESUAIAN NOTA *</b></td>
+                    <td></td>
+                    <td><b>{{ (float) $adjustmentTotal < 0 ? '−' : '+' }}Rp {{ Number::format(abs((float) $adjustmentTotal), null, 3, 'id') }}</b></td>
+                </tr>
+                @endif
+                <tr style="background: #e8f5e9; font-weight: bold;">
+                    <td></td>
+                    <td style="text-align: left;"><b>PENDAPATAN BERSIH</b></td>
+                    <td></td>
+                    <td><b>Rp {{ Number::format((float) $netRevenue, null, 3, 'id') }}</b></td>
+                </tr>
             </tbody>
         </table>
     @endif
+
+    {{-- FOOTNOTE: cara membaca angka laporan ini --}}
+    <div style="margin-top: 12px; font-size: 9px; color: #333;">
+        <p style="margin: 0 0 4px;"><b>Cara membaca angka laporan ini</b></p>
+        <p style="margin: 0 0 4px;"><b>Total Penjualan</b> adalah jumlah seluruh rincian barang (harga &times; qty) &mdash; yaitu angka kotor sebelum potongan.</p>
+        @if ((float) $discountTotal != 0)
+        <p style="margin: 0 0 4px;"><b>Total Diskon</b> adalah jumlah seluruh potongan harga yang diberikan kasir pada nota-nota periode ini. Diskon dicatat per nota (bukan per barang), sehingga ia ditampilkan sebagai satu baris rekap di sini, bukan dipecah ke tiap barang.</p>
+        @endif
+        @if ((float) $adjustmentTotal != 0)
+        <p style="margin: 0 0 4px;"><b>Penyesuaian Nota (*)</b> adalah selisih antara total yang tercetak di nota dengan jumlah rincian barangnya, pada sebagian nota lama (tercatat sebelum 24 Agustus 2026). Penyebabnya: kasir saat itu dapat mengetik total bayar secara manual; bila total ketikan lebih besar dari hitungan barang, kelebihannya tersimpan di total nota tanpa tercatat sebagai diskon (sistem lama tidak menolaknya). Sejak 24 Agustus 2026 sistem menghitung ulang total dari rincian barang sehingga selisih seperti ini tidak lagi terjadi pada nota baru &mdash; angka ini hanya peninggalan data lama dan tidak memengaruhi kas maupun stok.</p>
+        @endif
+        <p style="margin: 0;"><b>Pendapatan Bersih = Total Penjualan
+            @if ((float) $discountTotal != 0)
+                &minus; Total Diskon
+            @endif
+            @if ((float) $adjustmentTotal != 0)
+                + Penyesuaian Nota
+            @endif
+            .</b> Angka inilah yang sama dengan &ldquo;Penjualan Periode Ini&rdquo; dan &ldquo;Total Pendapatan&rdquo; di halaman Laporan Keuangan untuk periode dan filter yang sama.</p>
+    </div>
 </body>
 </html>

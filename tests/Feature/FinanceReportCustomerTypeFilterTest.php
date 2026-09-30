@@ -294,7 +294,13 @@ class FinanceReportCustomerTypeFilterTest extends TestCase
         ]);
 
         $response->assertOk();
-        $response->assertHeader('content-disposition', 'attachment; filename=laporan-penjualan.pdf');
+        // Nama file memuat cakupan: laporan-penjualan-category-<mulai>-sampai-<akhir>.pdf
+        $disposition = (string) $response->headers->get('content-disposition');
+        $this->assertStringStartsWith('attachment;', $disposition);
+        $this->assertMatchesRegularExpression(
+            '/filename=laporan-penjualan-category-\d{4}-\d{2}-\d{2}-sampai-\d{4}-\d{2}-\d{2}\.pdf/',
+            $disposition
+        );
     }
 
     public function test_download_custom_range_includes_end_date_transactions(): void
@@ -477,6 +483,278 @@ class FinanceReportCustomerTypeFilterTest extends TestCase
             'format_time' => 'harian',
             'download_by' => 'category',
             'category_ids' => [$category->id],
+        ]);
+
+        $response->assertOk();
+    }
+
+    public function test_download_recap_reconciles_to_header_totals(): void
+    {
+        // Rekonsiliasi: kotor − diskon + penyesuaian = Σ header.
+        // Nota diskon: rincian 100rb, diskon 20rb, header 80rb.
+        // Nota noise warisan: rincian 40rb, diskon 0, header 50rb.
+        // Ekspektasi: kotor 140rb, diskon 20rb, penyesuaian 10rb, bersih 130rb.
+        $this->actingAsOwner();
+
+        $category = ItemCategory::firstOrCreate(['name' => 'Kategori Test']);
+        $productA = Product::firstOrCreate(
+            ['code_id' => 'PRD-TEST-RECAP-A'],
+            ['name' => 'Produk Rekap A', 'item_category_id' => $category->id]
+        );
+        $productB = Product::firstOrCreate(
+            ['code_id' => 'PRD-TEST-RECAP-B'],
+            ['name' => 'Produk Rekap B', 'item_category_id' => $category->id]
+        );
+
+        $trxDate = Carbon::parse('2026-08-15 10:00:00');
+
+        $trxDisc = Transaction::create([
+            'total_quantity' => 1.000,
+            'total_price' => 80000,
+            'discount' => 20000,
+            'payment_method' => 'Cash',
+            'is_paid' => true,
+            'transaction_date' => $trxDate,
+        ]);
+        TransactionDetail::create([
+            'transaction_id' => $trxDisc->id,
+            'product_id' => $productA->id,
+            'product_price' => 100000,
+            'buying_price' => 60000,
+            'quantity' => 1.000,
+            'total_price' => 100000,
+            'created_at' => $trxDate,
+            'updated_at' => $trxDate,
+        ]);
+
+        $trxNoise = Transaction::create([
+            'total_quantity' => 1.000,
+            'total_price' => 50000,
+            'discount' => 0,
+            'payment_method' => 'Cash',
+            'is_paid' => true,
+            'transaction_date' => $trxDate,
+        ]);
+        TransactionDetail::create([
+            'transaction_id' => $trxNoise->id,
+            'product_id' => $productB->id,
+            'product_price' => 40000,
+            'buying_price' => 25000,
+            'quantity' => 1.000,
+            'total_price' => 40000,
+            'created_at' => $trxDate,
+            'updated_at' => $trxDate,
+        ]);
+
+        Pdf::shouldReceive('loadView')->once()->with('finance.report', Mockery::on(
+            function ($data) {
+                $grossOk = abs((float) $data['grandTotalSales'] - 140000) < 0.001;
+                $discOk = abs((float) $data['discountTotal'] - 20000) < 0.001;
+                $adjOk = abs((float) $data['adjustmentTotal'] - 10000) < 0.001;
+                $netOk = abs((float) $data['netRevenue'] - 130000) < 0.001;
+
+                return $grossOk && $discOk && $adjOk && $netOk;
+            }
+        ))->andReturnSelf();
+        Pdf::shouldReceive('setPaper')->andReturnSelf();
+        Pdf::shouldReceive('download')->once()->andReturn(response('pdf-bytes'));
+
+        $response = $this->post('/laporan-keuangan/download', [
+            'range_type' => 'custom',
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-31',
+            'format_time' => 'harian',
+            'download_by' => 'product',
+            'product_ids' => [$productA->id, $productB->id],
+        ]);
+
+        $response->assertOk();
+    }
+
+    private function renderReport(array $recap): string
+    {
+        return view('finance.report', array_merge([
+            'data' => collect(),
+            'pivot' => ['15 Agustus 2026' => [1 => 50000]],
+            'columns' => [1 => 'Produk A'],
+            'totalSales' => [1 => 50000],
+            'grandTotalQty' => 2,
+            'grandTotalSales' => 50000,
+            'totalQty' => [1 => 2],
+            'isLandscape' => true,
+            'downloadBy' => 'product',
+            'startDate' => '15 Agustus 2026',
+            'endDate' => '15 Agustus 2026',
+            'customerTypes' => ['r1', 'r2', 'konsumen'],
+            'customerTypesLabel' => 'Semua (R1, R2, Konsumen)',
+        ], $recap))->render();
+    }
+
+    public function test_report_hides_zero_recap_rows(): void
+    {
+        // Tanpa diskon & noise (mis. September): baris rekap nol disembunyikan.
+        $html = $this->renderReport([
+            'discountTotal' => '0.000',
+            'adjustmentTotal' => '0.000',
+            'netRevenue' => '50000.000',
+        ]);
+
+        $this->assertStringNotContainsString('TOTAL DISKON', $html);
+        $this->assertStringNotContainsString('PENYESUAIAN NOTA', $html);
+        $this->assertStringContainsString('PENDAPATAN BERSIH', $html);
+    }
+
+    public function test_report_shows_nonzero_recap_rows(): void
+    {
+        // Ada diskon & noise (mis. Januari): ketiga baris tampil.
+        $html = $this->renderReport([
+            'discountTotal' => '20000.000',
+            'adjustmentTotal' => '10000.000',
+            'netRevenue' => '40000.000',
+        ]);
+
+        $this->assertStringContainsString('TOTAL DISKON', $html);
+        $this->assertStringContainsString('PENYESUAIAN NOTA', $html);
+        $this->assertStringContainsString('PENDAPATAN BERSIH', $html);
+        $this->assertStringContainsString('Rp 20.000', $html);
+    }
+
+    /**
+     * Buat 11 produk @ Rp1.000 untuk memaksa mode portrait (>10 kolom).
+     *
+     * @return array<int> product ids
+     */
+    private function makeElevenProducts(ItemCategory $category): array
+    {
+        $ids = [];
+        for ($i = 1; $i <= 11; $i++) {
+            $product = Product::firstOrCreate(
+                ['code_id' => 'PRD-TEST-POR-'.$i],
+                ['name' => 'Produk Portrait '.$i, 'item_category_id' => $category->id]
+            );
+            $ids[] = $product->id;
+        }
+
+        return $ids;
+    }
+
+    private function makeDetail(int $trxId, int $productId, float $price, float $qty, Carbon $date): void
+    {
+        TransactionDetail::create([
+            'transaction_id' => $trxId,
+            'product_id' => $productId,
+            'product_price' => $price,
+            'buying_price' => $price / 2,
+            'quantity' => $qty,
+            'total_price' => $price * $qty,
+            'created_at' => $date,
+            'updated_at' => $date,
+        ]);
+    }
+
+    public function test_download_portrait_zero_adjustment_is_exact(): void
+    {
+        // Regresi gejala 1+2: di portrait $grandTotalSales = 0 dan debu float
+        // bisa memunculkan baris penyesuaian. Harus '0.000' persis.
+        $this->actingAsOwner();
+
+        $category = ItemCategory::firstOrCreate(['name' => 'Kategori Test']);
+        $ids = $this->makeElevenProducts($category);
+        $trxDate = Carbon::parse('2026-09-15 10:00:00');
+
+        $trx = Transaction::create([
+            'total_quantity' => 11.000,
+            'total_price' => 11000,
+            'discount' => 0,
+            'payment_method' => 'Cash',
+            'is_paid' => true,
+            'transaction_date' => $trxDate,
+        ]);
+        foreach ($ids as $pid) {
+            $this->makeDetail($trx->id, $pid, 1000, 1, $trxDate);
+        }
+
+        Pdf::shouldReceive('loadView')->once()->with('finance.report', Mockery::on(
+            function ($data) {
+                return $data['isLandscape'] === false
+                    && $data['adjustmentTotal'] === '0.000'
+                    && $data['discountTotal'] === '0.000'
+                    && abs((float) $data['netRevenue'] - 11000) < 0.001;
+            }
+        ))->andReturnSelf();
+        Pdf::shouldReceive('download')->once()->andReturn(response('pdf-bytes'));
+
+        $response = $this->post('/laporan-keuangan/download', [
+            'range_type' => 'custom',
+            'start_date' => '2026-09-01',
+            'end_date' => '2026-09-30',
+            'format_time' => 'harian',
+            'download_by' => 'product',
+            'product_ids' => $ids,
+        ]);
+
+        $response->assertOk();
+    }
+
+    public function test_download_portrait_recap_matches_headers(): void
+    {
+        // Portrait + diskon + noise: kotor 149rb, diskon 20rb,
+        // penyesuaian 10rb, bersih 139rb = Σ header.
+        $this->actingAsOwner();
+
+        $category = ItemCategory::firstOrCreate(['name' => 'Kategori Test']);
+        $ids = $this->makeElevenProducts($category);
+        $trxDate = Carbon::parse('2026-09-15 10:00:00');
+
+        // Nota diskon: produk 1 (100rb) + produk 3-6 (4×1rb) = 104rb − 20rb = 84rb.
+        $trxDisc = Transaction::create([
+            'total_quantity' => 5.000,
+            'total_price' => 84000,
+            'discount' => 20000,
+            'payment_method' => 'Cash',
+            'is_paid' => true,
+            'transaction_date' => $trxDate,
+        ]);
+        $this->makeDetail($trxDisc->id, $ids[0], 100000, 1, $trxDate);
+        foreach (array_slice($ids, 2, 4) as $pid) {
+            $this->makeDetail($trxDisc->id, $pid, 1000, 1, $trxDate);
+        }
+
+        // Nota noise: produk 2 (40rb) + produk 7-11 (5×1rb) = 45rb, header 55rb.
+        $trxNoise = Transaction::create([
+            'total_quantity' => 6.000,
+            'total_price' => 55000,
+            'discount' => 0,
+            'payment_method' => 'Cash',
+            'is_paid' => true,
+            'transaction_date' => $trxDate,
+        ]);
+        $this->makeDetail($trxNoise->id, $ids[1], 40000, 1, $trxDate);
+        foreach (array_slice($ids, 6, 5) as $pid) {
+            $this->makeDetail($trxNoise->id, $pid, 1000, 1, $trxDate);
+        }
+
+        Pdf::shouldReceive('loadView')->once()->with('finance.report', Mockery::on(
+            function ($data) {
+                // Portrait: $grandTotalSales memang 0 (total dihitung di Blade
+                // via $totalSalesSum); rekap memakai $grossSales presisi-string.
+                return $data['isLandscape'] === false
+                    && (float) $data['grandTotalSales'] == 0
+                    && abs((float) $data['discountTotal'] - 20000) < 0.001
+                    && abs((float) $data['adjustmentTotal'] - 10000) < 0.001
+                    && abs((float) $data['netRevenue'] - 139000) < 0.001;
+            }
+        ))->andReturnSelf();
+        // Portrait: setPaper tidak dipanggil.
+        Pdf::shouldReceive('download')->once()->andReturn(response('pdf-bytes'));
+
+        $response = $this->post('/laporan-keuangan/download', [
+            'range_type' => 'custom',
+            'start_date' => '2026-09-01',
+            'end_date' => '2026-09-30',
+            'format_time' => 'harian',
+            'download_by' => 'product',
+            'product_ids' => $ids,
         ]);
 
         $response->assertOk();

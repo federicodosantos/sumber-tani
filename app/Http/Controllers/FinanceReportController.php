@@ -904,6 +904,10 @@ class FinanceReportController extends Controller
             // sama seperti "Penjualan Periode Ini" di getStats().
             ->whereBetween('transactions.transaction_date', [$startDate, $endDate]);
 
+        // Builder dasar (tanpa select/groupBy) dipakai ulang untuk agregat
+        // header/diskon pada himpunan nota yang sama persis.
+        $baseQuery = $query;
+
         // Apply customer types filter
         $validTypes = ['r1', 'r2', 'konsumen'];
         $selectedTypes = array_values(array_intersect($customerTypes, $validTypes));
@@ -945,18 +949,31 @@ class FinanceReportController extends Controller
         }
 
         if ($request->download_by === 'product') {
-            $query
-                ->whereIn('products.id', $request->product_ids ?? [])
+            $productIds = $request->product_ids ?? [];
+            $dataQuery = (clone $baseQuery)
+                ->whereIn('products.id', $productIds)
                 ->select($periodSelect, 'products.id as product_id', 'products.name as product_name', DB::raw('SUM(transaction_details.quantity) as total_qty'), DB::raw('SUM(transaction_details.total_price) as total_sales'))
                 ->groupBy('period', 'products.id', 'products.name');
+            // Himpunan nota yang sama persis (punya ≥1 rincian terpilih),
+            // untuk agregat header/diskon yang konsisten.
+            $trxQuery = (clone $baseQuery)
+                ->whereIn('products.id', $productIds)
+                ->select('transactions.id', 'transactions.total_price', 'transactions.discount')
+                ->distinct();
         } else {
-            $query
-                ->whereIn('item_categories.id', $request->category_ids ?? [])
+            $categoryIds = $request->category_ids ?? [];
+            $dataQuery = (clone $baseQuery)
+                ->whereIn('item_categories.id', $categoryIds)
                 ->select($periodSelect, 'item_categories.id as category_id', 'item_categories.name as category_name', DB::raw('SUM(transaction_details.quantity) as total_qty'), DB::raw('SUM(transaction_details.total_price) as total_sales'))
                 ->groupBy('period', 'item_categories.id', 'item_categories.name');
+            $trxQuery = (clone $baseQuery)
+                ->whereIn('item_categories.id', $categoryIds)
+                ->select('transactions.id', 'transactions.total_price', 'transactions.discount')
+                ->distinct();
         }
 
-        $data = $query->orderBy('period')->get();
+        $data = $dataQuery->orderBy('period')->get();
+        $trxRows = $trxQuery->get();
 
         $data = $data->map(function ($row) use ($request) {
             if ($request->format_time === 'bulanan') {
@@ -985,6 +1002,16 @@ class FinanceReportController extends Controller
                     $row->category_name .= ' (dihapus)';
                 }
             });
+        }
+
+        // Total kotor presisi-string dari string desimal DB (bukan float
+        // array_sum): dipakai matematika rekap agar nol = '0.000' persis dan
+        // berlaku di kedua mode — $grandTotalSales hanya terisi di landscape
+        // (di portrait $columns kosong sehingga ia 0 dan merusak rekap).
+        $math = app(DecimalMathService::class);
+        $grossSales = '0.000';
+        foreach ($data as $row) {
+            $grossSales = $math->add($grossSales, (string) $row->total_sales);
         }
 
         $columnCount = $request->download_by === 'product'
@@ -1026,6 +1053,24 @@ class FinanceReportController extends Controller
 
         $grandTotalQty = array_sum($totalQty);
         $grandTotalSales = array_sum($totalSales);
+
+        // Rekonsiliasi ke basis nota (sama seperti halaman & laba rugi):
+        // neto = kotor − diskon + penyesuaian, dengan
+        // penyesuaian = Σheader − Σrincian + Σdiskon (residu nota warisan).
+        // Agregat dibatasi pada himpunan nota hasil rincian agar konsisten
+        // walau user hanya mencentang sebagian produk/kategori.
+        // $grossSales (presisi-string) dipakai — bukan $grandTotalSales float
+        // yang kosong di mode portrait.
+        $headerSum = '0.000';
+        $discountSum = '0.000';
+        foreach ($trxRows as $trxRow) {
+            $headerSum = $math->add($headerSum, (string) $trxRow->total_price);
+            $discountSum = $math->add($discountSum, (string) ($trxRow->discount ?? 0));
+        }
+        $discountTotal = $math->round($discountSum);
+        $adjustmentTotal = $math->add($math->subtract($headerSum, $grossSales), $discountTotal);
+        $netRevenue = $math->add($math->subtract($grossSales, $discountTotal), $adjustmentTotal);
+
         $data = $data->sortBy('period')->groupBy('period');
 
         $pdf = Pdf::loadView('finance.report', [
@@ -1035,6 +1080,9 @@ class FinanceReportController extends Controller
             'totalSales' => $totalSales,
             'grandTotalQty' => $grandTotalQty,
             'grandTotalSales' => $grandTotalSales,
+            'discountTotal' => $discountTotal,
+            'adjustmentTotal' => $adjustmentTotal,
+            'netRevenue' => $netRevenue,
             'totalQty' => $totalQty,
             'isLandscape' => $isLandscape,
             'downloadBy' => $request->download_by,
@@ -1048,7 +1096,16 @@ class FinanceReportController extends Controller
             $pdf->setPaper('A4', 'landscape');
         }
 
-        return $pdf->download('laporan-penjualan.pdf');
+        // Nama file memuat cakupan laporan agar unduhan beda periode
+        // tidak saling menimpa (hanya karakter aman tanggal Y-m-d).
+        $fileName = sprintf(
+            'laporan-penjualan-%s-%s-sampai-%s.pdf',
+            $request->download_by,
+            $startDate->format('Y-m-d'),
+            $endDate->format('Y-m-d')
+        );
+
+        return $pdf->download($fileName);
     }
 
     private function normalizeDecimalInput(Request $request): void
